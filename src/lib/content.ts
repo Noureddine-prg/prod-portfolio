@@ -7,7 +7,7 @@ export const profile = {
 	name: 'Noureddine Sidi Abed',
 	title: 'SOFTWARE ENGINEER',
 	location: 'New York, NY',
-	email: 'noureddinesidiabed6k@gmail.com',
+	email: 'nour.sidiabed@gmail.com',
 	timezone: 'New York · GMT-5'
 } as const;
 
@@ -41,27 +41,29 @@ export const experience = {
 			end: 'Jun 2026',
 			period: 'Oct 2025 — Jun 2026',
 			blurb:
-				'Architected an agentic image-evaluation pipeline with Gemini — automated scoring across 1,000+ outputs with human-in-the-loop verification, saving 40 min per cycle. Centralized 5 vendor sources into one reporting dashboard, cutting reporting time 70%.',
+				'Partnered directly with research teams to turn ambiguous evaluation requirements into deployed tooling — owning solutions from problem statement through production. Architected an agentic evaluation pipeline on the Gemini API scoring 1,000+ image outputs per cycle with human verification checkpoints, and consolidated 5 vendor sources into one reporting pipeline, cutting reporting time 70%.',
 			// mobile expanded role-card bullets (DC 11b L491–493)
 			bullets: [
-				'Agentic image-eval pipeline on Gemini — 1,000+ outputs auto-scored per cycle',
-				'Vendor reporting time cut 70% across five sources',
-				'Delivery tracking automated across three concurrent projects — 40 min saved per cycle'
+				'Owned eval tooling from ambiguous problem statements to production workflows',
+				'Agentic evaluation pipeline on Gemini — 1,000+ image outputs scored per cycle',
+				'5 vendor sources, one reporting pipeline — reporting time down 70%',
+				'PLX/SQL dashboards for 20+ stakeholders, iterated directly with end users'
 			],
-			tech: ['Python', 'Gemini API', 'agentic workflows']
+			tech: ['Python', 'Gemini API', 'SQL', 'agentic workflows']
 		},
 		{
 			company: 'Meta',
 			title: 'Data Solutions Lead',
-			start: 'Oct 2024',
+			start: 'Sep 2024',
 			end: 'Sep 2025',
-			period: 'Oct 2024 — Sep 2025',
+			period: 'Sep 2024 — Sep 2025',
 			blurb:
-				"Led 30+ analysts across two teams validating training data for Llama's coding and agentic capabilities. Shipped React tooling for structured QA across 10,000+ data points; Python failure-trajectory analysis that directly informed training improvements.",
+				"Served as the technical bridge between engineering, research, and vendor teams — leading 30+ analysts validating training data for Llama's coding and agentic capabilities. Shipped React tooling for structured QA across 10,000+ data points and Python failure-trajectory analyses that directly informed Llama training improvements.",
 			bullets: [
-				'Led 30+ analysts validating Llama coding & agentic training data',
+				'Technical bridge across engineering, research, and vendor teams — 30+ analysts led',
 				'React QA tooling across 10,000+ data points',
-				'Failure-trajectory analysis and model comparisons that informed Llama training'
+				'Failure-trajectory analysis and model comparisons that informed Llama training',
+				'Defined evaluation rubrics with researchers, adopted across annotation teams'
 			],
 			tech: ['React', 'Python', 'model eval', 'RLHF']
 		},
@@ -72,12 +74,13 @@ export const experience = {
 			end: 'Jul 2024',
 			period: 'Jan — Jul 2024',
 			blurb:
-				'Delivered an org-chart application in C#/ASP.NET and Java across Windows and Android; migrated thousands of employee records with zero data loss. Information Technology Division.',
+				'Embedded with internal government teams as the technical point of contact — scoping requirements, translating operational needs into specifications, and delivering working software against them. Shipped a cross-platform org-chart application in C#/ASP.NET and Java; migrated thousands of employee records with zero data loss.',
 			bullets: [
-				'Org-chart platform in C#/ASP.NET + Java',
+				'Embedded as technical point of contact — requirements to working software',
+				'Org-chart platform in C#/ASP.NET + Java, Windows and Android',
 				'Migrated thousands of legacy records with zero data loss'
 			],
-			tech: ['C#', 'ASP.NET', 'SQL']
+			tech: ['C#', 'ASP.NET', 'Java', 'SQL']
 		}
 	],
 	education: 'B.S. CIS — NYC College of Technology, 2024'
@@ -97,20 +100,31 @@ export const about = {
 	location: 'New York, NY',
 	// expanded view copy (DC 11a L322–326 / 11b L622–628)
 	intro:
-		'Software engineer focused on agentic pipelines, model evaluation, and the data tooling that keeps AI systems honest.',
-	body: "Exploring new opportunities while solving everyday problems with code and agents. Previously: agentic evals on Gemini at Google, Llama training data at Meta, platform migration for the NYC Mayor's Office.",
+		'Forward-deployed engineer — embedded with the teams who have the problem, shipping the tooling that solves it.',
+	body: "I work where engineering meets the people who need it — scoping ambiguous problems alongside research and operations teams, then owning the solution from first spec to production. Lately that means agentic evaluation pipelines on Gemini at Google, Llama training-data systems at Meta, and embedded delivery for the NYC Mayor's Office.",
 	availabilityLine: 'Available for full-time roles · New York or remote',
 	lockup: ['Software', 'Engineer'],
 	portrait: { src: '/portrait-placeholder.svg', alt: 'Portrait of Noureddine Sidi Abed' },
 	skillGroups: [
-		{ label: 'Languages', text: 'Python · SQL · JavaScript · C#', chips: ['Python', 'SQL', 'JavaScript', 'C#'] },
 		{
-			label: 'AI / Data',
-			text: 'Agentic pipelines · model evals · failure analysis · Gemini API',
-			chips: ['Agentic pipelines', 'Model evals', 'Failure analysis', 'Gemini API']
+			label: 'Languages',
+			text: 'Python · SQL · JavaScript · Go · C# · Java',
+			chips: ['Python', 'SQL', 'JavaScript', 'Go', 'C#']
 		},
-		{ label: 'Web', text: 'React · three.js · ASP.NET', chips: ['React', 'three.js', 'ASP.NET'] },
-		{ label: 'Practices', text: 'Human-in-the-loop QA · data migration · cross-team tooling' }
+		{
+			label: 'AI / ML',
+			text: 'LLM API integration · agentic workflows · model evaluation · prompt engineering · RLHF · annotation pipelines',
+			chips: ['LLM APIs', 'Agentic workflows', 'Model evals', 'RLHF']
+		},
+		{
+			label: 'Web',
+			text: 'React · Svelte · three.js · ASP.NET',
+			chips: ['React', 'Svelte', 'three.js']
+		},
+		{
+			label: 'Tooling',
+			text: 'Docker · PostgreSQL · MongoDB · Git'
+		}
 	] satisfies readonly SkillGroup[]
 } as const;
 
@@ -177,10 +191,10 @@ export const work = {
 			tech: 'Python · Gemini API',
 			org: 'Google',
 			year: '2026',
-			problem: 'Research teams needed image evals at a scale manual annotation could not reach.',
+			problem: 'Research teams had an ambiguous ask: image evals at a scale manual annotation could not reach.',
 			approach:
 				'Agentic pipeline on the Gemini API — plans scoring runs and routes low-confidence outputs to human checkpoints.',
-			outcome: '1,000+ outputs scored per cycle; the fully manual workflow was retired.'
+			outcome: '1,000+ outputs scored per cycle; the fully manual workflow was retired. Owned end to end, from scoping with researchers to production.'
 		},
 		{
 			id: 'vendor-reporting',
@@ -219,6 +233,7 @@ export const work = {
 			org: 'Meta',
 			year: '2025',
 			problem: 'Analysts reviewed 10,000+ raw vendor JSON data points by hand.',
+			// vendor APIs were also wired into the internal review UI as part of this work
 			approach: 'React tooling that parses and formats vendor data into reviewable structures.',
 			outcome: 'Direct improvement in analyst review speed.'
 		},
@@ -245,7 +260,7 @@ export const work = {
 			org: "NYC Mayor's Office",
 			year: '2024',
 			problem: 'Legacy organizational data with no modern interface, on two platforms.',
-			approach: 'C#/ASP.NET + Java app for Windows and Android; migrated and validated every record.',
+			approach: 'Embedded with the IT division as technical point of contact; C#/ASP.NET + Java app for Windows and Android, every record migrated and validated.',
 			outcome: 'Zero data loss across thousands of employee records.'
 		}
 	] satisfies Project[]
