@@ -31,6 +31,7 @@
 <div
 	class="tile"
 	data-tile
+	data-card="experience"
 	role="button"
 	tabindex="0"
 	onclick={activate}

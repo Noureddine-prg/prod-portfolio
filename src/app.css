@@ -98,51 +98,11 @@ body {
 		opacity 0.3s ease;
 }
 
-/* ── Keyframes (DC L46-61, verbatim) ───────────────────────────────────────── */
-@keyframes sway {
-	0% {
-		transform: rotate(-0.4deg) translateX(-1.5px);
-	}
-	50% {
-		transform: rotate(0.4deg) translateX(1.5px);
-	}
-	100% {
-		transform: rotate(-0.4deg) translateX(-1.5px);
-	}
-}
-@keyframes blink {
-	0%,
-	49% {
-		opacity: 1;
-	}
-	50%,
-	100% {
-		opacity: 0;
-	}
-}
-@keyframes wingflex {
-	0%,
-	100% {
-		transform: translateY(0) rotate(0deg);
-	}
-	30% {
-		transform: translateY(-1.2px) rotate(-0.25deg);
-	}
-	55% {
-		transform: translateY(0.6px) rotate(0.15deg);
-	}
-	75% {
-		transform: translateY(-0.5px) rotate(-0.1deg);
-	}
-}
-@keyframes mar {
-	from {
-		transform: translateX(0);
-	}
-	to {
-		transform: translateX(-50%);
-	}
-}
+/* ── Keyframes (DC L46-61) — consumed ones only, verbatim ──────────────────────
+ * NOT ported (unused by boards 11a/11b, per the interaction sheets): dcflame (L54),
+ * dcemberup (L55), sway (L46), blink (L47), wingflex (L48), mar (L49). ashburst (L56)
+ * is also dropped — it has no static consumer, and the burn ember specks animate via
+ * inline transitions (expand.ts burnEmbers), not a keyframe. */
 @keyframes dcdust {
 	0% {
 		transform: translate(0, 0);
@@ -204,44 +164,6 @@ body {
 		opacity: 0.75;
 	}
 }
-@keyframes dcflame {
-	0%,
-	100% {
-		transform: scaleY(1) skewX(0deg);
-	}
-	30% {
-		transform: scaleY(1.12) skewX(-3deg);
-	}
-	60% {
-		transform: scaleY(0.92) skewX(2.5deg);
-	}
-	80% {
-		transform: scaleY(1.06) skewX(-1.5deg);
-	}
-}
-@keyframes dcemberup {
-	0% {
-		transform: translate(0, 0);
-		opacity: 0;
-	}
-	15% {
-		opacity: 0.9;
-	}
-	100% {
-		transform: translate(var(--ex, 3px), -72px);
-		opacity: 0;
-	}
-}
-@keyframes ashburst {
-	0% {
-		transform: translate(0, 0) scale(1);
-		opacity: var(--ao, 0.8);
-	}
-	100% {
-		transform: translate(var(--dx, 0), var(--dy, -120px)) scale(0.4);
-		opacity: 0;
-	}
-}
 @keyframes firering {
 	from {
 		transform: translate(-50%, -50%) rotate(0deg);
@@ -294,8 +216,26 @@ body {
 	}
 }
 
-/* Respect reduced motion — freeze the ambient CSS animations (scenes handle their
- * own reduced-motion path in the loop). */
+/* ── Card clone close button (DC L64, verbatim; bg/color/z-index come inline from
+ * expand.ts, matching the DC expand()) ─────────────────────────────────────── */
+.clone-close {
+	position: absolute;
+	top: 16px;
+	right: 18px;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font: 400 18px 'JetBrains Mono', monospace;
+	z-index: 5;
+}
+
+/* Respect reduced motion (README mandate — not in the DC): disables the ambient CSS
+ * animations (ashrise/dcfall/dctwinkle/dcdust/firering…). The intro is skipped in
+ * intro.ts; the three.js scenes still animate — the loop has no still-frame hook yet
+ * (gap reported, loop.ts untouched). */
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,

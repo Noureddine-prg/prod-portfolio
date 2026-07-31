@@ -8,16 +8,19 @@
 	import ContactTile from './tiles/ContactTile.svelte';
 	import WorkTile from './tiles/WorkTile.svelte';
 	import AshLayer from './AshLayer.svelte';
+	import { expandCard } from '$lib/interactions/expand';
 	import { profile } from '$lib/content';
 	import type { CardId } from '$lib/stores/ui.svelte';
 
-	interface Props {
-		onopen?: (card: CardId) => void;
+	let boardEl: HTMLDivElement;
+	function onopen(card: CardId) {
+		const tile = boardEl?.querySelector<HTMLElement>(`[data-card="${card}"]`);
+		if (tile) expandCard(boardEl, tile, card);
 	}
-	let { onopen = () => {} }: Props = $props();
 </script>
 
 <div
+	bind:this={boardEl}
 	class="board"
 	data-board
 	style="width:390px;background:#121010;border:1px solid #262020;padding:12px;border-radius:28px;display:flex;flex-direction:column;gap:10px;position:relative"

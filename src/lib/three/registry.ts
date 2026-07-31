@@ -60,6 +60,12 @@ export function clearEntry(cv: HTMLCanvasElement): void {
 	entries.delete(cv);
 }
 
+// Dev-only debug hook: lets E2E assert freeze semantics on live entries (a frozen
+// canvas's `clk` stops advancing). Not part of the app contract; absent in prod builds.
+if (typeof window !== 'undefined' && import.meta.env?.DEV) {
+	(globalThis as unknown as Record<string, unknown>).__cozyRegistry = { getEntry, liveCanvases };
+}
+
 // ── per-canvas lifecycle meta ─────────────────────────────────────────────────
 export function getMeta(cv: HTMLCanvasElement): CanvasMeta {
 	let m = meta.get(cv);

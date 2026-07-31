@@ -1,23 +1,24 @@
 <script lang="ts">
 	// The board shell. Both boards (11a desktop / 11b mobile) live in the DOM — a media
 	// query at 900px shows one; the loop only builds canvases that are actually on-screen,
-	// so the hidden board costs nothing. Stage 3 wires `openCard` to the expand flow.
+	// so the hidden board costs nothing. The boards own the expand flow; the intro runs
+	// once per session on the visible board (skipped under prefers-reduced-motion).
+	import { onMount } from 'svelte';
 	import BoardDesktop from '$lib/components/BoardDesktop.svelte';
 	import BoardMobile from '$lib/components/BoardMobile.svelte';
-	import { ui, type CardId } from '$lib/stores/ui.svelte';
+	import { maybeRunIntro } from '$lib/interactions/intro';
 
-	function open(card: CardId) {
-		// Stage-1 stub — expand mechanics land in Stage 3.
-		ui.openCard = card;
-	}
+	onMount(() => {
+		maybeRunIntro();
+	});
 </script>
 
 <main>
 	<div class="stage stage--desktop">
-		<BoardDesktop onopen={open} />
+		<BoardDesktop />
 	</div>
 	<div class="stage stage--mobile">
-		<BoardMobile onopen={open} />
+		<BoardMobile />
 	</div>
 </main>
 
