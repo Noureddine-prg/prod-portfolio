@@ -8,6 +8,7 @@
 	// transform-scaled to fill the viewport. The wrapper is sized to the scaled box, and
 	// `boardScale` feeds the loop's render-resolution compensation.
 	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import BoardDesktop from '$lib/components/BoardDesktop.svelte';
 	import BoardMobile from '$lib/components/BoardMobile.svelte';
 	import { maybeRunIntro, teardownIntro } from '$lib/interactions/intro';
@@ -16,9 +17,13 @@
 	const DESK_H = 620;
 	const MOB_W = 390;
 
-	let vw = $state(0);
-	let vh = $state(0);
+	// Initialized from the real window so the first hydrated render is already scaled;
+	// the prerendered HTML (vw 0) keeps the stage hidden via `ready` below, so the
+	// unscaled board never paints.
+	let vw = $state(browser ? window.innerWidth : 0);
+	let vh = $state(browser ? window.innerHeight : 0);
 	let mobH = $state(0); // mobile board's natural (unscaled) content height
+	let ready = $state(false);
 
 	// The board's design width tracks the viewport aspect (clamped to keep the grid sane
 	// on extreme aspect ratios), so the fr-based grid itself spans edge-to-edge; a uniform
@@ -35,6 +40,7 @@
 	});
 
 	onMount(() => {
+		ready = true;
 		maybeRunIntro();
 		return teardownIntro; // cancels a mid-intro unmount (rAF + veil)
 	});
@@ -42,7 +48,7 @@
 
 <svelte:window bind:innerWidth={vw} bind:innerHeight={vh} />
 
-<main>
+<main class:ready>
 	<div
 		class="stage stage--desktop"
 		style="width:{deskW * deskScale}px;height:{DESK_H * deskScale}px"
@@ -66,6 +72,12 @@
 		justify-content: center;
 		padding: 0;
 		background: #121010; /* board bg — gutters blend, cards read edge-to-edge */
+	}
+
+	/* Stages stay invisible in the prerendered (unscaled) HTML; the first hydrated
+	 * render is already scaled, so revealing at mount never shows the mini board. */
+	main:not(.ready) .stage {
+		visibility: hidden;
 	}
 
 	.fit {
