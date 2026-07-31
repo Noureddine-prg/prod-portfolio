@@ -36,3 +36,4 @@ vite.config.ts.timestamp-*
 /blob-report
 /playwright/.cache
 /build
+.playwright-mcp/
