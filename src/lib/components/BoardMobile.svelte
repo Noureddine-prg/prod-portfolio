@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Mobile board — DC id="11b", 390w flex column, gap 10, pad 12, radius 28. No Wildcard.
-	// Order: hero → Experience → Work → About → (Contact + Health) → footer.
+	// Order: hero → Experience → (Contact + Health) → About → Work → footer.
 	import HeroTile from './tiles/HeroTile.svelte';
 	import ExperienceTile from './tiles/ExperienceTile.svelte';
 	import AboutTile from './tiles/AboutTile.svelte';
