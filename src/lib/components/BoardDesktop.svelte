@@ -22,7 +22,7 @@
 	bind:this={boardEl}
 	class="board"
 	data-board
-	style="position:relative;width:900px;height:620px;background:#121010;border:1px solid #262020;padding:16px;border-radius:24px;grid-template-columns:1.72fr 1fr 1fr;grid-template-rows:repeat(4,minmax(0,1fr));grid-auto-rows:0"
+	style="position:relative;width:900px;height:620px;background:#121010;padding:16px;grid-template-columns:1.72fr 1fr 1fr;grid-template-rows:repeat(4,minmax(0,1fr));grid-auto-rows:0"
 >
 	<AshLayer variant="desktop" />
 

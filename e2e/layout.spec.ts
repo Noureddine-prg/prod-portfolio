@@ -14,11 +14,22 @@ test('desktop 1280w: 900×620 grid board, mobile stage hidden', async ({ page })
 	await expect(b).toBeVisible();
 	await expect(page.locator('.stage--mobile [data-board]')).toBeHidden();
 
+	// Design coordinate system stays 900×620; on screen the board is transform-scaled to
+	// fill the viewport (frameless, captain-directed) — height-limited at 1280×800.
+	// The scale applies at hydration, which can lag behind first paint on cold compiles —
+	// poll until the scaled rect appears before asserting exact geometry.
+	const design = await b.evaluate((el) => ({ w: el.clientWidth, h: el.clientHeight }));
+	expect(design.w).toBe(900);
+	expect(design.h).toBe(620);
+	await expect
+		.poll(async () => (await b.boundingBox())!.width, { timeout: 15_000 })
+		.toBeGreaterThan(1000);
 	const box = (await b.boundingBox())!;
-	expect(box.width).toBeGreaterThanOrEqual(898);
-	expect(box.width).toBeLessThanOrEqual(904);
-	expect(box.height).toBeGreaterThanOrEqual(618);
-	expect(box.height).toBeLessThanOrEqual(624);
+	const expectedScale = Math.min(1280 / 900, 800 / 620); // = 800/620
+	expect(box.width).toBeGreaterThanOrEqual(900 * expectedScale - 4);
+	expect(box.width).toBeLessThanOrEqual(900 * expectedScale + 4);
+	expect(box.height).toBeGreaterThanOrEqual(800 - 4);
+	expect(box.height).toBeLessThanOrEqual(800 + 1);
 
 	// It's a real 3-column grid (1.72fr 1fr 1fr resolves to 3 pixel tracks).
 	const grid = await b.evaluate((el) => {

@@ -23,7 +23,7 @@
 	bind:this={boardEl}
 	class="board"
 	data-board
-	style="width:390px;background:#121010;border:1px solid #262020;padding:12px;border-radius:28px;display:flex;flex-direction:column;gap:10px;position:relative"
+	style="width:390px;background:#121010;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative"
 >
 	<AshLayer variant="mobile" />
 

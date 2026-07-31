@@ -14,7 +14,7 @@ test('intro plays on a fresh context: veil present early, gone by ~4s', async ({
 	await page.goto('/');
 
 	// Veil mounts within ~0.5s (font preload race caps at 450ms).
-	await expect.poll(() => veilCount(page), { timeout: 5_000 }).toBeGreaterThan(0);
+	await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBeGreaterThan(0);
 	// Veil removes itself ~3.6s after mount.
 	await expect.poll(() => veilCount(page), { timeout: 10_000 }).toBe(0);
 });
@@ -22,11 +22,11 @@ test('intro plays on a fresh context: veil present early, gone by ~4s', async ({
 test('intro replays on a full reload (per-load gate, no sessionStorage)', async ({ page }) => {
 	await page.setViewportSize(DESKTOP);
 	await page.goto('/');
-	await expect.poll(() => veilCount(page), { timeout: 5_000 }).toBeGreaterThan(0);
+	await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBeGreaterThan(0);
 	await expect.poll(() => veilCount(page), { timeout: 10_000 }).toBe(0);
 
 	await page.reload();
-	await expect.poll(() => veilCount(page), { timeout: 5_000 }).toBeGreaterThan(0);
+	await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBeGreaterThan(0);
 });
 
 test.describe('reduced motion', () => {

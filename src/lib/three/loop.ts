@@ -18,6 +18,7 @@ import {
 	type SceneEntry
 } from './registry';
 import { freeze } from '$lib/stores/freeze.svelte';
+import { boardScale } from '$lib/stores/scale.svelte';
 import type { SceneKind } from './types';
 
 const FRAME_MS = 15; // ~60fps ceiling; skip frames on high-refresh displays
@@ -54,6 +55,13 @@ declare global {
 
 function dpr(): number {
 	return Math.min(window.devicePixelRatio || 1, 2);
+}
+
+// Render-resolution compensation for the viewport scaler: a canvas whose CSS box lives in
+// the board's design coordinates is displayed at boardScale× that size, so the backing
+// store multiplies in the scale (capped at 3 to bound GPU cost on large monitors).
+function renderPx(): number {
+	return Math.min(3, dpr() * boardScale.value);
 }
 
 // Tear down one canvas's live context but keep it eligible for rebuild when it returns
@@ -143,7 +151,7 @@ function startLoop(T: typeof THREE): LoopState {
 		}
 
 		// (DC's `data-hover-only` warm/hover gating, L3068, is unused by boards 11a/11b — skipped.)
-		const px = dpr();
+		const px = renderPx();
 		for (const cv of cvs) {
 			const o = getEntry(cv);
 			if (!o || !document.body.contains(cv)) continue;
@@ -155,6 +163,7 @@ function startLoop(T: typeof THREE): LoopState {
 			const h = cv.clientHeight;
 			let resized = false;
 			if (w && h && cv.width !== Math.floor(w * px)) {
+				o.renderer.setPixelRatio(px); // scaler compensation — build-time ratio may be stale
 				o.renderer.setSize(w, h, false);
 				o.cam.aspect = w / h;
 				o.cam.updateProjectionMatrix();

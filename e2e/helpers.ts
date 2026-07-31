@@ -25,14 +25,9 @@ export function collectErrors(page: Page): string[] {
 	return errors;
 }
 
-/** Count intro veils currently in the DOM (any board). */
+/** Count intro veils currently in the DOM (viewport-level overlay on body). */
 export function veilCount(page: Page): Promise<number> {
-	return page.evaluate(
-		() =>
-			[...document.querySelectorAll('[data-board] > div')].filter(
-				(d) => getComputedStyle(d).zIndex === '90'
-			).length
-	);
+	return page.evaluate(() => document.querySelectorAll('[data-intro-veil]').length);
 }
 
 /**
