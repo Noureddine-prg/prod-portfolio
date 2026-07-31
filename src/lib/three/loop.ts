@@ -89,6 +89,11 @@ function startLoop(T: typeof THREE): LoopState {
 
 	const isOn = (cv: HTMLCanvasElement) => onscreen.has(cv) && cv.clientWidth > 0;
 
+	// prefers-reduced-motion: scenes render one still frame instead of animating
+	// (README mandate; not present in the DC prototype). Read once at loop start.
+	const stillMode = matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const stilled = new WeakSet<HTMLCanvasElement>();
+
 	const tick = () => {
 		const nowMs = performance.now();
 		if (nowMs - state.last < FRAME_MS) return;
@@ -140,10 +145,32 @@ function startLoop(T: typeof THREE): LoopState {
 			// Keep the drawing buffer matched to the CSS box.
 			const w = cv.clientWidth;
 			const h = cv.clientHeight;
+			let resized = false;
 			if (w && h && cv.width !== Math.floor(w * px)) {
 				o.renderer.setSize(w, h, false);
 				o.cam.aspect = w / h;
 				o.cam.updateProjectionMatrix();
+				resized = true;
+			}
+
+			// Still mode: one frame at t=0 per canvas (re-render only on resize).
+			if (stillMode) {
+				if (stilled.has(cv) && !resized) continue;
+				if (o.update) {
+					try {
+						o.update(0, 0);
+					} catch {
+						o.update = null;
+					}
+				}
+				try {
+					o.renderer.render(o.scene, o.cam);
+					stilled.add(cv);
+				} catch {
+					disposeCanvas(cv, o);
+					getMeta(cv).failed = true;
+				}
+				continue;
 			}
 
 			// Accumulated clock — freezes never jump time.
