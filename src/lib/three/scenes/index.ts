@@ -8,10 +8,11 @@
 
 import { dev } from '$app/environment';
 import type { Builder, SceneKind } from '../types';
+import { buildFlame } from './flame';
 
 // Scene builders plug in here as they land (Stage 2). Empty for now — the scaffold ships
 // a running, dark board that each scene PR fills in.
-export const SCENE_BUILDERS: Partial<Record<SceneKind, Builder>> = {};
+export const SCENE_BUILDERS: Partial<Record<SceneKind, Builder>> = { flame: buildFlame };
 
 const noted = new Set<string>();
 
