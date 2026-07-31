@@ -66,6 +66,10 @@
 	box-sizing: border-box;
 }
 
+html {
+	background: #121010;
+}
+
 html,
 body {
 	margin: 0;
