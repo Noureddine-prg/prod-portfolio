@@ -411,7 +411,10 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	// click-to-exit everywhere except interactive bits (Work keeps its rows; links/copy
 	// stay usable). The DC keys Work off [data-proj-row] presence (L3559); the card check
 	// keeps Work ✕-only even while its rows are hidden under the proj-detail overlay.
+	// Armed only at settle (like the ✕): a double-click's second click otherwise lands on
+	// the fresh clone and cancels the open mid-burn (QA finding).
 	clone.addEventListener('click', (ev) => {
+		if (!clone.classList.contains('is-settled')) return;
 		if (
 			(ev.target as HTMLElement).closest(
 				'a,[data-copy-email],[data-proj-row],.proj-detail,.clone-close'

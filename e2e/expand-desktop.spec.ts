@@ -75,7 +75,7 @@ test('rapid double-click never yields two clones (open guard)', async ({ page })
 // never reaching .is-settled. Repro: desktop, dblclick [data-card="experience"] →
 // data-open clears ~470ms later, settle never happens. Expected: a double-clicked card
 // still settles open (body-click close should arm at settle, like the ✕).
-test.fixme('double-clicked card still settles open', async ({ page }) => {
+test('double-clicked card still settles open', async ({ page }) => {
 	await page.setViewportSize(DESKTOP);
 	await page.goto('/');
 	await settleIntro(page);

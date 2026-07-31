@@ -37,3 +37,6 @@ vite.config.ts.timestamp-*
 /playwright/.cache
 /build
 .playwright-mcp/
+.claude/worktrees/
+test-results/
+build/
