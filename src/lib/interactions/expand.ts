@@ -49,8 +49,8 @@ const PANELS: Record<CardId, PanelSpec> = {
 		props: (mobile) => ({ mobile }),
 		style: (mobile) =>
 			mobile
-				? EX_BASE + 'background:#1d1824;padding:20px;gap:20px;overflow:auto'
-				: EX_BASE + 'background:#1d1824;padding:26px 30px;gap:0;overflow:auto'
+				? EX_BASE + 'background:#141a16;padding:20px;gap:20px;overflow:auto'
+				: EX_BASE + 'background:#141a16;padding:26px 30px;gap:0;overflow:auto'
 	},
 	contact: {
 		component: ExpandedContact,

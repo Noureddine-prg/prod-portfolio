@@ -12,9 +12,9 @@ export const profile = {
 } as const;
 
 export const links = {
-	resume: 'uploads/NoureddineSidiAbed_Res_.pdf',
+	resume: '/resume.pdf',
 	linkedin: 'https://linkedin.com',
-	github: 'https://github.com'
+	github: 'https://github.com/Noureddine-prg'
 } as const;
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
