@@ -16,7 +16,9 @@ import { mount, unmount, type Component } from 'svelte';
 import { ui, type CardId } from '$lib/stores/ui.svelte';
 import { freeze } from '$lib/stores/freeze.svelte';
 import ExpandedExperience from '$lib/components/expanded/ExpandedExperience.svelte';
-import ExpandedPlaceholder from '$lib/components/expanded/ExpandedPlaceholder.svelte';
+import ExpandedAbout from '$lib/components/expanded/ExpandedAbout.svelte';
+import ExpandedContact from '$lib/components/expanded/ExpandedContact.svelte';
+import ExpandedWork from '$lib/components/expanded/ExpandedWork.svelte';
 
 interface PanelSpec {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,9 +31,9 @@ interface PanelSpec {
 const EX_BASE =
 	'display:none;position:absolute;inset:0;z-index:1;flex-direction:column;box-sizing:border-box;';
 
-// Per-card expanded containers. Experience carries the full DC container styles
-// (11a L127 / 11b L462); the other three are placeholder shells on the DC card
-// surfaces (sheets 4a/4b/4c) — their full content is the next task.
+// Per-card expanded containers, carrying the DC [data-expand] container styles:
+// Experience 11a L127 / 11b L462, About 11a L297 / 11b L609, Contact 11a L236
+// (overflow:hidden crops the flame bleed) / 11b L547, Work 11a L361 / 11b L663.
 const PANELS: Record<CardId, PanelSpec> = {
 	experience: {
 		component: ExpandedExperience,
@@ -43,24 +45,29 @@ const PANELS: Record<CardId, PanelSpec> = {
 					'background:radial-gradient(120% 160% at 78% 30%,#101322 0%,#0a0c16 45%,#06070d 100%);padding:28px 34px;gap:20px;overflow:hidden'
 	},
 	about: {
-		component: ExpandedPlaceholder,
-		props: () => ({ title: 'About', meta: 'New York, NY' }),
-		style: () => EX_BASE + 'background:#1d1824;padding:26px 30px;gap:18px;overflow:hidden'
+		component: ExpandedAbout,
+		props: (mobile) => ({ mobile }),
+		style: (mobile) =>
+			mobile
+				? EX_BASE + 'background:#1d1824;padding:20px;gap:20px;overflow:auto'
+				: EX_BASE + 'background:#1d1824;padding:26px 30px;gap:0;overflow:auto'
 	},
 	contact: {
-		component: ExpandedPlaceholder,
-		props: () => ({ title: 'Contact', meta: 'New York · GMT-5' }),
-		style: () => EX_BASE + 'background:#1a1616;padding:28px 32px;gap:18px;overflow:hidden'
+		component: ExpandedContact,
+		props: (mobile) => ({ mobile }),
+		style: (mobile) =>
+			mobile
+				? EX_BASE + 'background:#1a1616;padding:20px;gap:16px;overflow:auto'
+				: EX_BASE +
+					'background:#1a1616;padding:28px 32px;justify-content:space-between;overflow:hidden'
 	},
 	work: {
-		component: ExpandedPlaceholder,
-		props: () => ({
-			title: 'Work · 06 builds',
-			meta: '2024 — now',
-			fg: '#241d18',
-			metaFg: '#8a7d6e'
-		}),
-		style: () => EX_BASE + 'background:#cbbfa8;padding:26px 30px;gap:18px;overflow:hidden'
+		component: ExpandedWork,
+		props: (mobile) => ({ mobile }),
+		style: (mobile) =>
+			mobile
+				? EX_BASE + 'background:#cbbfa8;padding:20px;gap:0;overflow:auto'
+				: EX_BASE + 'background:#cbbfa8;padding:26px 30px;gap:0;overflow:auto'
 	}
 };
 
@@ -398,7 +405,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	close.addEventListener('click', shut);
 	// click-to-exit everywhere except interactive bits (Work keeps its rows; links/copy
 	// stay usable). The DC keys Work off [data-proj-row] presence (L3559); the card check
-	// keeps Work ✕-only while its expanded content is still a placeholder without rows.
+	// keeps Work ✕-only even while its rows are hidden under the proj-detail overlay.
 	clone.addEventListener('click', (ev) => {
 		if (
 			(ev.target as HTMLElement).closest(

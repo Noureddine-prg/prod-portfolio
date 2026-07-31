@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="480" viewBox="0 0 400 480">
+  <!-- swap this file (or the src in content.ts `about.portrait`) for a real photo -->
+  <rect width="400" height="480" fill="#241d30"/>
+  <circle cx="200" cy="190" r="64" fill="#322a3d"/>
+  <path d="M80 420c0-66 54-104 120-104s120 38 120 104v60H80z" fill="#322a3d"/>
+  <text x="200" y="452" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="17" letter-spacing="2" fill="#6f6580">YOUR PHOTO</text>
+</svg>
