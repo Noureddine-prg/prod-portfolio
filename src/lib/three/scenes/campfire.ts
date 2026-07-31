@@ -30,6 +30,11 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	scene.background = new T.Color(todP.bg);
 	cam.position.set(0, 1.5, 5.8);
 	cam.lookAt(lite ? 0.55 : 0, 0.72, 0);
+	if (lite) {
+		// tighter mobile framing — the fire fills more of the tall hero crop
+		cam.zoom = 1.28;
+		cam.updateProjectionMatrix();
+	}
 	// camera is fixed: cull scatter that can never enter the widest crop (+parallax margin)
 	const inView = function (x: number, z: number, extra?: number) {
 		const dz = z - 5.8;
