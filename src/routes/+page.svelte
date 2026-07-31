@@ -32,8 +32,9 @@
 		vw && vh ? Math.round(Math.min(1400, Math.max(760, (DESK_H * vw) / vh))) : 900
 	);
 	const deskScale = $derived(vw ? Math.max(0.5, Math.min(vh / DESK_H, vw / deskW)) : 1);
-	// Mobile scales by width; the page scrolls vertically as usual.
-	const mobScale = $derived(vw ? Math.max(0.75, vw / MOB_W) : 1);
+	// Mobile scales by width, capped so tablet widths get a centered column instead of a
+	// blown-up phone layout; the page scrolls vertically as usual.
+	const mobScale = $derived(vw ? Math.min(1.25, Math.max(0.75, vw / MOB_W)) : 1);
 
 	$effect(() => {
 		boardScale.value = vw >= 900 ? deskScale : mobScale;
