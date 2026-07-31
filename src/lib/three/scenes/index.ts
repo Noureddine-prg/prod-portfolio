@@ -9,12 +9,13 @@
 import { dev } from '$app/environment';
 import type { Builder, SceneKind } from '../types';
 import { buildAxelog } from './axelog';
-
+import { buildEnvelope } from './envelope';
 import { buildJar } from './jar';
 
 // Scene builders plug in here as they land (Stage 2).
 export const SCENE_BUILDERS: Partial<Record<SceneKind, Builder>> = {
 	axelog: buildAxelog,
+	envelope: buildEnvelope,
 	jar: buildJar
 };
 
