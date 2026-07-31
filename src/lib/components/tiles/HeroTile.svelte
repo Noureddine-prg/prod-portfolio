@@ -25,7 +25,7 @@
 </script>
 
 <div
-	style="{placement};position:relative;border-radius:14px;overflow:hidden;background:#0a0c12;border:1px solid #2a2424"
+	style="{placement};position:relative;border-radius:11px;overflow:hidden;background:#0a0c12;border:1px solid #2a2424"
 >
 	<ThreeCanvas kind="campfire" lite={mobile} style="width:100%;height:100%;display:block" />
 

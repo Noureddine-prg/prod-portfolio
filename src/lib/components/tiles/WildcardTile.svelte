@@ -9,7 +9,7 @@
 </script>
 
 <div
-	style="{placement};position:relative;overflow:hidden;background:#1a1616;border:1px dashed #453a36;border-radius:12px;padding:16px;display:flex;flex-direction:column;justify-content:space-between"
+	style="{placement};position:relative;overflow:hidden;background:#1a1616;border:1px dashed #453a36;border-radius:9px;padding:16px;display:flex;flex-direction:column;justify-content:space-between"
 >
 	<span
 		style="font:400 13px 'Archivo Black',sans-serif;letter-spacing:.02em;color:#efe9e6;text-transform:uppercase">{wildcard.header}</span

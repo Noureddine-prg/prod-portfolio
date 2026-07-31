@@ -134,11 +134,11 @@
 {:else}
 	<SpaceNightBg />
 	<div style="position:relative;display:flex;justify-content:space-between;align-items:baseline">
-		<span style="display:flex;align-items:baseline;gap:12px"
+		<span
 			><span
 				style="font:400 24px 'Archivo Black',sans-serif;letter-spacing:.01em;color:#efe9e6;text-transform:uppercase"
 				>Experience</span
-			><span style="font:400 9.5px 'JetBrains Mono',monospace;color:#6e6058"
+			><span style="font:400 9.5px 'JetBrains Mono',monospace;color:#6e6058;margin-left:12px"
 				>&mdash; The journey so far</span
 			></span
 		>

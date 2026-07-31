@@ -37,7 +37,7 @@
 	tabindex="0"
 	onclick={activate}
 	onkeydown={onKey}
-	style="{placement};background:#cbbfa8;border-radius:12px"
+	style="{placement};background:#cbbfa8;border-radius:9px"
 >
 	<div
 		style="position:absolute;left:{labelLeft}px;top:{labelY}px;bottom:{labelY}px;display:flex;flex-direction:column;justify-content:space-between;z-index:1"

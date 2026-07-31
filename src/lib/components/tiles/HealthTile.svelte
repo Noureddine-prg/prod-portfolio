@@ -13,7 +13,7 @@
 </script>
 
 <div
-	style="{placement};background:radial-gradient(110% 85% at 30% -15%,rgba(94,138,105,.12),transparent 58%),#161a17;border:1px solid #263028;border-radius:12px;padding:{pad};display:flex;flex-direction:column;justify-content:space-between;overflow:hidden"
+	style="{placement};background:radial-gradient(110% 85% at 30% -15%,rgba(94,138,105,.12),transparent 58%),#161a17;border:1px solid #263028;border-radius:9px;padding:{pad};display:flex;flex-direction:column;justify-content:space-between;overflow:hidden"
 >
 	{#if mobile}
 		<div style="display:flex;justify-content:space-between;align-items:baseline">

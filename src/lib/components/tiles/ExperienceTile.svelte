@@ -36,7 +36,7 @@
 	tabindex="0"
 	onclick={activate}
 	onkeydown={onKey}
-	style="{placement};background:#0a0c12;border:1px solid #2a2424;border-radius:12px;padding:{pad}px;display:flex;flex-direction:column;justify-content:space-between"
+	style="{placement};background:#0a0c12;border:1px solid #2a2424;border-radius:9px;padding:{pad}px;display:flex;flex-direction:column;justify-content:space-between"
 >
 	<ThreeCanvas
 		kind="calm"

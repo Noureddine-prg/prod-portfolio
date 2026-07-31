@@ -37,7 +37,7 @@
 	tabindex="0"
 	onclick={activate}
 	onkeydown={onKey}
-	style="{placement};background:radial-gradient(90% 70% at 62% 118%,rgba(255,140,58,.16),transparent 62%),#1c1512;border:1px solid #322619;border-radius:12px;padding:{pad}px;display:flex;flex-direction:column;justify-content:space-between"
+	style="{placement};background:radial-gradient(90% 70% at 62% 118%,rgba(255,140,58,.16),transparent 62%),#1c1512;border:1px solid #322619;border-radius:9px;padding:{pad}px;display:flex;flex-direction:column;justify-content:space-between"
 >
 	<span
 		style="position:relative;font:400 {headFont}px 'Archivo Black',sans-serif;color:#efe9e6;text-transform:uppercase;letter-spacing:.01em">{contact.header}</span

@@ -58,9 +58,9 @@ export const color = {
 export const radius = {
 	boardDesktop: 24,
 	boardMobile: 28,
-	tile: 12,
-	hero: 14,
-	scene: 18,
+	tile: 9,
+	hero: 11,
+	scene: 14,
 	chip: 7,
 	button: 10
 } as const;
