@@ -18,7 +18,7 @@
 </script>
 
 <!-- calm strip + blend-out + header — DC L463–470 -->
-<div style="position:relative;flex:none;height:200px;overflow:hidden;background:#0a0c12">
+<div style="position:relative;flex:0 1 200px;min-height:140px;overflow:hidden;background:#0a0c12">
 	<ThreeCanvas kind="calm" nowing lite style="width:100%;height:100%;display:block" />
 	<div
 		style="position:absolute;left:0;right:0;bottom:-1px;height:110px;background:linear-gradient(180deg,transparent,rgba(16,27,33,.55) 55%,#101b21);pointer-events:none"

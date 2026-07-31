@@ -35,16 +35,20 @@
 >
 	<AshLayer variant="mobile" />
 
-	<HeroTile mobile placement="flex:1 1 auto;min-height:200px" />
-	<ExperienceTile mobile placement="flex:none;height:120px" onopen={() => onopen('experience')} />
+	<HeroTile mobile placement="flex:1 1 auto;min-height:170px" />
+	<ExperienceTile
+		mobile
+		placement="flex:0 1 120px;min-height:96px"
+		onopen={() => onopen('experience')}
+	/>
 
-	<div style="display:flex;gap:10px;flex:none">
-		<ContactTile mobile placement="flex:1;height:110px" onopen={() => onopen('contact')} />
-		<HealthTile mobile placement="flex:1;height:110px" />
+	<div style="display:flex;gap:10px;flex:0 1 110px;min-height:90px">
+		<ContactTile mobile placement="flex:1;height:100%" onopen={() => onopen('contact')} />
+		<HealthTile mobile placement="flex:1;height:100%" />
 	</div>
 
-	<AboutTile mobile placement="flex:none;height:110px" onopen={() => onopen('about')} />
-	<WorkTile mobile placement="flex:none;height:120px" onopen={() => onopen('work')} />
+	<AboutTile mobile placement="flex:0 1 110px;min-height:88px" onopen={() => onopen('about')} />
+	<WorkTile mobile placement="flex:0 1 120px;min-height:96px" onopen={() => onopen('work')} />
 
 	<!-- Footer strip — small addition beyond the DC board (see report). -->
 	<div

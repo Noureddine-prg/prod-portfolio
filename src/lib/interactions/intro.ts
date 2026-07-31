@@ -51,19 +51,21 @@ function runIntro(board: HTMLElement): void {
 	const isMobile = board.clientWidth < 500; // design-space width: 390 mobile / 900 desktop
 	const s = Math.max(0.75, boardScale.value); // screen-space multiplier for type/particles
 
-	// ember ring tracing the board border, same language as the card-open ring
-	const ring = document.createElement('div');
-	ring.style.cssText =
-		'position:absolute;inset:0;pointer-events:none;border-radius:inherit;padding:3px;overflow:hidden;filter:drop-shadow(0 0 4px rgba(255,140,58,.3));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;transition:opacity .5s';
-	const ringInner = document.createElement('div');
-	// Dimmed and slowed relative to the DC board ring for viewport scale.
-	ringInner.style.cssText =
-		'position:absolute;left:50%;top:50%;width:320%;height:320%;transform:translate(-50%,-50%);background:conic-gradient(transparent 0 58%,rgba(255,125,46,.13) 70%,rgba(255,125,46,.40) 84%,rgba(255,210,138,.50) 90%,rgba(255,190,110,.16) 95%,transparent 99%);animation:firering 2.8s linear infinite';
-	ring.appendChild(ringInner);
-	veil.appendChild(ring);
-	setTimeout(() => {
-		ring.style.opacity = '0';
-	}, 2500);
+	// ember ring tracing the viewport edge; desktop only
+	if (!isMobile) {
+		const ring = document.createElement('div');
+		ring.style.cssText =
+			'position:absolute;inset:0;pointer-events:none;border-radius:inherit;padding:3px;overflow:hidden;filter:drop-shadow(0 0 4px rgba(255,140,58,.3));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;transition:opacity .5s';
+		const ringInner = document.createElement('div');
+		// Dimmed and slowed relative to the DC board ring for viewport scale.
+		ringInner.style.cssText =
+			'position:absolute;left:50%;top:50%;width:320%;height:320%;transform:translate(-50%,-50%);background:conic-gradient(transparent 0 58%,rgba(255,125,46,.13) 70%,rgba(255,125,46,.40) 84%,rgba(255,210,138,.50) 90%,rgba(255,190,110,.16) 95%,transparent 99%);animation:firering 2.8s linear infinite';
+		ring.appendChild(ringInner);
+		veil.appendChild(ring);
+		setTimeout(() => {
+			ring.style.opacity = '0';
+		}, 2500);
+	}
 
 	const nm = document.createElement('span');
 	nm.style.cssText =
