@@ -14,20 +14,19 @@ test('desktop 1280w: 900×620 grid board, mobile stage hidden', async ({ page })
 	await expect(b).toBeVisible();
 	await expect(page.locator('.stage--mobile [data-board]')).toBeHidden();
 
-	// Design coordinate system stays 900×620; on screen the board is transform-scaled to
-	// fill the viewport — height-limited at 1280×800.
-	// The scale applies at hydration, which can lag behind first paint on cold compiles —
+	// Design height stays 620; design width tracks the viewport aspect (620 * vw/vh,
+	// clamped 760-1400) so the grid spans the full screen after the uniform scale.
+	// The scale applies at hydration, which can lag first paint on cold compiles —
 	// poll until the scaled rect appears before asserting exact geometry.
 	const design = await b.evaluate((el) => ({ w: el.clientWidth, h: el.clientHeight }));
-	expect(design.w).toBe(900);
 	expect(design.h).toBe(620);
+	expect(design.w).toBe(Math.round((620 * 1280) / 800)); // = 992
 	await expect
 		.poll(async () => (await b.boundingBox())!.width, { timeout: 15_000 })
-		.toBeGreaterThan(1000);
+		.toBeGreaterThan(1200);
 	const box = (await b.boundingBox())!;
-	const expectedScale = Math.min(1280 / 900, 800 / 620); // = 800/620
-	expect(box.width).toBeGreaterThanOrEqual(900 * expectedScale - 4);
-	expect(box.width).toBeLessThanOrEqual(900 * expectedScale + 4);
+	expect(box.width).toBeGreaterThanOrEqual(1280 - 4);
+	expect(box.width).toBeLessThanOrEqual(1280 + 1);
 	expect(box.height).toBeGreaterThanOrEqual(800 - 4);
 	expect(box.height).toBeLessThanOrEqual(800 + 1);
 

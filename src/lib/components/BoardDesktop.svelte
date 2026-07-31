@@ -11,6 +11,12 @@
 	import { expandCard } from '$lib/interactions/expand';
 	import type { CardId } from '$lib/stores/ui.svelte';
 
+	interface Props {
+		/** Design-space width; tracks the viewport aspect so the grid spans edge-to-edge. */
+		designW?: number;
+	}
+	let { designW = 900 }: Props = $props();
+
 	let boardEl: HTMLDivElement;
 	function onopen(card: CardId) {
 		const tile = boardEl?.querySelector<HTMLElement>(`[data-card="${card}"]`);
@@ -22,7 +28,7 @@
 	bind:this={boardEl}
 	class="board"
 	data-board
-	style="position:relative;width:900px;height:620px;background:#121010;padding:16px;grid-template-columns:1.72fr 1fr 1fr;grid-template-rows:repeat(4,minmax(0,1fr));grid-auto-rows:0"
+	style="position:relative;width:{designW}px;height:620px;background:#121010;padding:16px;grid-template-columns:1.72fr 1fr 1fr;grid-template-rows:repeat(4,minmax(0,1fr));grid-auto-rows:0"
 >
 	<AshLayer variant="desktop" />
 

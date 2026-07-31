@@ -13,7 +13,6 @@
 	import { maybeRunIntro, teardownIntro } from '$lib/interactions/intro';
 	import { boardScale } from '$lib/stores/scale.svelte';
 
-	const DESK_W = 900;
 	const DESK_H = 620;
 	const MOB_W = 390;
 
@@ -21,9 +20,13 @@
 	let vh = $state(0);
 	let mobH = $state(0); // mobile board's natural (unscaled) content height
 
-	// Fill the viewport edge-to-edge; the page bg matches the board bg so any
-	// aspect-ratio gutter reads as part of the board.
-	const deskScale = $derived(vw ? Math.max(0.5, Math.min(vw / DESK_W, vh / DESK_H)) : 1);
+	// The board's design width tracks the viewport aspect (clamped to keep the grid sane
+	// on extreme aspect ratios), so the fr-based grid itself spans edge-to-edge; a uniform
+	// scale then fills the height with no distortion.
+	const deskW = $derived(
+		vw && vh ? Math.round(Math.min(1400, Math.max(760, (DESK_H * vw) / vh))) : 900
+	);
+	const deskScale = $derived(vw ? Math.max(0.5, Math.min(vh / DESK_H, vw / deskW)) : 1);
 	// Mobile scales by width; the page scrolls vertically as usual.
 	const mobScale = $derived(vw ? Math.max(0.75, vw / MOB_W) : 1);
 
@@ -42,10 +45,10 @@
 <main>
 	<div
 		class="stage stage--desktop"
-		style="width:{DESK_W * deskScale}px;height:{DESK_H * deskScale}px"
+		style="width:{deskW * deskScale}px;height:{DESK_H * deskScale}px"
 	>
 		<div class="fit" style="transform:scale({deskScale})">
-			<BoardDesktop />
+			<BoardDesktop designW={deskW} />
 		</div>
 	</div>
 	<div class="stage stage--mobile" style="width:{MOB_W * mobScale}px;height:{mobH * mobScale}px">

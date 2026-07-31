@@ -54,11 +54,11 @@ function runIntro(board: HTMLElement): void {
 	// ember ring tracing the board border, same language as the card-open ring
 	const ring = document.createElement('div');
 	ring.style.cssText =
-		'position:absolute;inset:0;pointer-events:none;border-radius:inherit;padding:3px;overflow:hidden;filter:drop-shadow(0 0 5px rgba(255,140,58,.45));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;transition:opacity .5s';
+		'position:absolute;inset:0;pointer-events:none;border-radius:inherit;padding:3px;overflow:hidden;filter:drop-shadow(0 0 4px rgba(255,140,58,.3));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;transition:opacity .5s';
 	const ringInner = document.createElement('div');
-	// Dimmed relative to the DC board ring: full intensity reads too hot at viewport size.
+	// Dimmed and slowed relative to the DC board ring for viewport scale.
 	ringInner.style.cssText =
-		'position:absolute;left:50%;top:50%;width:320%;height:320%;transform:translate(-50%,-50%);background:conic-gradient(transparent 0 58%,rgba(255,125,46,.20) 70%,rgba(255,125,46,.58) 84%,rgba(255,210,138,.72) 90%,rgba(255,190,110,.26) 95%,transparent 99%);animation:firering 1.6s linear infinite';
+		'position:absolute;left:50%;top:50%;width:320%;height:320%;transform:translate(-50%,-50%);background:conic-gradient(transparent 0 58%,rgba(255,125,46,.13) 70%,rgba(255,125,46,.40) 84%,rgba(255,210,138,.50) 90%,rgba(255,190,110,.16) 95%,transparent 99%);animation:firering 2.8s linear infinite';
 	ring.appendChild(ringInner);
 	veil.appendChild(ring);
 	setTimeout(() => {
