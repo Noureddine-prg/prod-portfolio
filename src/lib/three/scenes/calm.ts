@@ -221,7 +221,7 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 			uTime: { value: 0 },
 			// wide tile/strip crops (nowing) get a near-flat, calm horizon; the tall
 			// porthole keeps the full earth-curve art
-			uCurve: { value: variants.nowing ? 0.45 : 1.7 },
+			uCurve: { value: variants.nowing ? 0.9 : 1.7 },
 			uFlat: { value: variants.nowing ? 1 : 0 },
 			uBigElev: { value: 0.035 },
 			uBigFreq: { value: new T.Vector2(3.2, 4.8) },

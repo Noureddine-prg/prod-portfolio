@@ -90,6 +90,29 @@
 			>{about.availabilityLine}</span
 		>
 	</div>
+	<!-- links footer, matching the other cards' pattern -->
+	<div
+		style="position:relative;flex:none;display:flex;gap:14px;align-items:baseline;border-top:1px solid #322a3d;padding-top:12px"
+	>
+		<a
+			href={links.resume}
+			target="_blank"
+			style="font:500 8.5px 'JetBrains Mono',monospace;color:#e2954f;text-decoration:none"
+			>Open resume PDF &rarr;</a
+		>
+		<a
+			href={links.linkedin}
+			target="_blank"
+			style="font:500 8.5px 'JetBrains Mono',monospace;color:#b3a8c2;text-decoration:none"
+			>LinkedIn &#8599;</a
+		>
+		<a
+			href={links.github}
+			target="_blank"
+			style="font:500 8.5px 'JetBrains Mono',monospace;color:#b3a8c2;text-decoration:none"
+			>GitHub &#8599;</a
+		>
+	</div>
 {:else}
 	<EmberGlass />
 	<div
