@@ -153,6 +153,7 @@ export interface Project {
 	number: string;
 	name: string;
 	desc: string;
+	descShort: string; // mobile ledger row wording (DC 11b L668–697)
 	tech: string;
 	org: string;
 	year: string;
@@ -172,6 +173,7 @@ export const work = {
 			number: '01',
 			name: 'Agentic Image-Eval Pipeline',
 			desc: 'Automated scoring across 1,000+ image outputs per cycle, human-in-the-loop',
+			descShort: '1,000+ image outputs scored per cycle, human-in-the-loop',
 			tech: 'Python · Gemini API',
 			org: 'Google',
 			year: '2026',
@@ -185,6 +187,7 @@ export const work = {
 			number: '02',
 			name: 'Vendor Reporting Pipeline',
 			desc: 'Five vendor sources into one dashboard — reporting time down 70%',
+			descShort: 'Five vendor sources, one dashboard — reporting down 70%',
 			tech: 'Python · SQL · PLX',
 			org: 'Google',
 			year: '2026',
@@ -198,6 +201,7 @@ export const work = {
 			number: '03',
 			name: 'Delivery Tracking System',
 			desc: 'Automated delivery tracking across three concurrent projects',
+			descShort: 'Automated tracking across three concurrent projects',
 			tech: 'Python · Automation',
 			org: 'Google',
 			year: '2025',
@@ -210,6 +214,7 @@ export const work = {
 			number: '04',
 			name: 'QA Tooling Suite',
 			desc: 'Vendor JSON parsed and formatted for QA across 10,000+ data points',
+			descShort: 'Vendor JSON parsed for QA across 10,000+ data points',
 			tech: 'React · JSON',
 			org: 'Meta',
 			year: '2025',
@@ -222,6 +227,7 @@ export const work = {
 			number: '05',
 			name: 'Model Failure Analysis',
 			desc: 'Failure trajectories and model comparisons that informed Llama training',
+			descShort: 'Failure trajectories that informed Llama training',
 			tech: 'Python · Data Viz',
 			org: 'Meta',
 			year: '2025',
@@ -234,6 +240,7 @@ export const work = {
 			number: '06',
 			name: 'Org Chart Application',
 			desc: 'Cross-platform org management with zero-loss legacy data migration',
+			descShort: 'Cross-platform org management, zero-loss migration',
 			tech: 'C# · ASP.NET · Java',
 			org: "NYC Mayor's Office",
 			year: '2024',

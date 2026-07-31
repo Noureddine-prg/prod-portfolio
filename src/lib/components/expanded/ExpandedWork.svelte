@@ -84,7 +84,7 @@
 			<span style="font:500 13px 'Cormorant Garamond',serif;color:#241d18"
 				>{p.number} &middot; {p.name}</span
 			>
-			<span style="font:400 9.5px/1.5 'Archivo',sans-serif;color:#5e544a">{p.desc}</span>
+			<span style="font:400 9.5px/1.5 'Archivo',sans-serif;color:#5e544a">{p.descShort}</span>
 			<span style="font:400 7.5px 'JetBrains Mono',monospace;color:#8a7d6e"
 				>{p.tech} &middot; {p.org} &middot; {p.year}</span
 			>
