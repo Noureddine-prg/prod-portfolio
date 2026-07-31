@@ -1,5 +1,5 @@
 // Shared scene primitives — extracted VERBATIM from the DC file so the campfire and flame
-// scene teammates are fully independent (the DC stashed these on window.__DC_* to bridge a
+// the campfire and flame scenes stay independent (the DC stashed these on window.__DC_* to bridge a
 // build-order dependency; here they are plain exports, no window globals).
 //
 // Contents (and nothing else — mkTree/mkTier/mkTree2 etc. are per-scene, not shared):

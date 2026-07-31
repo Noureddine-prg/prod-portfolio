@@ -1,10 +1,10 @@
-// The builder map. Scene teammates add their scene here in a one-line change:
+// The builder map. Each scene registers here in a one-line change:
 //
 //     import { buildCampfire } from './campfire';
 //     export const SCENE_BUILDERS = { campfire: buildCampfire, ... };
 //
 // Any kind absent from the map renders as an empty scene (a one-time dev note is logged),
-// so the whole board mounts and runs TODAY while scenes land incrementally.
+// so the board mounts and runs even with builders missing.
 
 import { dev } from '$app/environment';
 import { buildCampfire } from './campfire';

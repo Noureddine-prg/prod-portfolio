@@ -1,6 +1,5 @@
-// Board scale — how much the 900×620 (desktop) / 390w (mobile) design coordinate system
-// is scaled to fill the viewport (captain-directed improvement over the DC's fixed board).
-// The loop multiplies render resolution by this so scaled-up scenes stay crisp.
+// How much the 900×620 (desktop) / 390w (mobile) design coordinate system is scaled to
+// fill the viewport. The loop multiplies render resolution by this to stay crisp.
 
 function createScale() {
 	let value = $state(1);

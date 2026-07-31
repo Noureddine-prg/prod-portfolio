@@ -4,11 +4,9 @@
 	// so the hidden board costs nothing. The boards own the expand flow; the intro runs
 	// once per session on the visible board (skipped under prefers-reduced-motion).
 	//
-	// Viewport scaling (captain-directed improvement over the DC's fixed 900×620 card):
-	// each board keeps its native design coordinate system and is transform-scaled to fill
-	// the viewport — pixel-perfect internals, responsive footprint. The wrapper is sized to
-	// the scaled box so layout/centering stay honest, and `boardScale` feeds the loop's
-	// render-resolution compensation.
+	// Viewport scaling: each board keeps its native design coordinate system and is
+	// transform-scaled to fill the viewport. The wrapper is sized to the scaled box, and
+	// `boardScale` feeds the loop's render-resolution compensation.
 	import { onMount } from 'svelte';
 	import BoardDesktop from '$lib/components/BoardDesktop.svelte';
 	import BoardMobile from '$lib/components/BoardMobile.svelte';
@@ -23,8 +21,8 @@
 	let vh = $state(0);
 	let mobH = $state(0); // mobile board's natural (unscaled) content height
 
-	// Fill the viewport edge-to-edge (frameless per captain): the page bg matches the board
-	// bg, so any aspect-ratio gutter reads as part of the board.
+	// Fill the viewport edge-to-edge; the page bg matches the board bg so any
+	// aspect-ratio gutter reads as part of the board.
 	const deskScale = $derived(vw ? Math.max(0.5, Math.min(vw / DESK_W, vh / DESK_H)) : 1);
 	// Mobile scales by width; the page scrolls vertically as usual.
 	const mobScale = $derived(vw ? Math.max(0.75, vw / MOB_W) : 1);

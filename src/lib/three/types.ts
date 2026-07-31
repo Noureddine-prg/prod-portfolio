@@ -1,4 +1,4 @@
-// The scene contract. Scene teammates implement ONE function per kind:
+// The scene contract. Each scene implements one builder per kind:
 //
 //     export function build<Kind>(ctx: SceneCtx): UpdateFn | null
 //

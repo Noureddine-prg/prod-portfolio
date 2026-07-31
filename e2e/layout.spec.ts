@@ -15,7 +15,7 @@ test('desktop 1280w: 900×620 grid board, mobile stage hidden', async ({ page })
 	await expect(page.locator('.stage--mobile [data-board]')).toBeHidden();
 
 	// Design coordinate system stays 900×620; on screen the board is transform-scaled to
-	// fill the viewport (frameless, captain-directed) — height-limited at 1280×800.
+	// fill the viewport — height-limited at 1280×800.
 	// The scale applies at hydration, which can lag behind first paint on cold compiles —
 	// poll until the scaled rect appears before asserting exact geometry.
 	const design = await b.evaluate((el) => ({ w: el.clientWidth, h: el.clientHeight }));

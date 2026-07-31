@@ -96,7 +96,7 @@
 					></polyline></svg
 				><span style="font:400 9.5px 'Archivo',sans-serif;color:#94867f">{health.bpm} bpm</span></span
 			>
-			<span style="font:400 9.5px 'Archivo',sans-serif;color:#94867f">⚖ {health.weight}</span>
+			<span style="font:400 9.5px 'Archivo',sans-serif;color:#94867f">{health.weight}</span>
 		</div>
 	{/if}
 </div>

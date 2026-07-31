@@ -5,10 +5,9 @@
 // L1360). The DC retry loop (waiting for boards to exist) is also dropped — we run from
 // the page's onMount with the boards already in the DOM.
 //
-// NEW vs DC (README mandate): prefers-reduced-motion skips the intro entirely — the veil
-// is never shown and `introPlayed` is set immediately. Also new: a short wait for the
-// 'Archivo Black' webfont so the particle text samples the display font, not the
-// fallback (the DC sampled synchronously at t=0 — flagged in the report).
+// prefers-reduced-motion skips the intro entirely: the veil is never shown and
+// `introPlayed` is set immediately. A short wait for the 'Archivo Black' webfont lets
+// the particle text sample the display font rather than the fallback.
 
 import { ui } from '$lib/stores/ui.svelte';
 import { boardScale } from '$lib/stores/scale.svelte';
@@ -42,10 +41,9 @@ export async function maybeRunIntro(): Promise<void> {
 }
 
 function runIntro(board: HTMLElement): void {
-	// Viewport-level overlay (captain directive): the veil covers the whole screen — not
-	// just the board box — and all metrics render in screen space scaled by boardScale.
-	// It lives on document.body because position:fixed inside the transform-scaled board
-	// wrapper would resolve against the transform, not the viewport.
+	// Full-viewport overlay on document.body: position:fixed inside the transform-scaled
+	// board wrapper would resolve against the transform, not the viewport. All metrics
+	// render in screen space scaled by boardScale.
 	const veil = document.createElement('div');
 	veil.dataset.introVeil = '1';
 	veil.style.cssText =
@@ -58,8 +56,7 @@ function runIntro(board: HTMLElement): void {
 	ring.style.cssText =
 		'position:absolute;inset:0;pointer-events:none;border-radius:inherit;padding:3px;overflow:hidden;filter:drop-shadow(0 0 5px rgba(255,140,58,.45));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;transition:opacity .5s';
 	const ringInner = document.createElement('div');
-	// Dimmed vs the DC board ring (captain directive): the ring now traces the whole
-	// viewport, so full intensity reads too hot at that scale.
+	// Dimmed relative to the DC board ring: full intensity reads too hot at viewport size.
 	ringInner.style.cssText =
 		'position:absolute;left:50%;top:50%;width:320%;height:320%;transform:translate(-50%,-50%);background:conic-gradient(transparent 0 58%,rgba(255,125,46,.20) 70%,rgba(255,125,46,.58) 84%,rgba(255,210,138,.72) 90%,rgba(255,190,110,.26) 95%,transparent 99%);animation:firering 1.6s linear infinite';
 	ring.appendChild(ringInner);
@@ -174,10 +171,8 @@ function runIntro(board: HTMLElement): void {
 		pOn = false;
 		veil.remove();
 	});
-	// Force a style flush before mutating opacity: append + rAF-mutate in the same frame
-	// can skip the element's initial computed style, so the 2.5s-delayed veil fade (and
-	// the name blur-in) would apply instantly instead of transitioning — the veil never
-	// showed at all. The DC relied on rAF ordering; regression-fixed here.
+	// Style flush before mutating opacity: append + rAF-mutate in the same frame can skip
+	// the initial computed style, applying the delayed transitions instantly.
 	void veil.offsetWidth;
 	requestAnimationFrame(() => {
 		nm.style.opacity = '1';

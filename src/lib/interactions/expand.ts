@@ -354,10 +354,8 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		setTimeout(() => {
 			ex.style.display = 'none';
 		}, 180);
-		// Close animation (captain directive — the DC's return never visually played: its
-		// clone kept the open transition's 1.4s delay but was removed at 470ms, so the card
-		// just vanished). Re-arm an immediate transition, flush, then write the tile rect:
-		// the clone visibly shrinks home, fading out over the last stretch.
+		// The open transition carries a 1.4s delay; re-arm an immediate one, flush, then
+		// write the tile rect so the box shrinks home with a fade tail.
 		clone.style.transition =
 			'left .42s cubic-bezier(.6,.05,.3,1), top .42s cubic-bezier(.6,.05,.3,1), ' +
 			'width .42s cubic-bezier(.6,.05,.3,1), height .42s cubic-bezier(.6,.05,.3,1), ' +
@@ -370,8 +368,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		clone.style.boxShadow = '0 0 0 rgba(0,0,0,0)';
 		clone.style.opacity = '0';
 		board.querySelectorAll<HTMLElement>('[data-tile], .burn-sib').forEach((t) => {
-			// the clone IS a copied [data-tile] — restoring it here would wipe the shrink
-			// transition (the very bug that killed the DC's own return animation)
+			// matches [data-tile] too; it must keep its shrink transition
 			if (t === clone) return;
 			t.style.animation = '';
 			t.style.filter = '';
@@ -424,8 +421,8 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	// click-to-exit everywhere except interactive bits (Work keeps its rows; links/copy
 	// stay usable). The DC keys Work off [data-proj-row] presence (L3559); the card check
 	// keeps Work ✕-only even while its rows are hidden under the proj-detail overlay.
-	// Armed only at settle (like the ✕): a double-click's second click otherwise lands on
-	// the fresh clone and cancels the open mid-burn (QA finding).
+	// Armed only at settle, like the close button: an earlier click would cancel the
+	// open mid-burn.
 	clone.addEventListener('click', (ev) => {
 		if (!clone.classList.contains('is-settled')) return;
 		if (
