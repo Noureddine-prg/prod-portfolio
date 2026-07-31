@@ -154,6 +154,11 @@ function runIntro(board: HTMLElement): void {
 	requestAnimationFrame(pTick);
 
 	board.appendChild(veil);
+	// Force a style flush before mutating opacity: append + rAF-mutate in the same frame
+	// can skip the element's initial computed style, so the 2.5s-delayed veil fade (and
+	// the name blur-in) would apply instantly instead of transitioning — the veil never
+	// showed at all. The DC relied on rAF ordering; regression-fixed here.
+	void veil.offsetWidth;
 	requestAnimationFrame(() => {
 		nm.style.opacity = '1';
 		nm.style.filter = 'blur(0)';
