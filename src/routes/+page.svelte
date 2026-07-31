@@ -22,36 +22,48 @@
 	// unscaled board never paints.
 	let vw = $state(browser ? window.innerWidth : 0);
 	let vh = $state(browser ? window.innerHeight : 0);
+	// Small-viewport height (100svh): the minimum area guaranteed visible on mobile
+	// regardless of the browser's dynamic URL bar. innerHeight can report the large
+	// viewport while the bar is shown, which would size the board past the fold.
+	let svh = $state(0);
+	let svhProbe: HTMLDivElement | undefined;
 	let ready = $state(false);
+	const vhEff = $derived(svh && svh < vh ? svh : vh);
 
 	// The board's design width tracks the viewport aspect (clamped to keep the grid sane
 	// on extreme aspect ratios), so the fr-based grid itself spans edge-to-edge; a uniform
 	// scale then fills the height with no distortion.
 	const deskW = $derived(
-		vw && vh ? Math.round(Math.min(1400, Math.max(760, (DESK_H * vw) / vh))) : 900
+		vw && vhEff ? Math.round(Math.min(1400, Math.max(760, (DESK_H * vw) / vhEff))) : 900
 	);
-	const deskScale = $derived(vw ? Math.max(0.5, Math.min(vh / DESK_H, vw / deskW)) : 1);
+	const deskScale = $derived(vw ? Math.max(0.5, Math.min(vhEff / DESK_H, vw / deskW)) : 1);
 	// Mobile scales by width, capped so tablet widths get a centered column instead of a
 	// blown-up phone layout. Design height tracks the device (clamped so tiles never
 	// compress below usable) and the column form-fits the screen with no scrolling.
 	const mobScale = $derived(vw ? Math.min(1.25, Math.max(0.75, vw / MOB_W)) : 1);
 	const mobH = $derived(
-		vw && vh ? Math.round(Math.min(1000, Math.max(700, vh / mobScale))) : 812
+		vw && vhEff ? Math.round(Math.min(1000, Math.max(640, vhEff / mobScale))) : 812
 	);
 
 	$effect(() => {
 		boardScale.value = vw >= 900 ? deskScale : mobScale;
 	});
 
+	function readSvh() {
+		if (svhProbe) svh = svhProbe.clientHeight;
+	}
+
 	onMount(() => {
+		readSvh();
 		ready = true;
 		maybeRunIntro();
 		return teardownIntro; // cancels a mid-intro unmount (rAF + veil)
 	});
 </script>
 
-<svelte:window bind:innerWidth={vw} bind:innerHeight={vh} />
+<svelte:window bind:innerWidth={vw} bind:innerHeight={vh} onresize={readSvh} />
 
+<div bind:this={svhProbe} style="position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none" aria-hidden="true"></div>
 <main class:ready>
 	<div
 		class="stage stage--desktop"
