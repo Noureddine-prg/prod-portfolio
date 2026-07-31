@@ -7,11 +7,12 @@
 // so the whole board mounts and runs TODAY while scenes land incrementally.
 
 import { dev } from '$app/environment';
+import { buildCampfire } from './campfire';
 import type { Builder, SceneKind } from '../types';
 
 // Scene builders plug in here as they land (Stage 2). Empty for now — the scaffold ships
 // a running, dark board that each scene PR fills in.
-export const SCENE_BUILDERS: Partial<Record<SceneKind, Builder>> = {};
+export const SCENE_BUILDERS: Partial<Record<SceneKind, Builder>> = { campfire: buildCampfire };
 
 const noted = new Set<string>();
 
