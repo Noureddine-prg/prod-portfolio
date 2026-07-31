@@ -14,6 +14,7 @@ import {
 	getEntry,
 	getMeta,
 	liveCanvases,
+	onCanvasRemoved,
 	type SceneEntry
 } from './registry';
 import { freeze } from '$lib/stores/freeze.svelte';
@@ -86,6 +87,13 @@ function startLoop(T: typeof THREE): LoopState {
 		},
 		{ rootMargin: `${MARGIN} ${MARGIN} ${MARGIN} ${MARGIN}`, threshold: 0 }
 	);
+
+	// Unmounted canvases leave IO tracking (and the strong onscreen ref) immediately.
+	onCanvasRemoved((cv) => {
+		io.unobserve(cv);
+		onscreen.delete(cv);
+		observed.delete(cv);
+	});
 
 	const isOn = (cv: HTMLCanvasElement) => onscreen.has(cv) && cv.clientWidth > 0;
 

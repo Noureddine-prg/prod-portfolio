@@ -36,6 +36,13 @@ const entries = new WeakMap<HTMLCanvasElement, SceneEntry>();
 const meta = new WeakMap<HTMLCanvasElement, CanvasMeta>();
 const mounted = new Set<HTMLCanvasElement>();
 
+// Set by the loop so its IntersectionObserver (and onscreen set) release a canvas the
+// moment it unmounts — the registry can't import the loop (the loop imports us).
+let removeHook: ((cv: HTMLCanvasElement) => void) | null = null;
+export function onCanvasRemoved(fn: (cv: HTMLCanvasElement) => void): void {
+	removeHook = fn;
+}
+
 // ── mounted set (driven by ThreeCanvas mount/destroy) ─────────────────────────
 export function addCanvas(cv: HTMLCanvasElement): void {
 	mounted.add(cv);
@@ -44,6 +51,7 @@ export function removeCanvas(cv: HTMLCanvasElement): void {
 	mounted.delete(cv);
 	entries.delete(cv);
 	meta.delete(cv);
+	removeHook?.(cv);
 }
 export function liveCanvases(): Set<HTMLCanvasElement> {
 	return mounted;
