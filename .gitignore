@@ -1,0 +1,6 @@
+# reference design spec — on disk only, not shipped
+design_handoff_portfolio_svelte/
+# working notes
+BUILD-LOG.txt
+# OS noise
+.DS_Store
