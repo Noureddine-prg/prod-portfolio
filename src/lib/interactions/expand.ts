@@ -354,12 +354,25 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		setTimeout(() => {
 			ex.style.display = 'none';
 		}, 180);
+		// Close animation (captain directive — the DC's return never visually played: its
+		// clone kept the open transition's 1.4s delay but was removed at 470ms, so the card
+		// just vanished). Re-arm an immediate transition, flush, then write the tile rect:
+		// the clone visibly shrinks home, fading out over the last stretch.
+		clone.style.transition =
+			'left .42s cubic-bezier(.6,.05,.3,1), top .42s cubic-bezier(.6,.05,.3,1), ' +
+			'width .42s cubic-bezier(.6,.05,.3,1), height .42s cubic-bezier(.6,.05,.3,1), ' +
+			'box-shadow .42s ease, opacity .22s ease .3s';
+		void clone.offsetWidth; // style flush — the new transition must land before the rect write
 		clone.style.left = tile.offsetLeft + 'px';
 		clone.style.top = tile.offsetTop + 'px';
 		clone.style.width = tile.offsetWidth + 'px';
 		clone.style.height = tile.offsetHeight + 'px';
 		clone.style.boxShadow = '0 0 0 rgba(0,0,0,0)';
+		clone.style.opacity = '0';
 		board.querySelectorAll<HTMLElement>('[data-tile], .burn-sib').forEach((t) => {
+			// the clone IS a copied [data-tile] — restoring it here would wipe the shrink
+			// transition (the very bug that killed the DC's own return animation)
+			if (t === clone) return;
 			t.style.animation = '';
 			t.style.filter = '';
 			t.style.transform = '';
@@ -405,7 +418,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 			});
 			delete board.dataset.open;
 			ui.openCard = null;
-		}, 470);
+		}, 560); // after the .42s shrink + fade tail
 	};
 	close.addEventListener('click', shut);
 	// click-to-exit everywhere except interactive bits (Work keeps its rows; links/copy
