@@ -3,7 +3,7 @@ import { DESKTOP, MOBILE, board, settleIntro } from './helpers';
 import { profile } from '../src/lib/content';
 
 // Both-breakpoint layout guards: the fixed 900×620 desktop grid at 1280w, and the
-// mobile stacking order (hero → experience → [contact+health] → about → work → footer)
+// mobile stacking order (hero → about → [contact+health] → experience → work → footer)
 // at 390w. Exactly one board is visible per viewport.
 
 test('desktop 1280w: 900×620 grid board, mobile stage hidden', async ({ page }) => {
@@ -47,7 +47,7 @@ test('desktop 1280w: 900×620 grid board, mobile stage hidden', async ({ page })
 	await expect(b.getByText('Wildcard', { exact: true })).toBeVisible();
 });
 
-test('mobile 390w: order hero → experience → [contact+health] → about → work → footer', async ({
+test('mobile 390w: order hero → about → [contact+health] → experience → work → footer', async ({
 	page
 }) => {
 	await page.setViewportSize(MOBILE);
@@ -75,11 +75,11 @@ test('mobile 390w: order hero → experience → [contact+health] → about → 
 	// Footer strip: the only element whose full text is the complete name.
 	const footer = await y(b.getByText(profile.name, { exact: true }).last());
 
-	expect(hero).toBeLessThan(exp);
-	expect(exp).toBeLessThan(contact);
+	expect(hero).toBeLessThan(about);
+	expect(about).toBeLessThan(contact);
 	// contact and health share one row — their tops are within the tile's header inset
 	expect(Math.abs(contact - health)).toBeLessThan(40);
-	expect(contact).toBeLessThan(about);
-	expect(about).toBeLessThan(work);
+	expect(contact).toBeLessThan(exp);
+	expect(exp).toBeLessThan(work);
 	expect(work).toBeLessThan(footer);
 });

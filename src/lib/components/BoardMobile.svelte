@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Mobile board — DC id="11b", 390w flex column, gap 10, pad 12. No Wildcard.
-	// Order: hero → Experience → (Contact + Health) → About → Work → footer.
+	// Order: hero → About → (Contact + Health) → Experience → Work → footer.
 	// Height form-fits the device (designH from the page scaler); the hero flexes to
 	// absorb the difference between phone aspect ratios.
 	import HeroTile from './tiles/HeroTile.svelte';
@@ -36,18 +36,18 @@
 	<AshLayer variant="mobile" />
 
 	<HeroTile mobile placement="flex:1 1 auto;min-height:170px" />
-	<ExperienceTile
-		mobile
-		placement="flex:0 1 120px;min-height:96px"
-		onopen={() => onopen('experience')}
-	/>
+	<AboutTile mobile placement="flex:0 1 110px;min-height:88px" onopen={() => onopen('about')} />
 
 	<div style="display:flex;gap:10px;flex:0 1 110px;min-height:90px">
 		<ContactTile mobile placement="flex:1;height:100%" onopen={() => onopen('contact')} />
 		<HealthTile mobile placement="flex:1;height:100%" />
 	</div>
 
-	<AboutTile mobile placement="flex:0 1 110px;min-height:88px" onopen={() => onopen('about')} />
+	<ExperienceTile
+		mobile
+		placement="flex:0 1 120px;min-height:96px"
+		onopen={() => onopen('experience')}
+	/>
 	<WorkTile mobile placement="flex:0 1 120px;min-height:96px" onopen={() => onopen('work')} />
 
 	<!-- Footer strip — small addition beyond the DC board (see report). -->
