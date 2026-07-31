@@ -8,10 +8,10 @@
 
 import { dev } from '$app/environment';
 import type { Builder, SceneKind } from '../types';
+import { buildAxelog } from './axelog';
 
-// Scene builders plug in here as they land (Stage 2). Empty for now — the scaffold ships
-// a running, dark board that each scene PR fills in.
-export const SCENE_BUILDERS: Partial<Record<SceneKind, Builder>> = {};
+// Scene builders plug in here as they land (Stage 2).
+export const SCENE_BUILDERS: Partial<Record<SceneKind, Builder>> = { axelog: buildAxelog };
 
 const noted = new Set<string>();
 
