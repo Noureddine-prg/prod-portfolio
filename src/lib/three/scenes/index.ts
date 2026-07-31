@@ -10,13 +10,15 @@ import { dev } from '$app/environment';
 import { buildCampfire } from './campfire';
 import type { Builder, SceneKind } from '../types';
 import { buildAxelog } from './axelog';
+import { buildCalm } from './calm';
 import { buildEnvelope } from './envelope';
 import { buildFlame } from './flame';
 import { buildJar } from './jar';
 
-// Scene builders plug in here as they land (Stage 2).
+// All 6 scene builders (Stage 2 complete). Porthole-wing lives inside calm.
 export const SCENE_BUILDERS: Partial<Record<SceneKind, Builder>> = {
 	axelog: buildAxelog,
+	calm: buildCalm,
 	campfire: buildCampfire,
 	envelope: buildEnvelope,
 	flame: buildFlame,
