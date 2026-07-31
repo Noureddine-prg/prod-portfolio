@@ -10,6 +10,7 @@
 	// Copy-email (DC wireExtras L3123–3136): clipboard write + '✦ signal sent' feedback
 	// reverting after 2200ms — component state instead of document-level delegation.
 	// The email comes from content.ts, not the DC's hardcoded old address.
+	import { onDestroy } from 'svelte';
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { contact, links, profile } from '$lib/content';
 
@@ -20,6 +21,7 @@
 
 	let copied = $state(false);
 	let revert: ReturnType<typeof setTimeout> | undefined;
+	onDestroy(() => clearTimeout(revert)); // closing mid-"✦ signal sent" must not fire on an unmounted component
 
 	function copyEmail() {
 		try {

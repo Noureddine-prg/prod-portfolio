@@ -322,10 +322,15 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		clone.style.width = bw + 'px';
 		clone.style.height = bh + 'px';
 	});
+	let shutDone = false; // double-shut guard (✕ then body click) — the panel unmounts once
+
 	// X only appears once the card has actually expanded. `clone.isConnected` guards a
 	// close→reopen race the DC tolerated (its loop queried the DOM, so a settled class
-	// on a detached clone was inert — our freeze store would not be).
-	setTimeout(() => {
+	// on a detached clone was inert — our freeze store would not be). The `shutDone`
+	// guard + shut()'s clearTimeout close the 1480–1950ms race where a close during the
+	// grow animation would let this fire afterwards and re-freeze on a detached clone.
+	const settleTimer = setTimeout(() => {
+		if (shutDone) return;
 		if (board.dataset.open && clone.isConnected) {
 			close.style.opacity = '1';
 			clone.classList.add('is-settled');
@@ -333,11 +338,11 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		}
 	}, 1950);
 
-	let shutDone = false; // double-shut guard (✕ then body click) — the panel unmounts once
 	const shut = (ev: Event) => {
 		ev.stopPropagation();
 		if (shutDone) return;
 		shutDone = true;
+		clearTimeout(settleTimer);
 		close.style.transition = 'opacity .08s ease';
 		close.style.opacity = '0';
 		clone.style.overflow = 'hidden';
