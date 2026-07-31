@@ -61,11 +61,14 @@
 		? '10px'
 		: '14px'};overflow:auto;opacity:{shown ? 1 : 0};transition:opacity .35s ease .1s"
 >
-	<!-- back / counter / prev-next — padding-right clears the ✕ (DC L3314) -->
+	<!-- back / counter / prev-next; on narrow the row moves to the bottom of the card,
+	     so the ✕-clearance padding only applies in the desktop top position (DC L3314) -->
 	<div
 		style="display:flex;justify-content:space-between;align-items:center;padding-right:{narrow
-			? 34
-			: 48}px"
+			? 0
+			: 48}px;order:{narrow ? 99 : 0};{narrow
+			? 'margin-top:auto;padding-top:14px;border-top:1px solid rgba(36,29,24,.16)'
+			: ''}"
 	>
 		<span
 			data-pd-back
@@ -86,7 +89,7 @@
 				tabindex="0"
 				onclick={() => nav(-1)}
 				onkeydown={(e) => e.key === 'Enter' && nav(-1)}
-				style="cursor:pointer;font:500 13px 'JetBrains Mono',monospace;color:{ink};padding:4px 6px"
+				style="cursor:pointer;font:500 {narrow ? 15 : 13}px 'JetBrains Mono',monospace;color:{ink};padding:{narrow ? '10px 14px' : '4px 6px'}"
 				>&larr;</span
 			>
 			<span
@@ -95,7 +98,7 @@
 				tabindex="0"
 				onclick={() => nav(1)}
 				onkeydown={(e) => e.key === 'Enter' && nav(1)}
-				style="cursor:pointer;font:500 13px 'JetBrains Mono',monospace;color:{ink};padding:4px 6px"
+				style="cursor:pointer;font:500 {narrow ? 15 : 13}px 'JetBrains Mono',monospace;color:{ink};padding:{narrow ? '10px 14px' : '4px 6px'}"
 				>&rarr;</span
 			>
 		</span>
