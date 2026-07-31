@@ -18,8 +18,10 @@
 	const badgeR = $derived(mobile ? 7 : 8);
 	const badgeFont = $derived(mobile ? 11 : 13);
 	const nameFont = $derived(mobile ? 21 : 34);
+	const nameLH = $derived(mobile ? 1.05 : 1.02);
 	const nameBottom = $derived(mobile ? 16 : 22);
 	const glow = $derived(mobile ? '0 0 12px rgba(255,150,70,.14)' : '0 0 14px rgba(255,150,70,.14)');
+	const badgeShadow = $derived(mobile ? '0 0 7px rgba(255,150,70,.35)' : '0 0 8px rgba(255,150,70,.35)');
 </script>
 
 <div
@@ -33,7 +35,7 @@
 			: 8}px;align-items:center"
 	>
 		<span
-			style="margin-right:auto;padding:{badgePad};border-radius:{badgeR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);font:500 {badgeFont}px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#d4654c;text-transform:uppercase;box-shadow:{glow};text-shadow:0 0 8px rgba(255,150,70,.35)"
+			style="margin-right:auto;padding:{badgePad};border-radius:{badgeR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);font:500 {badgeFont}px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#d4654c;text-transform:uppercase;box-shadow:{glow};text-shadow:{badgeShadow}"
 			>{hero.badge}</span
 		>
 		<a
@@ -90,7 +92,7 @@
 		style="position:absolute;bottom:{nameBottom}px;left:{nameBottom}px;right:{nameBottom}px;display:flex;justify-content:space-between;align-items:flex-end"
 	>
 		<div
-			style="font:400 {nameFont}px/1.02 'Archivo Black',sans-serif;letter-spacing:-.01em;color:#f2ede2;text-shadow:0 2px 20px rgba(0,0,0,.6),0 0 22px rgba(255,170,90,.22);text-transform:uppercase"
+			style="font:400 {nameFont}px/{nameLH} 'Archivo Black',sans-serif;letter-spacing:-.01em;color:#f2ede2;text-shadow:0 2px 20px rgba(0,0,0,.6),0 0 22px rgba(255,170,90,.22);text-transform:uppercase"
 		>
 			{hero.nameLines[0]}<br />{hero.nameLines[1]}
 		</div>

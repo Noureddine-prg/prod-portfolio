@@ -17,6 +17,9 @@
 	const jarH = $derived(mobile ? 76 : 92);
 	const jarRight = $derived(mobile ? 6 : 10);
 	const jarTop = $derived(mobile ? 44 : 46);
+	const avail = $derived(mobile ? about.availabilityShort : about.availability);
+	const dotSize = $derived(mobile ? 7 : 8);
+	const availFont = $derived(mobile ? 9 : 9.5);
 
 	function activate() {
 		onopen();
@@ -64,8 +67,7 @@
 	/>
 
 	<span style="position:relative;display:flex;align-items:center;gap:8px"
-		><span style="width:8px;height:8px;border-radius:50%;background:#c85a44"></span><span
-			style="font:400 9.5px 'JetBrains Mono',monospace;color:#94867f">{about.availability}</span
-		></span
+		><span style="width:{dotSize}px;height:{dotSize}px;border-radius:50%;background:#c85a44"></span
+		><span style="font:400 {availFont}px 'JetBrains Mono',monospace;color:#94867f">{avail}</span></span
 	>
 </div>

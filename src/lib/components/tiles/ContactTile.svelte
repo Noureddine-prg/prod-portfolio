@@ -15,6 +15,8 @@
 	const headFont = $derived(mobile ? 12 : 15);
 	const envW = $derived(mobile ? 84 : 104);
 	const envH = $derived(mobile ? 96 : 118);
+	const envRight = $derived(mobile ? 4 : 6);
+	const teaserFont = $derived(mobile ? 8.5 : 9.5);
 
 	function activate() {
 		onopen();
@@ -43,9 +45,9 @@
 		kind="envelope"
 		lite
 		clean
-		style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:{envW}px;height:{envH}px;pointer-events:none"
+		style="position:absolute;right:{envRight}px;top:50%;transform:translateY(-50%);width:{envW}px;height:{envH}px;pointer-events:none"
 	/>
-	<span style="position:relative;font:400 9.5px 'JetBrains Mono',monospace;color:#c85a44"
+	<span style="position:relative;font:400 {teaserFont}px 'JetBrains Mono',monospace;color:#c85a44"
 		>{contact.teaser}</span
 	>
 </div>

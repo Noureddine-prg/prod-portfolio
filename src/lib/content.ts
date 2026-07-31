@@ -67,7 +67,8 @@ export const experience = {
 // ── About ─────────────────────────────────────────────────────────────────────
 export const about = {
 	header: 'About',
-	availability: 'Available · New York, NY'
+	availability: 'Available · New York, NY',
+	availabilityShort: 'Available · NYC'
 } as const;
 
 // ── Health (display-only) ─────────────────────────────────────────────────────
@@ -78,7 +79,8 @@ export const health = {
 	steps: '8,412',
 	moveMin: 42,
 	bpm: 62,
-	weight: '172.4 lb'
+	weight: '172.4 lb',
+	weightShort: '172 lb'
 } as const;
 
 // ── Contact ───────────────────────────────────────────────────────────────────

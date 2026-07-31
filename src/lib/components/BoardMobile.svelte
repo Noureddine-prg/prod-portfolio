@@ -26,13 +26,14 @@
 
 	<HeroTile mobile placement="height:258px;flex:none" />
 	<ExperienceTile mobile placement="flex:none;height:120px" onopen={() => onopen('experience')} />
-	<WorkTile mobile placement="flex:none;height:120px" onopen={() => onopen('work')} />
-	<AboutTile mobile placement="flex:none;height:110px" onopen={() => onopen('about')} />
 
 	<div style="display:flex;gap:10px;flex:none">
 		<ContactTile mobile placement="flex:1;height:110px" onopen={() => onopen('contact')} />
 		<HealthTile mobile placement="flex:1;height:110px" />
 	</div>
+
+	<AboutTile mobile placement="flex:none;height:110px" onopen={() => onopen('about')} />
+	<WorkTile mobile placement="flex:none;height:120px" onopen={() => onopen('work')} />
 
 	<!-- Footer strip — small addition beyond the DC board (see report). -->
 	<div
