@@ -1,9 +1,11 @@
 <script lang="ts">
 	// Experience expanded panel — the Stage-2 composite, mounted into the clone's
 	// [data-expand] container by expand.ts.
-	// Desktop (DC 11a L127–194): SpaceNightBg (absolute — excluded from the reveal
-	// stagger) + header row + body row holding the timeline slot and the PortholeBar.
-	// The timeline slot stays empty for now; its flex slot keeps the porthole in place.
+	// Desktop (DC 11a L127–206): SpaceNightBg (absolute — excluded from the reveal
+	// stagger) + header row + body row holding the role timeline (96px/20px/1fr grid,
+	// DC L147–168: right-aligned period column / constellation connector column with
+	// per-row dots and a 1px line linking rows / role blocks with icon chip, blurb and
+	// tech pills) next to the PortholeBar, then the quick-link footer (DC L202–206).
 	// Mobile (DC 11b L462–540): MobileOceanStrip (calm strip + sea-glass panel) holding
 	// the three [data-exp-card] role cards — icon 32px + dashed connector, natural
 	// stacking (pb:22). Cards start opacity:0/translateY(-12px) with their own inline
@@ -20,6 +22,12 @@
 	let { mobile = false }: Props = $props();
 
 	const cardDelays = ['120ms', '280ms', '440ms'];
+	// timeline dot colors — current role ember-red, past roles ashen bronze (DC L149/156/163)
+	const dots = [
+		{ bg: '#c85a44', ring: 'rgba(200,90,68,.18)' },
+		{ bg: '#8a6a4a', ring: 'rgba(138,106,74,.15)' },
+		{ bg: '#8a6a4a', ring: 'rgba(138,106,74,.15)' }
+	];
 </script>
 
 {#if mobile}
@@ -137,8 +145,113 @@
 		<span style="font:400 9px 'JetBrains Mono',monospace;color:#6e6058"></span>
 	</div>
 	<div style="position:relative;display:flex;gap:22px;flex:1;min-height:0">
-		<!-- timeline slot — content task fills the 96px/20px/1fr grid (DC L149-168) -->
-		<div style="flex:1;min-width:0"></div>
+		<!-- role timeline — DC L147–168 -->
+		<div style="display:grid;grid-template-columns:96px 20px 1fr;flex:1;align-content:start">
+			{#each experience.roles as role, i (role.company)}
+				{@const last = i === experience.roles.length - 1}
+				<div
+					style="grid-column:1;grid-row:{i +
+						1};padding:2px 12px {last ? 0 : 26}px 0;text-align:right;display:flex;flex-direction:column;gap:3px"
+				>
+					<span style="font:500 9.5px 'JetBrains Mono',monospace;color:#efe9e6">{role.start}</span>
+					<span style="font:400 9px 'JetBrains Mono',monospace;color:#6e6058">{role.end}</span>
+				</div>
+				<div style="grid-column:2;grid-row:{i + 1};position:relative">
+					{#if !last}
+						<span
+							style="position:absolute;left:50%;top:8px;bottom:-8px;width:1px;background:#362e2e"
+						></span>
+					{/if}
+					<span
+						style="position:absolute;left:50%;top:4px;transform:translateX(-50%);width:9px;height:9px;border-radius:50%;background:{dots[
+							i
+						].bg};box-shadow:0 0 0 3px {dots[i].ring}"
+					></span>
+				</div>
+				<div
+					style="grid-column:3;grid-row:{i + 1};padding:0 0 {last
+						? 0
+						: 26}px 16px;display:flex;flex-direction:column;gap:7px"
+				>
+					<div style="display:flex;align-items:center;gap:10px">
+						{#if role.company === 'Google'}
+							<span
+								style="width:26px;height:26px;border-radius:8px;background:#262020;border:1px solid #362e2e;flex:none;display:flex;align-items:center;justify-content:center;"
+								><svg width="14" height="14" viewBox="0 0 48 48"
+									><path
+										fill="#EA4335"
+										d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+									/><path
+										fill="#4285F4"
+										d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+									/><path
+										fill="#FBBC05"
+										d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+									/><path
+										fill="#34A853"
+										d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+									/></svg
+								></span
+							>
+						{:else if role.company === 'Meta'}
+							<span
+								style="width:26px;height:26px;border-radius:8px;background:#262020;border:1px solid #362e2e;flex:none;display:flex;align-items:center;justify-content:center;"
+								><svg width="16" height="11" viewBox="0 0 48 32"
+									><path
+										d="M24 16 C19 8 9 6.5 9 16 C9 25.5 19 24 24 16 C29 8 39 6.5 39 16 C39 25.5 29 24 24 16"
+										fill="none"
+										stroke="#0082FB"
+										stroke-width="5"
+										stroke-linecap="round"
+									/></svg
+								></span
+							>
+						{:else}
+							<span
+								style="width:26px;height:26px;border-radius:8px;background:#262020;border:1px solid #362e2e;flex:none;display:flex;align-items:center;justify-content:center;font:700 8px 'Archivo',sans-serif;color:#efe9e6"
+								>NYC</span
+							>
+						{/if}
+						<span style="font:600 16px 'Archivo',sans-serif;color:#efe9e6">{role.company}</span>
+						<span style="font:500 9.5px 'JetBrains Mono',monospace;color:#c85a44">{role.title}</span>
+					</div>
+					<span style="font:400 10px/1.75 'JetBrains Mono',monospace;color:#94867f"
+						>{role.blurb}</span
+					>
+					<div style="display:flex;gap:6px;flex-wrap:wrap">
+						{#each role.tech as t (t)}
+							<span
+								style="padding:4px 10px;border-radius:11px;background:#262020;border:1px solid #362e2e;font:500 8.5px 'JetBrains Mono',monospace;color:#94867f"
+								>{t}</span
+							>
+						{/each}
+					</div>
+				</div>
+			{/each}
+		</div>
 		<PortholeBar />
+	</div>
+	<!-- quick-link row — DC L202–206 -->
+	<div
+		style="position:relative;display:flex;justify-content:flex-start;gap:18px;align-items:baseline;border-top:1px solid #2a2424;padding-top:14px"
+	>
+		<a
+			href={links.resume}
+			target="_blank"
+			style="font:500 9px 'JetBrains Mono',monospace;color:#c85a44;text-decoration:none"
+			>Open resume PDF &rarr;</a
+		>
+		<a
+			href={links.linkedin}
+			target="_blank"
+			style="font:500 9px 'JetBrains Mono',monospace;color:#94867f;text-decoration:none"
+			>LinkedIn &#8599;</a
+		>
+		<a
+			href={links.github}
+			target="_blank"
+			style="font:500 9px 'JetBrains Mono',monospace;color:#94867f;text-decoration:none"
+			>GitHub &#8599;</a
+		>
 	</div>
 {/if}
