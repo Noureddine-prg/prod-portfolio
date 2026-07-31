@@ -5,7 +5,7 @@ import type { SceneVariants } from './types';
 
 // A minimal shape matching DOMStringMap for the fields we read — lets tests pass a plain
 // object without a real DOM node.
-export interface VariantDataset {
+interface VariantDataset {
 	lite?: string;
 	nowing?: string;
 	sunzoom?: string;

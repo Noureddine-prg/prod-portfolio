@@ -12,15 +12,6 @@ import type { Rand } from '$lib/util/rand';
 // the `calm` builder (gated by the `nowing`/`sunzoom` variants).
 export type SceneKind = 'campfire' | 'calm' | 'flame' | 'jar' | 'envelope' | 'axelog';
 
-export const SCENE_KINDS: readonly SceneKind[] = [
-	'campfire',
-	'calm',
-	'flame',
-	'jar',
-	'envelope',
-	'axelog'
-] as const;
-
 // Parsed `data-*` attributes + the resolved hour, handed to every builder.
 export interface SceneVariants {
 	lite: boolean; // data-lite  — mobile / reduced geometry + auto-drift instead of tilt

@@ -84,7 +84,7 @@ export const experience = {
 } as const;
 
 // ── About ─────────────────────────────────────────────────────────────────────
-export interface SkillGroup {
+interface SkillGroup {
 	label: string;
 	text: string; // desktop plain-text form (DC 11a L330–344)
 	chips?: readonly string[]; // mobile chip form (DC 11b L630–649) — desktop-only groups omit it
