@@ -316,6 +316,13 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	fireRing(clone);
 	tile.style.visibility = 'hidden';
 
+	// Freeze every scene for the whole open animation, not just from settle: the burn +
+	// grow run on the compositor while the GPU would otherwise keep rendering all board
+	// scenes underneath, which reads as open lag on phones. The clone carries no canvases
+	// yet, so nothing inside it is affected; the panel's canvases build after settle,
+	// inside the already-frozen container.
+	freeze.container = clone;
+
 	requestAnimationFrame(() => {
 		clone.style.left = pad + 'px';
 		clone.style.top = pad + 'px';
@@ -347,7 +354,8 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		close.style.opacity = '0';
 		clone.style.overflow = 'hidden';
 		clone.classList.remove('is-settled');
-		freeze.container = null; // unfreeze — every canvas updates again
+		// scenes stay frozen through the shrink (same GPU-contention logic as the open);
+		// the cleanup timeout below unfreezes once the animation is done
 		ex.style.overflow = 'hidden';
 		ex.style.transition = 'opacity .18s ease';
 		ex.style.opacity = '0';
@@ -388,6 +396,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		});
 		board.querySelectorAll('.burn-fx').forEach((f) => f.remove());
 		setTimeout(() => {
+			freeze.container = null; // unfreeze — every canvas updates again
 			unmount(panel);
 			clone.remove();
 			// fade the tile's own content back in instead of popping

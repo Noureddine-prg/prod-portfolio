@@ -49,7 +49,7 @@
 			style="font:500 8px 'JetBrains Mono',monospace;letter-spacing:.14em;color:{dim};text-transform:uppercase"
 			>{h}</span
 		>
-		<span style="font:400 10px/1.65 'Hanken Grotesk',sans-serif;color:{mid}">{b}</span>
+		<span style="font:400 11px/1.65 'Hanken Grotesk',sans-serif;color:{mid}">{b}</span>
 	</div>
 {/snippet}
 

@@ -211,7 +211,10 @@ function startLoop(T: typeof THREE): LoopState {
 			o.mx += (o.tx - o.mx) * 0.06;
 			o.my += (o.ty - o.my) * 0.06;
 			if (o.variants.lite) {
-				o.pivot.rotation.y = Math.sin(now * 0.12) * 0.04;
+				// campfire gets a wider, slower left-right pan; other lite scenes a subtle sway
+				const amp = o.kind === 'campfire' ? 0.11 : 0.04;
+				const freq = o.kind === 'campfire' ? 0.09 : 0.12;
+				o.pivot.rotation.y = Math.sin(now * freq) * amp;
 				o.pivot.rotation.x = 0;
 			} else {
 				const pf = o.kind === 'campfire' ? 0.16 : 0.8;

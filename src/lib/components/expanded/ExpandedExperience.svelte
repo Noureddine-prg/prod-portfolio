@@ -95,7 +95,7 @@
 							<span style="display:flex;gap:8px;align-items:flex-start"
 								><span
 									style="width:3.5px;height:3.5px;border-radius:50%;background:#5e4f48;flex:none;margin-top:6px"
-								></span><span style="font:400 10px/1.55 'Archivo',sans-serif;color:#a89b93">{b}</span
+								></span><span style="font:400 11px/1.55 'Archivo',sans-serif;color:#a89b93">{b}</span
 								></span
 							>
 						{/each}
@@ -216,7 +216,7 @@
 						<span style="font:600 16px 'Archivo',sans-serif;color:#efe9e6">{role.company}</span>
 						<span style="font:500 9.5px 'JetBrains Mono',monospace;color:#c85a44">{role.title}</span>
 					</div>
-					<span style="font:400 10px/1.75 'JetBrains Mono',monospace;color:#94867f"
+					<span style="font:400 11px/1.7 'JetBrains Mono',monospace;color:#94867f"
 						>{role.blurb}</span
 					>
 					<div style="display:flex;gap:6px;flex-wrap:wrap">

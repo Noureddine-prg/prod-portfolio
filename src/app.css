@@ -77,6 +77,8 @@ body {
 }
 
 body {
+	overflow: hidden; /* board form-fits the viewport; no page scroll or bounce */
+	overscroll-behavior: none;
 	background: #121010;
 	color: var(--c-text-cream);
 	font-family: var(--f-body);
