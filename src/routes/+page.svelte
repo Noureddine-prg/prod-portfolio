@@ -6,10 +6,11 @@
 	import { onMount } from 'svelte';
 	import BoardDesktop from '$lib/components/BoardDesktop.svelte';
 	import BoardMobile from '$lib/components/BoardMobile.svelte';
-	import { maybeRunIntro } from '$lib/interactions/intro';
+	import { maybeRunIntro, teardownIntro } from '$lib/interactions/intro';
 
 	onMount(() => {
 		maybeRunIntro();
+		return teardownIntro; // cancels a mid-intro unmount (rAF + veil)
 	});
 </script>
 

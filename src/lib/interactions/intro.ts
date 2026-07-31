@@ -12,6 +12,15 @@
 
 import { ui } from '$lib/stores/ui.svelte';
 
+// In-flight intro teardowns (one per visible board), for mid-intro page unmount.
+const teardowns = new Set<() => void>();
+
+/** Cancel any in-flight intro: stop its particle rAF and drop its veil. Idempotent. */
+export function teardownIntro(): void {
+	teardowns.forEach((fn) => fn());
+	teardowns.clear();
+}
+
 export async function maybeRunIntro(): Promise<void> {
 	if (ui.introPlayed) return;
 	ui.introPlayed = true; // session gate — the DC's window.__fireIntro (L1244/L1360)
@@ -154,6 +163,10 @@ function runIntro(board: HTMLElement): void {
 	requestAnimationFrame(pTick);
 
 	board.appendChild(veil);
+	teardowns.add(() => {
+		pOn = false;
+		veil.remove();
+	});
 	// Force a style flush before mutating opacity: append + rAF-mutate in the same frame
 	// can skip the element's initial computed style, so the 2.5s-delayed veil fade (and
 	// the name blur-in) would apply instantly instead of transitioning — the veil never
