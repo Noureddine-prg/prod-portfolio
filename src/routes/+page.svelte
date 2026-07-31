@@ -22,7 +22,6 @@
 	// unscaled board never paints.
 	let vw = $state(browser ? window.innerWidth : 0);
 	let vh = $state(browser ? window.innerHeight : 0);
-	let mobH = $state(0); // mobile board's natural (unscaled) content height
 	let ready = $state(false);
 
 	// The board's design width tracks the viewport aspect (clamped to keep the grid sane
@@ -33,8 +32,12 @@
 	);
 	const deskScale = $derived(vw ? Math.max(0.5, Math.min(vh / DESK_H, vw / deskW)) : 1);
 	// Mobile scales by width, capped so tablet widths get a centered column instead of a
-	// blown-up phone layout; the page scrolls vertically as usual.
+	// blown-up phone layout. Design height tracks the device (clamped so tiles never
+	// compress below usable) and the column form-fits the screen with no scrolling.
 	const mobScale = $derived(vw ? Math.min(1.25, Math.max(0.75, vw / MOB_W)) : 1);
+	const mobH = $derived(
+		vw && vh ? Math.round(Math.min(1000, Math.max(700, vh / mobScale))) : 812
+	);
 
 	$effect(() => {
 		boardScale.value = vw >= 900 ? deskScale : mobScale;
@@ -59,8 +62,8 @@
 		</div>
 	</div>
 	<div class="stage stage--mobile" style="width:{MOB_W * mobScale}px;height:{mobH * mobScale}px">
-		<div class="fit" style="transform:scale({mobScale})" bind:clientHeight={mobH}>
-			<BoardMobile />
+		<div class="fit" style="transform:scale({mobScale})">
+			<BoardMobile designH={mobH} />
 		</div>
 	</div>
 </main>
@@ -73,6 +76,7 @@
 		justify-content: center;
 		padding: 0;
 		background: #121010; /* board bg — gutters blend, cards read edge-to-edge */
+		overflow-x: hidden; /* ash sway must never create horizontal scroll */
 	}
 
 	/* Stages stay invisible in the prerendered (unscaled) HTML; the first hydrated

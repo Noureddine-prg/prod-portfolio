@@ -1,6 +1,8 @@
 <script lang="ts">
-	// Mobile board — DC id="11b", 390w flex column, gap 10, pad 12, radius 28. No Wildcard.
+	// Mobile board — DC id="11b", 390w flex column, gap 10, pad 12. No Wildcard.
 	// Order: hero → Experience → (Contact + Health) → About → Work → footer.
+	// Height form-fits the device (designH from the page scaler); the hero flexes to
+	// absorb the difference between phone aspect ratios.
 	import HeroTile from './tiles/HeroTile.svelte';
 	import ExperienceTile from './tiles/ExperienceTile.svelte';
 	import AboutTile from './tiles/AboutTile.svelte';
@@ -11,6 +13,12 @@
 	import { expandCard } from '$lib/interactions/expand';
 	import { profile } from '$lib/content';
 	import type { CardId } from '$lib/stores/ui.svelte';
+
+	interface Props {
+		/** Design-space height; tracks the device viewport so the column fits exactly. */
+		designH?: number;
+	}
+	let { designH = 812 }: Props = $props();
 
 	let boardEl: HTMLDivElement;
 	function onopen(card: CardId) {
@@ -23,11 +31,11 @@
 	bind:this={boardEl}
 	class="board"
 	data-board
-	style="width:390px;background:#121010;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative"
+	style="width:390px;height:{designH}px;background:#121010;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden"
 >
 	<AshLayer variant="mobile" />
 
-	<HeroTile mobile placement="height:258px;flex:none" />
+	<HeroTile mobile placement="flex:1 1 auto;min-height:200px" />
 	<ExperienceTile mobile placement="flex:none;height:120px" onopen={() => onopen('experience')} />
 
 	<div style="display:flex;gap:10px;flex:none">
