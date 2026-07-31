@@ -4,3 +4,35 @@ design_handoff_portfolio_svelte/
 BUILD-LOG.txt
 # OS noise
 .DS_Store
+
+# --- SvelteKit scaffold ---
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# --- test / build artifacts ---
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+/build
