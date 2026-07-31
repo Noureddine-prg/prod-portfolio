@@ -7,6 +7,7 @@
 // so the whole board mounts and runs TODAY while scenes land incrementally.
 
 import { dev } from '$app/environment';
+import { buildCampfire } from './campfire';
 import type { Builder, SceneKind } from '../types';
 import { buildAxelog } from './axelog';
 import { buildEnvelope } from './envelope';
@@ -16,6 +17,7 @@ import { buildJar } from './jar';
 // Scene builders plug in here as they land (Stage 2).
 export const SCENE_BUILDERS: Partial<Record<SceneKind, Builder>> = {
 	axelog: buildAxelog,
+	campfire: buildCampfire,
 	envelope: buildEnvelope,
 	flame: buildFlame,
 	jar: buildJar
