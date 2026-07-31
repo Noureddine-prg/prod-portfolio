@@ -15,6 +15,8 @@
 	const headFont = $derived(mobile ? 12 : 15);
 	const jarW = $derived(mobile ? 66 : 82);
 	const jarH = $derived(mobile ? 76 : 92);
+	const jarRight = $derived(mobile ? 6 : 10);
+	const jarTop = $derived(mobile ? 44 : 46);
 
 	function activate() {
 		onopen();
@@ -58,7 +60,7 @@
 	<ThreeCanvas
 		kind="jar"
 		lite
-		style="position:absolute;right:10px;top:46%;transform:translateY(-50%);width:{jarW}px;height:{jarH}px;pointer-events:none"
+		style="position:absolute;right:{jarRight}px;top:{jarTop}%;transform:translateY(-50%);width:{jarW}px;height:{jarH}px;pointer-events:none"
 	/>
 
 	<span style="position:relative;display:flex;align-items:center;gap:8px"

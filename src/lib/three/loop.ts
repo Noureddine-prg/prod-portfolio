@@ -129,6 +129,7 @@ function startLoop(T: typeof THREE): LoopState {
 			}
 		}
 
+		// (DC's `data-hover-only` warm/hover gating, L3068, is unused by boards 11a/11b — skipped.)
 		const px = dpr();
 		for (const cv of cvs) {
 			const o = getEntry(cv);
