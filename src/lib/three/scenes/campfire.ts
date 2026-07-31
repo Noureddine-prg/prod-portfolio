@@ -382,8 +382,15 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	).forEach(function (d) {
 		if (inView(d[0], d[1], 1.6 * d[2])) mkTree(d[0], d[1], d[2], d[3], d[4]);
 	});
-	// extra tree on the left for mobile — fills the dark gap at frame left
-	if (lite) mkTree(-2.6, -2.3, 1.25, 0.03);
+	// extra flanking trees for mobile — the halved treeDefs leave the frame edges sparse
+	if (lite) {
+		mkTree(-2.6, -2.3, 1.25, 0.03);
+		mkTree(-3.1, -1.0, 1.3, -0.03);
+		mkTree(3.0, -1.4, 1.3, 0.04);
+		mkTree(-2.2, -4.6, 1.4, 0.02, true);
+		mkTree(2.5, -4.2, 1.35, -0.05, true);
+		mkTree(3.4, -2.8, 1.2, 0.03);
+	}
 
 	// --- fire kit (procedural fallback; replaced by GLB model when it loads) ---
 	const fireKit = new T.Group();
