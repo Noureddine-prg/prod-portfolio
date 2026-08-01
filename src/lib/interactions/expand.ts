@@ -331,7 +331,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	// home on close.
 	let jarHome: { parent: HTMLElement; next: Node | null; css: string } | null = null;
 	const jarCv =
-		card === 'about' || card === 'experience'
+		card === 'about' || card === 'contact' || card === 'experience'
 			? tile.querySelector<HTMLCanvasElement>('canvas[data-three]')
 			: null;
 	if (jarCv && card === 'experience') {

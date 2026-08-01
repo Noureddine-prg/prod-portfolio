@@ -35,7 +35,19 @@ export function buildEnvelope(ctx: SceneCtx): UpdateFn | null {
 	};
 	const W = 1.15,
 		H = 0.75;
-	tri([[-W, H], [W, H], [0, 0.06]], paperDark, 0.045);
+	// top flap hinged at its top edge so it can swing open on data-pop
+	const flapPivot = new T.Group();
+	flapPivot.position.y = H;
+	grp.add(flapPivot);
+	{
+		const s = new T.Shape();
+		s.moveTo(-W, 0);
+		s.lineTo(W, 0);
+		s.lineTo(0, 0.06 - H);
+		const m = new T.Mesh(new T.ExtrudeGeometry(s, xo), paperDark);
+		m.position.z = 0.045;
+		flapPivot.add(m);
+	}
 	tri([[-W, -H], [W, -H], [0, -0.06]], paper, 0.065);
 	tri([[-W, H], [-W, -H], [-0.10, 0]], paper, 0.055);
 	tri([[W, H], [W, -H], [0.10, 0]], paper, 0.055);
@@ -45,14 +57,16 @@ export function buildEnvelope(ctx: SceneCtx): UpdateFn | null {
 	);
 	seal.rotation.x = Math.PI / 2;
 	seal.position.set(0, 0, 0.15);
-	grp.add(seal);
+	const sealGrp = new T.Group();
+	sealGrp.add(seal);
+	grp.add(sealGrp);
 	const emboss = new T.Mesh(
 		new T.CylinderGeometry(0.09, 0.10, 0.03, 9),
 		new T.MeshStandardMaterial({ color: 0xa8452f, roughness: 0.5, flatShading: true })
 	);
 	emboss.rotation.x = Math.PI / 2;
 	emboss.position.set(0, 0, 0.19);
-	grp.add(emboss);
+	sealGrp.add(emboss);
 	// (address lines removed)
 	const clean = ctx.variants.clean;
 	const embers: EmberMesh[] = [];
@@ -181,7 +195,26 @@ export function buildEnvelope(ctx: SceneCtx): UpdateFn | null {
 	const fireP = new T.PointLight(0xff8c3a, clean ? 0 : 0.9, 2.2);
 	fireP.position.set(1.06, 0.88, 0.3);
 	grp.add(fireP);
+	// seal pop + flap open: expand.ts sets data-pop at click; resets when cleared
+	let popT: number | null = null;
 	return (t) => {
+		const popped = ctx.canvas.dataset.pop === '1';
+		if (popped && popT == null) popT = t;
+		if (!popped && popT != null) {
+			popT = null;
+			sealGrp.position.set(0, 0, 0);
+			sealGrp.rotation.set(0, 0, 0);
+			flapPivot.rotation.x = 0;
+		}
+		if (popT != null) {
+			const k = Math.min(1, (t - popT) / 0.7);
+			const e = 1 - Math.pow(1 - k, 3);
+			const hop = Math.sin(Math.min(1, k * 1.2) * Math.PI) * 0.5;
+			sealGrp.position.z = e * 1.0;
+			sealGrp.position.y = -e * 0.55 + hop;
+			sealGrp.rotation.x = e * 2.4;
+			flapPivot.rotation.x = -e * 2.1;
+		}
 		grp.position.y = Math.sin(t * 0.5) * 0.09;
 		grp.rotation.y = Math.sin(t * 0.23) * 0.3;
 		grp.rotation.z = Math.sin(t * 0.31) * 0.05;
