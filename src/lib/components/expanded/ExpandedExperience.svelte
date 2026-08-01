@@ -11,7 +11,8 @@
 	// stacking (pb:22). Cards start opacity:0/translateY(-12px) with their own inline
 	// 120/280/440ms transitions; expand.ts clears both at settle (t=1950ms) for the
 	// staggered rise. Education + links footer follows the panel (DC L532–539).
-	import ThreeCanvas from '../ThreeCanvas.svelte';
+	import PortholeBar from './PortholeBar.svelte';
+	import SpaceNightBg from './SpaceNightBg.svelte';
 	import MobileOceanStrip from './MobileOceanStrip.svelte';
 	import { experience, links } from '$lib/content';
 
@@ -131,13 +132,7 @@
 		</div>
 	</div>
 {:else}
-	<!-- full-bleed ocean sunset (no wing, no glass) with a legibility scrim on the left -->
-	<div style="position:absolute;inset:0;overflow:hidden">
-		<ThreeCanvas kind="calm" nowing style="position:absolute;inset:0;width:100%;height:100%;display:block" />
-		<div
-			style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,10,14,.72) 0%,rgba(8,10,14,.45) 46%,rgba(8,10,14,.08) 100%);pointer-events:none"
-		></div>
-	</div>
+	<SpaceNightBg />
 	<div style="position:relative;display:flex;justify-content:space-between;align-items:baseline">
 		<span style="display:inline-flex;align-items:center;gap:12px"
 			><span
@@ -235,6 +230,7 @@
 				</div>
 			{/each}
 		</div>
+		<PortholeBar />
 	</div>
 	<!-- quick-link row — DC L202–206 -->
 	<div

@@ -323,31 +323,39 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	// inside the already-frozen container.
 	freeze.container = clone;
 
-	// About: the live jar canvas migrates into the clone — the fireflies persist through
-	// the transition as the only surviving tile content, the cap pops at settle, and the
-	// canvas returns home on close. Registry entries are keyed by node, so moving the
-	// element keeps its WebGL context and render loop intact.
+	// About + Experience: the tile's live canvas migrates into the clone — registry
+	// entries are node-keyed, so moving the element keeps its WebGL context rendering.
+	// About: the jar rides to a showcase spot and its cap pops at settle. Experience:
+	// the ocean fills the growing clone (its cloned glass overlay fades with the other
+	// collapsed-face children, so the water + sunset show clean, no wing). Both return
+	// home on close.
 	let jarHome: { parent: HTMLElement; next: Node | null; css: string } | null = null;
 	const jarCv =
-		card === 'about' ? tile.querySelector<HTMLCanvasElement>('canvas[data-three]') : null;
-	if (jarCv) {
+		card === 'about' || card === 'experience'
+			? tile.querySelector<HTMLCanvasElement>('canvas[data-three]')
+			: null;
+	if (jarCv && card === 'experience') {
 		jarHome = {
 			parent: jarCv.parentElement as HTMLElement,
 			next: jarCv.nextSibling,
 			css: jarCv.style.cssText
 		};
 		clone.appendChild(jarCv);
-		const grow = ' .46s cubic-bezier(.5,.02,.2,1) 1.4s';
+		jarCv.style.zIndex = '0';
+		jarCv.style.pointerEvents = 'none';
+	} else if (jarCv) {
+		jarHome = {
+			parent: jarCv.parentElement as HTMLElement,
+			next: jarCv.nextSibling,
+			css: jarCv.style.cssText
+		};
+		clone.appendChild(jarCv);
 		jarCv.style.zIndex = '2';
 		jarCv.style.pointerEvents = 'none';
-		jarCv.style.transition = 'right' + grow + ', top' + grow + ', width' + grow + ', height' + grow + ', transform' + grow;
+		jarCv.dataset.pop = '1'; // cap pops the moment the card is clicked
+		jarCv.style.transition = 'opacity .45s ease 1.05s'; // then the jar fades as the card grows
 		void jarCv.offsetWidth;
-		const mob = board.clientWidth < 500;
-		jarCv.style.right = mob ? '14px' : '24px';
-		jarCv.style.top = mob ? '22px' : '20px';
-		jarCv.style.transform = 'none';
-		jarCv.style.width = (mob ? 168 : 205) + 'px';
-		jarCv.style.height = (mob ? 192 : 234) + 'px';
+		jarCv.style.opacity = '0';
 	}
 
 	requestAnimationFrame(() => {
@@ -369,7 +377,6 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 			close.style.opacity = '1';
 			clone.classList.add('is-settled');
 			freeze.container = clone; // the loop now updates only canvases inside the clone
-			if (jarCv) jarCv.dataset.pop = '1'; // lid pops as the card settles
 		}
 	}, 1950);
 
