@@ -34,11 +34,11 @@ const SPINS: Record<string, number> = {
 	calm: 0,
 	envelope: 0,
 	flame: 0,
-	jar: 0
+	jar: 0.0026
 };
 const DEFAULT_SPIN = 0.0032;
 // Kinds that do NOT also spin on x (DC L3093).
-const NO_X_SPIN = new Set<SceneKind>(['campfire', 'axelog', 'calm', 'flame']);
+const NO_X_SPIN = new Set<SceneKind>(['campfire', 'axelog', 'calm', 'flame', 'jar']);
 
 interface LoopState {
 	raf: number;
