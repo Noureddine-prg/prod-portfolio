@@ -55,8 +55,8 @@ export function buildJar(ctx: SceneCtx): UpdateFn | null {
 	cylAdd(7 * V, 7 * V, 0.5 * V, 0.25 * V, glass);
 	cylAdd(5 * V, 7 * V, 2 * V, 17 * V, glass, true);
 	cylAdd(5 * V, 5 * V, 2 * V, 19 * V, glass, true);
-	cylAdd(5.6 * V, 5.6 * V, 2 * V, 21 * V, zinc);
-	cylAdd(4.5 * V, 4.5 * V, 1 * V, 22.5 * V, zinc);
+	const lidA = cylAdd(5.6 * V, 5.6 * V, 2 * V, 21 * V, zinc);
+	const lidB = cylAdd(4.5 * V, 4.5 * V, 1 * V, 22.5 * V, zinc);
 	cylAdd(6.8 * V, 6.8 * V, 1 * V, 1 * V, soilM);
 	let seed = 7;
 	const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -132,7 +132,27 @@ export function buildJar(ctx: SceneCtx): UpdateFn | null {
 		if (c > w) return 0.22;
 		return 0.22 + 0.78 * Math.pow(Math.sin((c / w) * Math.PI), 1.6);
 	};
+	// cap pop-off: expand.ts sets data-pop on the canvas at card settle; the lid springs
+	// up with a tilt and drifts aside, and resets when the flag clears (card closed)
+	let popT: number | null = null;
 	return (t) => {
+		const popped = ctx.canvas.dataset.pop === '1';
+		if (popped && popT == null) popT = t;
+		if (!popped && popT != null) {
+			popT = null;
+			lidA.position.set(0, 21 * V, 0);
+			lidB.position.set(0, 22.5 * V, 0);
+			lidA.rotation.z = lidB.rotation.z = 0;
+		}
+		if (popT != null) {
+			const k = Math.min(1, (t - popT) / 0.8);
+			const e = 1 - Math.pow(1 - k, 3);
+			const hop = Math.sin(Math.min(1, k * 1.15) * Math.PI) * 0.34;
+			lidA.position.y = 21 * V + e * 0.32 + hop;
+			lidB.position.y = 22.5 * V + e * 0.32 + hop;
+			lidA.position.x = lidB.position.x = e * 0.85;
+			lidA.rotation.z = lidB.rotation.z = -e * 1.1;
+		}
 		flies.forEach((f) => {
 			const a = t * f.wf[0] * Math.PI * 2 + f.wo[0];
 			const rr = Math.min(f.rr + 0.012 * SF * Math.sin(t * f.wf[2] * Math.PI * 2 + f.wo[2]), 0.043 * SF);

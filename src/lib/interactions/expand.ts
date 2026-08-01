@@ -49,8 +49,8 @@ const PANELS: Record<CardId, PanelSpec> = {
 		props: (mobile) => ({ mobile }),
 		style: (mobile) =>
 			mobile
-				? EX_BASE + 'background:#141a16;padding:20px;gap:20px;overflow:auto'
-				: EX_BASE + 'background:#141a16;padding:26px 30px;gap:0;overflow:auto'
+				? EX_BASE + 'background:radial-gradient(120% 90% at 50% 115%,rgba(200,112,63,.10),transparent 60%),#1d1824;padding:20px;gap:20px;overflow:auto'
+				: EX_BASE + 'background:radial-gradient(120% 90% at 50% 115%,rgba(200,112,63,.10),transparent 60%),#1d1824;padding:26px 30px;gap:0;overflow:auto'
 	},
 	contact: {
 		component: ExpandedContact,
@@ -323,6 +323,33 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	// inside the already-frozen container.
 	freeze.container = clone;
 
+	// About: the live jar canvas migrates into the clone — the fireflies persist through
+	// the transition as the only surviving tile content, the cap pops at settle, and the
+	// canvas returns home on close. Registry entries are keyed by node, so moving the
+	// element keeps its WebGL context and render loop intact.
+	let jarHome: { parent: HTMLElement; next: Node | null; css: string } | null = null;
+	const jarCv =
+		card === 'about' ? tile.querySelector<HTMLCanvasElement>('canvas[data-three]') : null;
+	if (jarCv) {
+		jarHome = {
+			parent: jarCv.parentElement as HTMLElement,
+			next: jarCv.nextSibling,
+			css: jarCv.style.cssText
+		};
+		clone.appendChild(jarCv);
+		const grow = ' .46s cubic-bezier(.5,.02,.2,1) 1.4s';
+		jarCv.style.zIndex = '2';
+		jarCv.style.pointerEvents = 'none';
+		jarCv.style.transition = 'right' + grow + ', top' + grow + ', width' + grow + ', height' + grow + ', transform' + grow;
+		void jarCv.offsetWidth;
+		const mob = board.clientWidth < 500;
+		jarCv.style.right = mob ? '14px' : '24px';
+		jarCv.style.top = mob ? '22px' : '20px';
+		jarCv.style.transform = 'none';
+		jarCv.style.width = (mob ? 168 : 205) + 'px';
+		jarCv.style.height = (mob ? 192 : 234) + 'px';
+	}
+
 	requestAnimationFrame(() => {
 		clone.style.left = pad + 'px';
 		clone.style.top = pad + 'px';
@@ -342,6 +369,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 			close.style.opacity = '1';
 			clone.classList.add('is-settled');
 			freeze.container = clone; // the loop now updates only canvases inside the clone
+			if (jarCv) jarCv.dataset.pop = '1'; // lid pops as the card settles
 		}
 	}, 1950);
 
@@ -397,6 +425,11 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		board.querySelectorAll('.burn-fx').forEach((f) => f.remove());
 		setTimeout(() => {
 			freeze.container = null; // unfreeze — every canvas updates again
+			if (jarCv && jarHome) {
+				delete jarCv.dataset.pop;
+				jarCv.style.cssText = jarHome.css;
+				jarHome.parent.insertBefore(jarCv, jarHome.next);
+			}
 			unmount(panel);
 			clone.remove();
 			// fade the tile's own content back in instead of popping

@@ -27,7 +27,7 @@
 			style="--ao:.46;--sw:26px;position:absolute;left:86%;bottom:-30px;width:16px;height:16px;border-radius:50%;background:#ffd97e;filter:blur(5px);animation:ashrise 20s linear infinite -5s"
 		></span>
 		<div
-			style="position:absolute;inset:0;background:rgba(18,24,19,.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),inset 0 0 0 1px rgba(226,149,79,.08)"
+			style="position:absolute;inset:0;background:rgba(29,24,36,.38);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),inset 0 0 0 1px rgba(226,149,79,.08)"
 		></div>
 	{:else}
 		<span
@@ -61,7 +61,7 @@
 			style="--ao:.4;--sw:-20px;position:absolute;left:63%;bottom:-40px;width:28px;height:28px;border-radius:50%;background:#ffcf7a;filter:blur(8px);animation:ashrise 28s linear infinite -9s"
 		></span>
 		<div
-			style="position:absolute;inset:0;background:rgba(18,24,19,.4);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),inset 0 0 0 1px rgba(226,149,79,.08)"
+			style="position:absolute;inset:0;background:rgba(29,24,36,.38);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),inset 0 0 0 1px rgba(226,149,79,.08)"
 		></div>
 	{/if}
 </div>

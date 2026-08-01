@@ -100,6 +100,16 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	groundTex.wrapS = groundTex.wrapT = T.RepeatWrapping;
 	groundTex.repeat.set(5, 5);
 	groundTex.encoding = T.sRGBEncoding;
+	// coast_sand_rocks_02 (Poly Haven, CC0) replaces the procedural strokes once loaded;
+	// darkened toward soil via material color multiply below
+	new T.TextureLoader().load('/textures/ground.jpg', function (tex) {
+		tex.wrapS = tex.wrapT = T.RepeatWrapping;
+		tex.repeat.set(5, 5);
+		tex.encoding = T.sRGBEncoding;
+		groundMat.map = tex;
+		groundMat.color.set(0x6a5844);
+		groundMat.needsUpdate = true;
+	});
 	const barkTex = new T.CanvasTexture(
 		mkCanvas(256, 512, function (g, w, h) {
 			g.fillStyle = '#170e06';
@@ -292,12 +302,14 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		}
 		gGeo.computeVertexNormals();
 	}
-	spin.add(
-		new T.Mesh(
-			gGeo,
-			new T.MeshStandardMaterial({ map: groundTex, bumpMap: groundTex, bumpScale: 0.14, roughness: 1, metalness: 0 })
-		)
-	);
+	const groundMat = new T.MeshStandardMaterial({
+		map: groundTex,
+		bumpMap: groundTex,
+		bumpScale: 0.14,
+		roughness: 1,
+		metalness: 0
+	});
+	spin.add(new T.Mesh(gGeo, groundMat));
 	const gGlowMat = new T.MeshBasicMaterial({
 		map: glowTex,
 		transparent: true,
