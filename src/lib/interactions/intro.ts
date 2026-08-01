@@ -47,7 +47,7 @@ function runIntro(board: HTMLElement): void {
 	const veil = document.createElement('div');
 	veil.dataset.introVeil = '1';
 	veil.style.cssText =
-		'position:fixed;inset:0;z-index:90;overflow:hidden;pointer-events:none;display:flex;align-items:center;justify-content:center;background:#121010;transition:opacity .7s ease 2.5s';
+		'position:fixed;inset:0;z-index:90;overflow:hidden;pointer-events:none;display:flex;align-items:center;justify-content:center;background:linear-gradient(168deg,#121f36 0%,#0e1728 42%,#080d16 100%);transition:opacity .7s ease 2.5s';
 	const isMobile = board.clientWidth < 500; // design-space width: 390 mobile / 900 desktop
 	const s = Math.max(0.75, boardScale.value); // screen-space multiplier for type/particles
 

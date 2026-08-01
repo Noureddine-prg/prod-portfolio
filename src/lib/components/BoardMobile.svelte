@@ -31,7 +31,7 @@
 	bind:this={boardEl}
 	class="board"
 	data-board
-	style="width:390px;height:{designH}px;background:#121010;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden"
+	style="width:390px;height:{designH}px;background:transparent;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden"
 >
 	<AshLayer variant="mobile" />
 

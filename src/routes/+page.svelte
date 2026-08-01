@@ -13,6 +13,7 @@
 	import BoardMobile from '$lib/components/BoardMobile.svelte';
 	import { maybeRunIntro, teardownIntro } from '$lib/interactions/intro';
 	import { boardScale } from '$lib/stores/scale.svelte';
+	import { ui } from '$lib/stores/ui.svelte';
 
 	const DESK_H = 620;
 	const MOB_W = 390;
@@ -65,6 +66,7 @@
 
 <div bind:this={svhProbe} style="position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none" aria-hidden="true"></div>
 <main class:ready>
+	<div class="shade" class:on={ui.openCard !== null}></div>
 	<div
 		class="stage stage--desktop"
 		style="width:{deskW * deskScale}px;height:{DESK_H * deskScale}px"
@@ -87,8 +89,21 @@
 		align-items: center;
 		justify-content: center;
 		padding: 0;
-		background: #121010; /* board bg — gutters blend, cards read edge-to-edge */
+		background: linear-gradient(168deg, #121f36 0%, #0e1728 42%, #080d16 100%);
 		overflow-x: hidden; /* ash sway must never create horizontal scroll */
+	}
+
+	/* black field behind an expanded card; the transparent board lets it show through */
+	.shade {
+		position: fixed;
+		inset: 0;
+		background: #060505;
+		opacity: 0;
+		transition: opacity 0.6s ease;
+		pointer-events: none;
+	}
+	.shade.on {
+		opacity: 1;
 	}
 
 	/* Stages stay invisible in the prerendered (unscaled) HTML; the first hydrated

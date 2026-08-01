@@ -67,7 +67,7 @@
 }
 
 html {
-	background: #121010;
+	background: #080d16;
 }
 
 html,
@@ -79,7 +79,7 @@ body {
 body {
 	overflow: hidden; /* board form-fits the viewport; no page scroll or bounce */
 	overscroll-behavior: none;
-	background: #121010;
+	background: linear-gradient(168deg, #121f36 0%, #0e1728 42%, #080d16 100%);
 	color: var(--c-text-cream);
 	font-family: var(--f-body);
 	-webkit-font-smoothing: antialiased;
