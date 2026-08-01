@@ -81,24 +81,22 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 		if (!popped && popT != null) {
 			popT = null;
 			axe.rotation.z = -0.5;
-			axe.position.y = 0.02;
+			axe.position.set(0.42, 0.02, 0);
 			stump.position.y = 0;
 		}
 		if (popT == null) return;
 		const k = Math.min(1, (t - popT) / 0.9);
-		if (k < 0.45) {
-			const e = 1 - Math.pow(1 - k / 0.45, 3);
-			axe.rotation.z = -0.5 - e * 0.7; // lift into the air
-			axe.position.y = 0.02 + e * 0.2;
-		} else if (k < 0.72) {
-			const e = Math.pow((k - 0.45) / 0.27, 2);
-			axe.rotation.z = -1.2 + e * 0.7; // accelerate down, landing exactly at rest
-			axe.position.y = 0.22 - e * 0.2;
-		} else {
-			axe.rotation.z = -0.5;
-			axe.position.y = 0.02;
-			const e = (k - 0.72) / 0.28;
-			stump.position.y = Math.sin(e * Math.PI * 3) * (1 - e) * 0.02; // impact shudder
+		// lift factor: 0 at rest, 1 at apex, back to 0 — the pose is always REST + offset,
+		// so the axe can only ever land exactly where it started
+		let lift = 0;
+		if (k < 0.5) lift = 1 - Math.pow(1 - k / 0.5, 3);
+		else if (k < 0.78) lift = 1 - Math.pow((k - 0.5) / 0.28, 2);
+		axe.position.y = 0.02 + lift * 0.62; // head rises clear of the stump rim
+		axe.position.x = 0.42 + lift * 0.1;
+		axe.rotation.z = -0.5 - lift * 0.35; // slight windup tilt at the apex
+		if (k >= 0.78) {
+			const e = (k - 0.78) / 0.22;
+			stump.position.y = Math.sin(e * Math.PI * 3) * (1 - e) * 0.02; // landing shudder
 		}
 	};
 }
