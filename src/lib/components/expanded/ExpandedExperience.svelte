@@ -152,7 +152,7 @@
 				{@const last = i === experience.roles.length - 1}
 				<div
 					style="grid-column:1;grid-row:{i +
-						1};padding:2px 12px {last ? 0 : 26}px 0;text-align:right;display:flex;flex-direction:column;gap:3px"
+						1};padding:2px 12px {last ? 0 : 16}px 0;text-align:right;display:flex;flex-direction:column;gap:3px"
 				>
 					<span style="font:500 9.5px 'JetBrains Mono',monospace;color:#efe9e6">{role.start}</span>
 					<span style="font:400 9px 'JetBrains Mono',monospace;color:#6e6058">{role.end}</span>
@@ -172,7 +172,7 @@
 				<div
 					style="grid-column:3;grid-row:{i + 1};padding:0 0 {last
 						? 0
-						: 26}px 16px;display:flex;flex-direction:column;gap:7px"
+						: 16}px 16px;display:flex;flex-direction:column;gap:5px"
 				>
 					<div style="display:flex;align-items:center;gap:10px">
 						{#if role.company === 'Google'}
@@ -216,13 +216,13 @@
 						<span style="font:600 16px 'Archivo',sans-serif;color:#efe9e6">{role.company}</span>
 						<span style="font:500 9.5px 'JetBrains Mono',monospace;color:#c85a44">{role.title}</span>
 					</div>
-					<span style="font:400 11px/1.7 'JetBrains Mono',monospace;color:#94867f"
+					<span style="font:400 10px/1.55 'JetBrains Mono',monospace;color:#94867f"
 						>{role.blurb}</span
 					>
 					<div style="display:flex;gap:6px;flex-wrap:wrap">
 						{#each role.tech as t (t)}
 							<span
-								style="padding:4px 10px;border-radius:11px;background:#262020;border:1px solid #362e2e;font:500 8.5px 'JetBrains Mono',monospace;color:#94867f"
+								style="padding:3px 9px;border-radius:10px;background:#262020;border:1px solid #362e2e;font:500 8px 'JetBrains Mono',monospace;color:#94867f"
 								>{t}</span
 							>
 						{/each}

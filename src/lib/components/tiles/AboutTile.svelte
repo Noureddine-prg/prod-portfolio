@@ -13,8 +13,8 @@
 
 	const pad = $derived(mobile ? '14px' : '16px 18px');
 	const headFont = $derived(mobile ? 12 : 15);
-	const jarW = $derived(mobile ? 66 : 82);
-	const jarH = $derived(mobile ? 76 : 92);
+	const jarW = $derived(mobile ? 78 : 96);
+	const jarH = $derived(mobile ? 90 : 108);
 	const jarRight = $derived(mobile ? 6 : 10);
 	const jarTop = $derived(mobile ? 44 : 46);
 	const avail = $derived(mobile ? about.availabilityShort : about.availability);
