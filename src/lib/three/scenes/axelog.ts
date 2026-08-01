@@ -85,21 +85,27 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 			stump.position.y = 0;
 		}
 		if (popT == null) return;
-		const k = Math.min(1, (t - popT) / 0.75);
-		if (k < 0.45) {
-			const e = 1 - Math.pow(1 - k / 0.45, 3);
+		const k = Math.min(1, (t - popT) / 1.0);
+		if (k < 0.35) {
+			const e = 1 - Math.pow(1 - k / 0.35, 3);
 			axe.rotation.z = -0.5 - e * 0.75; // wind up
 			axe.position.y = 0.02 + e * 0.22;
-		} else if (k < 0.62) {
-			const e = (k - 0.45) / 0.17;
+		} else if (k < 0.5) {
+			const e = (k - 0.35) / 0.15;
 			axe.rotation.z = -1.25 + e * 0.95; // fast swing down, biting past rest
 			axe.position.y = 0.24 - e * 0.26;
+		} else if (k < 0.62) {
+			const e = (k - 0.5) / 0.12;
+			stump.position.y = Math.sin(e * Math.PI * 3) * (1 - e) * 0.02; // impact shudder
+		} else if (k < 0.82) {
+			const e = 1 - Math.pow(1 - (k - 0.62) / 0.2, 2);
+			axe.rotation.z = -0.3 - e * 0.65; // pull back up out of the wood
+			axe.position.y = -0.02 + e * 0.18;
+			stump.position.y = 0;
 		} else {
-			const e = (k - 0.62) / 0.38;
-			const shake = Math.sin(e * Math.PI * 3) * (1 - e) * 0.02;
-			stump.position.y = shake; // impact shudder
-			axe.rotation.z = -0.3 - (1 - Math.pow(1 - e, 2)) * 0.2; // settle back to rest
-			axe.position.y = -0.02 + (1 - Math.pow(1 - e, 2)) * 0.04;
+			const e = 1 - Math.pow(1 - (k - 0.82) / 0.18, 2);
+			axe.rotation.z = -0.95 + e * 0.45; // drop back to the embedded rest pose
+			axe.position.y = 0.16 - e * 0.14;
 		}
 	};
 }
