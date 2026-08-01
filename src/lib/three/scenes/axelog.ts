@@ -72,5 +72,34 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	scene.add(fill);
 	scene.add(new T.AmbientLight(0x2a2020, 0.9));
 
-	return null;
+	// chop-on-pop: expand.ts sets data-pop at Work click — the axe lifts, swings into
+	// the wood with a stump shudder, and settles; resets when the flag clears.
+	let popT: number | null = null;
+	return (t) => {
+		const popped = ctx.canvas.dataset.pop === '1';
+		if (popped && popT == null) popT = t;
+		if (!popped && popT != null) {
+			popT = null;
+			axe.rotation.z = -0.5;
+			axe.position.y = 0.02;
+			stump.position.y = 0;
+		}
+		if (popT == null) return;
+		const k = Math.min(1, (t - popT) / 0.75);
+		if (k < 0.45) {
+			const e = 1 - Math.pow(1 - k / 0.45, 3);
+			axe.rotation.z = -0.5 - e * 0.75; // wind up
+			axe.position.y = 0.02 + e * 0.22;
+		} else if (k < 0.62) {
+			const e = (k - 0.45) / 0.17;
+			axe.rotation.z = -1.25 + e * 0.95; // fast swing down, biting past rest
+			axe.position.y = 0.24 - e * 0.26;
+		} else {
+			const e = (k - 0.62) / 0.38;
+			const shake = Math.sin(e * Math.PI * 3) * (1 - e) * 0.02;
+			stump.position.y = shake; // impact shudder
+			axe.rotation.z = -0.3 - (1 - Math.pow(1 - e, 2)) * 0.2; // settle back to rest
+			axe.position.y = -0.02 + (1 - Math.pow(1 - e, 2)) * 0.04;
+		}
+	};
 }
