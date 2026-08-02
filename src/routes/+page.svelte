@@ -54,6 +54,29 @@
 	});
 
 
+	// Browser bar tints re-derive on load and on scroll — not on meta/style changes.
+	// Colors flip with the card state, and after the close fade an invisible 1px
+	// scroll-and-back (document is otherwise scroll-locked) forces the resample.
+	$effect(() => {
+		if (!browser) return;
+		const open = ui.openCard !== null;
+		const c = open ? '#060505' : '#101a2c';
+		document.documentElement.style.backgroundColor = c;
+		document.body.style.backgroundColor = c;
+		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', c);
+		if (open) return;
+		const jiggle = setTimeout(() => {
+			const de = document.documentElement;
+			de.style.overflow = 'auto';
+			document.body.style.minHeight = 'calc(100lvh + 2px)';
+			window.scrollTo(0, 1);
+			window.scrollTo(0, 0);
+			document.body.style.minHeight = '';
+			de.style.overflow = '';
+		}, 750);
+		return () => clearTimeout(jiggle);
+	});
+
 	function readSvh() {
 		if (svhProbe) svh = svhProbe.clientHeight;
 	}
@@ -71,18 +94,17 @@
 <div bind:this={svhProbe} style="position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none" aria-hidden="true"></div>
 <main class:ready bind:clientWidth={mw}>
 	<div class="field"></div>
+	<div class="shade" class:on={ui.openCard !== null}></div>
 	<div
 		class="stage stage--desktop"
 		style="width:{deskW * deskScale}px;height:{DESK_H * deskScale}px"
 	>
 		<div class="fit" style="transform:scale({deskScale})">
-			<div class="shade" class:on={ui.openCard !== null}></div>
 			<BoardDesktop designW={deskW} />
 		</div>
 	</div>
 	<div class="stage stage--mobile" style="width:{MOB_W * mobScale}px;height:{mobH * mobScale}px">
 		<div class="fit" style="transform:scale({mobScale})">
-			<div class="shade" class:on={ui.openCard !== null}></div>
 			<BoardMobile designH={mobH} />
 		</div>
 	</div>
@@ -114,11 +136,13 @@
 	}
 
 	/* black field behind an expanded card; the transparent board lets it show through */
-	/* covers the board box only — black must never reach the screen edges, which the
-	 * browser samples for its bar tints */
+	/* full-screen black while a card is open */
 	.shade {
-		position: absolute;
-		inset: 0;
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: calc(100lvh + 140px);
 		background: #060505;
 		opacity: 0;
 		transition: opacity 0.6s ease;
