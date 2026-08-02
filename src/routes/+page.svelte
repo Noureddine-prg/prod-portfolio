@@ -59,16 +59,33 @@
 		// this browser honors a write going dark at interaction time but does not repaint
 		// the strip when the value is restored. The shade supplies the visible black.
 		if (ui.openCard !== null) return;
+		let r1 = 0,
+			r2 = 0,
+			r3 = 0;
 		const jiggle = setTimeout(() => {
 			const de = document.documentElement;
+			// unlock the root scroller and grow the body so a 1px document scroll is possible
 			de.style.overflow = 'auto';
 			document.body.style.minHeight = 'calc(100lvh + 2px)';
-			window.scrollTo(0, 1);
-			window.scrollTo(0, 0);
-			document.body.style.minHeight = '';
-			de.style.overflow = '';
+			// scroll 1px then back on SEPARATE frames — a same-turn 0→1→0 never paints, so
+			// Safari never resamples the bar tint; a painted delta forces the resample to navy
+			r1 = requestAnimationFrame(() => {
+				window.scrollTo(0, 1);
+				r2 = requestAnimationFrame(() => {
+					window.scrollTo(0, 0);
+					r3 = requestAnimationFrame(() => {
+						de.style.overflow = '';
+						document.body.style.minHeight = '';
+					});
+				});
+			});
 		}, 750);
-		return () => clearTimeout(jiggle);
+		return () => {
+			clearTimeout(jiggle);
+			cancelAnimationFrame(r1);
+			cancelAnimationFrame(r2);
+			cancelAnimationFrame(r3);
+		};
 	});
 
 	function readSvh() {
@@ -124,7 +141,7 @@
 		left: 0;
 		width: 100vw;
 		height: calc(100lvh + 140px); /* overshoot under the bottom toolbar */
-		background: #101a2c;
+		background: var(--c-field);
 		z-index: 0;
 		pointer-events: none;
 	}
@@ -139,12 +156,14 @@
 		height: calc(100lvh + 140px);
 		background: #060505;
 		opacity: 0;
-		transition: opacity 0.6s ease;
+		/* fast CLOSE fade so any bar-tint resample after close sees navy, not black */
+		transition: opacity 0.15s ease;
 		z-index: 1;
 		pointer-events: none;
 	}
 	.shade.on {
 		opacity: 1;
+		transition: opacity 0.6s ease; /* slow OPEN fade */
 	}
 
 	.stage {
