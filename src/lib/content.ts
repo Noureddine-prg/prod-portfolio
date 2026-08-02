@@ -151,7 +151,7 @@ export const contact = {
 	copiedLabel: '✦ signal sent',
 	writeMe: 'write me →',
 	resumeLabel: 'Open resume PDF →',
-	socialsMobile: ['GitHub', 'LinkedIn', 'X']
+	socialsMobile: ['GitHub', 'LinkedIn']
 } as const;
 
 // ── Wildcard (display-only, desktop) ──────────────────────────────────────────

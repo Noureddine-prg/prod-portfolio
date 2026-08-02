@@ -100,7 +100,7 @@
 		<div style="display:flex;gap:8px">
 			{#each contact.socialsMobile as s (s)}
 				<span
-					style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:10px;background:#211b1b;border:1px solid #2a2424;font:500 9px 'JetBrains Mono',monospace;color:#efe9e6"
+					style="flex:1;display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:10px;background:#211b1b;border:1px solid #2a2424;font:500 12px 'JetBrains Mono',monospace;color:#efe9e6"
 					>{s}&nbsp;<span style="color:#c85a44">&#8599;</span></span
 				>
 			{/each}
