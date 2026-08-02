@@ -83,7 +83,7 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	// chop-on-pop (data-pop at Work click): the axe cocks back and swings down as a pendulum
 	// about the grip, blade-first. Rotation is 0 at k=1/idle, so it lands on the exact rest pose.
 	const STUMP_Y0 = -0.62;
-	const COCK = 1.5; // windup angle (rad) about the grip — head lifts up and back
+	const COCK = 1.5; // windup angle (rad): head lifts up-and-back, then swings down into the bite
 	let popT: number | null = null;
 	return (t) => {
 		const popped = ctx.canvas.dataset.pop === '1';
@@ -97,12 +97,12 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 		const k = Math.min(1, (t - popT) / 0.9);
 		const KW = 0.4,
 			KI = 0.82; // windup apex, impact
-		// ease up to the cocked apex, then accelerate the head down through the arc into the bite
+		// hang at the cocked apex, then ACCELERATE the head down through the arc into the bite
 		const sw =
 			k < KW
 				? Math.sin((k / KW) * (Math.PI / 2))
 				: k < KI
-					? Math.pow(1 - (k - KW) / (KI - KW), 2)
+					? 1 - Math.pow((k - KW) / (KI - KW), 2)
 					: 0;
 		const u = (k - KI) / (1 - KI);
 		const rec = k >= KI ? Math.sin(u * Math.PI * 3) * (1 - u) : 0; // decaying impact recoil, 0 at k=1
