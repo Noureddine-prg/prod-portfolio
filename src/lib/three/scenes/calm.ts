@@ -179,7 +179,7 @@ async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
 	// lower-left frame up to the tip near center height, top toward the camera, ocean above
 	const BASE_RZ = 0.7;
 	wgrp.scale.setScalar(0.0048);
-	wgrp.position.set(-0.24, -1.4, -6.3);
+	wgrp.position.set(-0.42, -1.4, -6.3);
 	wgrp.rotation.set(1.3, 0.2, BASE_RZ);
 	wgrp.userData.baseRotZ = BASE_RZ;
 }
