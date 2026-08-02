@@ -5,12 +5,12 @@ import { expect, type Locator, type Page } from '@playwright/test';
 // - expanding clone:   .is-clone                        (appended synchronously on click)
 // - settled state:     .is-clone.is-settled             (~1.95s after click; freeze active)
 // - close button:      .clone-close                     (opacity 0 → 1 on settle)
-// - intro veil:        board child with computed z-index 90 (no class in the DC port)
+// - intro veil:        [data-intro-veil] on document.body
 
 export const DESKTOP = { width: 1280, height: 800 };
 export const MOBILE = { width: 390, height: 844 };
 
-export type Which = 'desktop' | 'mobile';
+type Which = 'desktop' | 'mobile';
 
 export function board(page: Page, which: Which): Locator {
 	return page.locator(`.stage--${which} [data-board]`);
@@ -30,25 +30,15 @@ export function veilCount(page: Page): Promise<number> {
 	return page.evaluate(() => document.querySelectorAll('[data-intro-veil]').length);
 }
 
-/**
- * Wait for the intro to fully play out: the veil mounts within ~0.5s of load and
- * removes itself ~3.6s later. Only for non-reduced-motion contexts (where it always
- * plays — there is no sessionStorage gate).
- */
+/** Wait out the intro (veil mounts ~0.5s, self-removes ~3.6s). Non-reduced-motion only. */
 export async function settleIntro(page: Page): Promise<void> {
-	// Generous first poll: on a cold dev server, hydration (and therefore the intro)
-	// can lag several seconds behind the load event. The veil lives ~3.6s and the poll
-	// samples at least once a second, so the window cannot be missed.
+	// Generous first poll: cold-dev-server hydration can lag the intro several seconds.
 	await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBeGreaterThan(0);
 	await expect.poll(() => veilCount(page), { timeout: 10_000 }).toBe(0);
 }
 
-/**
- * WORKAROUND (Playwright 1.62.1 bug): `test.use({ reducedMotion: 'reduce' })` is
- * silently ignored for the fixture context (colorScheme/viewport from the same use()
- * call DO apply), while browser.newContext({ reducedMotion: 'reduce' }) works.
- * Reduced-motion tests therefore build their context manually. Callers must close it.
- */
+// WORKAROUND (Playwright 1.62.1): test.use({ reducedMotion }) is ignored for the fixture
+// context but browser.newContext({ reducedMotion }) works, so build it manually. Callers close it.
 export async function reducedMotionPage(
 	browser: import('@playwright/test').Browser,
 	baseURL: string | undefined,
@@ -76,10 +66,7 @@ export async function openCard(
 	return clone;
 }
 
-/**
- * Pause every CSS animation/transition (ash drift, ember ring, hover fades) so pixel
- * comparisons only see canvas repaints. rAF-driven three.js rendering is unaffected.
- */
+/** Pause CSS animations/transitions so pixel comparisons see only canvas repaints (rAF unaffected). */
 export async function pauseCssAnimations(page: Page): Promise<void> {
 	await page.addStyleTag({
 		content:

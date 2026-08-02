@@ -1,15 +1,10 @@
-// App-level UI state (runes). Stage 3 wires the expand/close flow to `openCard`; the
-// scaffold only needs the state to exist with the right shape. NOTE: there is no soundOn
-// — sound is cut from scope entirely.
-
-import { currentHour, timeOfDay, type TimeOfDay } from '$lib/util/time';
+// App-level UI state (runes). No sound state — sound is out of scope.
 
 export type CardId = 'experience' | 'about' | 'contact' | 'work';
 
 let _openCard = $state<CardId | null>(null);
 let _workDetail = $state<string | null>(null);
 let _introPlayed = $state(false); // per session (module lives for the tab's lifetime)
-let _timeOfDay = $state<TimeOfDay>(timeOfDay(currentHour()));
 
 export const ui = {
 	get openCard(): CardId | null {
@@ -31,12 +26,5 @@ export const ui = {
 	},
 	set introPlayed(v: boolean) {
 		_introPlayed = v;
-	},
-
-	get timeOfDay(): TimeOfDay {
-		return _timeOfDay;
-	},
-	set timeOfDay(v: TimeOfDay) {
-		_timeOfDay = v;
 	}
 };

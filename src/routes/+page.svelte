@@ -18,12 +18,8 @@
 	const DESK_H = 620;
 	const MOB_W = 390;
 
-	// Initialized from the real window so the first hydrated render is already scaled;
-	// the prerendered HTML (vw 0) keeps the stage hidden via `ready` below, so the
-	// unscaled board never paints.
-	let vw = $state(browser ? window.innerWidth : 0);
-	// layout truth for scaling — innerWidth can disagree with the real container width,
-	// which skews the centered stage; clientWidth cannot
+	// Layout truth for scaling: clientWidth of <main>, bound on mount. innerWidth can
+	// disagree with the real container width and skew the centered stage.
 	let mw = $state(0);
 	let vh = $state(browser ? window.innerHeight : 0);
 	// Small-viewport height (100svh): the minimum area guaranteed visible on mobile
@@ -50,7 +46,7 @@
 	);
 
 	$effect(() => {
-		boardScale.value = (mw || vw) >= 900 ? deskScale : mobScale;
+		boardScale.value = mw >= 900 ? deskScale : mobScale;
 	});
 
 
@@ -87,7 +83,7 @@
 	});
 </script>
 
-<svelte:window bind:innerWidth={vw} bind:innerHeight={vh} onresize={readSvh} />
+<svelte:window bind:innerHeight={vh} onresize={readSvh} />
 
 <div bind:this={svhProbe} style="position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none" aria-hidden="true"></div>
 <main class:ready bind:clientWidth={mw}>

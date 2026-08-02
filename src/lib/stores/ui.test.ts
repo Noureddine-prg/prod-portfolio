@@ -64,12 +64,3 @@ describe('ui.introPlayed session gate', () => {
 	});
 });
 
-describe('ui.timeOfDay', () => {
-	it('initializes to a valid bucket and accepts the three DC states', () => {
-		expect(['night', 'dawn', 'dusk']).toContain(ui.timeOfDay);
-		for (const t of ['dawn', 'dusk', 'night'] as const) {
-			ui.timeOfDay = t;
-			expect(ui.timeOfDay).toBe(t);
-		}
-	});
-});

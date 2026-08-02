@@ -1,15 +1,5 @@
-import { test, expect, type ConsoleMessage } from '@playwright/test';
-
-// Console errors we consider benign in a scenes-not-yet-built scaffold: the dev-mode
-// "no builder for scene" notes are console.info, not errors, so nothing to filter yet.
-function collectErrors(page: import('@playwright/test').Page): string[] {
-	const errors: string[] = [];
-	page.on('console', (msg: ConsoleMessage) => {
-		if (msg.type() === 'error') errors.push(msg.text());
-	});
-	page.on('pageerror', (err) => errors.push(err.message));
-	return errors;
-}
+import { test, expect } from '@playwright/test';
+import { collectErrors } from './helpers';
 
 test('desktop board mounts with scene canvases and no console errors', async ({ page }) => {
 	await page.setViewportSize({ width: 900, height: 900 });

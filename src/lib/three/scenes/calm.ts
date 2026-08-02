@@ -1,7 +1,5 @@
-// Calm/ocean scene — sunset sea + airplane-window wing, ported verbatim from the DC
-// `kind === 'calm'` branch (Bento Portfolio.dc.html L2270–2821, wing L2411–2617).
-// Everything hangs off `scene` (not `spin`): the DC builder parents content to the scene
-// and the wing/contrail to the camera; spins.calm = 0 in the loop table.
+// Calm/ocean scene — sunset sea + airplane-window wing, verbatim port of the DC `kind === 'calm'`.
+// Everything parents to `scene` (not `spin`); the wing/contrail parent to the camera. spins.calm = 0.
 /* eslint-disable prefer-template */
 
 import type * as THREE from 'three';
@@ -44,52 +42,6 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 		sky.scale.set(s, 1, 1);
 		sea.scale.x = Math.max(1, s * 0.95);
 	};
-	// sunset cloud layer — fbm shader emulating volumetric clouds lit from within by the low sun
-	const cloudFrag = 'uniform float uTime; varying vec2 vUv;\n' +
-		'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }\n' +
-		'float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }\n' +
-		'float fbm(vec2 p){ float v=0.0, a=0.5; for(int i=0;i<6;i++){ v+=a*noise(p); p=p*2.0+vec2(1.7,9.2); a*=0.5; } return v; }\n' +
-		'void main(){\n' +
-		'  vec2 uv = vUv; vec2 sunP = vec2(0.5, 0.135);\n' +
-		'  // squash y near horizon for perspective: distant band of small clouds, bigger overhead\n' +
-		'  float persp = mix(6.0, 1.4, uv.y);\n' +
-		'  vec2 p = vec2(uv.x*7.0 - uTime*0.022, uv.y*persp*3.4);\n' +
-		'  float base = fbm(p);\n' +
-		'  float detail = fbm(p*2.6 - vec2(uTime*0.03, 0.0));\n' +
-		'  float d = base + detail*0.42;\n' +
-		'  // sparse clusters: large-scale mask gates where cloud groups form at all\n' +
-		'  float cluster = fbm(vec2(uv.x*1.6 - uTime*0.009, uv.y*2.2));\n' +
-		'  float clusterMask = smoothstep(0.3, 0.5, cluster);\n' +
-		'  // crisp cumulus: hard threshold, big thick bodies\n' +
-		'  float thr = 0.56;\n' +
-		'  float cov = smoothstep(thr, thr+0.13, d) * clusterMask;\n' +
-		'  cov = min(cov*1.4, 1.0);\n' +
-		'  // where clouds live: from below the horizon line (under the wing) up to mid-sky\n' +
-		'  float zone = 1.0 - smoothstep(0.42, 0.72, uv.y);\n' +
-		'  cov *= zone;\n' +
-		'  if (cov < 0.01) discard;\n' +
-		'  float sd = distance(vec2(uv.x, uv.y*1.9), vec2(sunP.x, sunP.y*1.9));\n' +
-		'  // top-lit shading: sample density slightly above — lighter tops, shaded bases\n' +
-		'  float above = fbm(p + vec2(0.0, 0.34)) + fbm((p + vec2(0.0,0.34))*2.6 - vec2(uTime*0.03, 0.0))*0.42;\n' +
-		'  float grad2 = clamp((d - above)*3.8 + 0.5, 0.0, 1.0);\n' +
-		'  grad2 = grad2*grad2*(3.0-2.0*grad2);\n' +
-		'  vec3 lit = mix(vec3(0.98,0.82,0.66), vec3(1.0,0.66,0.42), clamp(sd*2.2,0.0,1.0));\n' +
-		'  vec3 shade = vec3(0.33,0.2,0.26);\n' +
-		'  vec3 col = mix(shade, lit, grad2);\n' +
-		'  col += vec3(1.0,0.95,0.85) * pow(grad2, 3.0) * 0.35;\n' +
-		'  col += vec3(1.0,0.72,0.45) * exp(-sd*4.5) * 0.28 * grad2;\n' +
-		'  gl_FragColor = vec4(col, cov*0.9);\n' +
-		'}';
-	const cloudMat = new T.ShaderMaterial({
-		transparent: true,
-		depthWrite: false,
-		vertexShader:
-			'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
-		fragmentShader: cloudFrag,
-		uniforms: { uTime: { value: 0 } }
-	});
-	// (cloud decks removed — pending rework)
-
 	// stars in the upper sky
 	const stN = 60,
 		stG = new T.BufferGeometry(),
@@ -396,9 +348,7 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 				F2 = SP(te1[0] + lp1 * 0.22, te1[1] + lp1, d1);
 			pushTri(E, E2, F, lipC);
 			pushTri(F, E2, F2, lipC.clone().multiplyScalar(1.18));
-			// (red top-surface stripe removed)
 		}
-		// (no root/body fill — wing enters cropped by the window edge)
 		// upturned winglet with red-painted tip
 		const wl = (f: number, e2: number) => {
 			const bx = e2 ? 100.4 : 99.1,
@@ -713,11 +663,6 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 			}
 		});
 	}
-	// Dead code from the DC branch omitted (never invoked / never populated): clouds2 (L2618),
-	// rockTex2/rockMat2/mkRock2 (L2619–2642), folMat2/trunkMat2/mkTier2/mkTree2 (L2644–2669),
-	// horizon-isles mkIsle/isles with the `for (let i = 0; i < 0; i++)` spawn loop (L2670–2712),
-	// and their update blocks (clouds2.forEach / isles.forEach, L2789–2807).
-
 	// near islands passing below the plane — flat blobs on the water, fast parallax for height cue
 	const mkIsleTop = function (seed: number) {
 		const icv = document.createElement('canvas');
@@ -873,7 +818,6 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 			ws2.material.opacity = 0.13 + Math.sin(t * 1.7) * 0.05;
 			ws2.scale.x = 2.6 + Math.sin(t * 0.9) * 0.3;
 		}
-		cloudMat.uniforms.uTime.value = t;
 		fitBackdrop();
 
 		stM.opacity = 0.45 + Math.sin(t * 0.8) * 0.15;

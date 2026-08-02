@@ -1,17 +1,9 @@
-// Shared scene primitives — extracted VERBATIM from the DC file so the campfire and flame
-// the campfire and flame scenes stay independent (the DC stashed these on window.__DC_* to bridge a
-// build-order dependency; here they are plain exports, no window globals).
-//
-// Contents (and nothing else — mkTree/mkTier/mkTree2 etc. are per-scene, not shared):
-//   NOISE_GLSL  — simplex noise (DC L1731-1774)
-//   FLAME_VERT  — noise-displaced flame vertex shader (DC L1776-1795)
-//   FLAME_FRAG  — flame fragment shader (DC L1796-1806)
-//   mkFlame     — flame layer factory (campfire L1808-1816 ≡ flame L2825-2833)
-//   mkCanvas    — 2D canvas-texture helper (DC L1433)
+// Flame primitives shared by the campfire and flame scenes, extracted verbatim from the
+// DC file (there stashed on window.__DC_* to bridge a build-order dependency).
 
 import type * as THREE from 'three';
 
-export const NOISE_GLSL = `
+const NOISE_GLSL = `
             vec3 mod289(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
             vec4 mod289(vec4 x){return x - floor(x*(1.0/289.0))*289.0;}
             vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
@@ -56,7 +48,7 @@ export const NOISE_GLSL = `
               return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
             }`;
 
-export const FLAME_VERT =
+const FLAME_VERT =
 	NOISE_GLSL +
 	`
             uniform float uTime;
@@ -79,7 +71,7 @@ export const FLAME_VERT =
               gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
             }`;
 
-export const FLAME_FRAG = `
+const FLAME_FRAG = `
             uniform float uOpacity;
             varying float vH;
             varying float vN;
@@ -91,11 +83,7 @@ export const FLAME_FRAG = `
               gl_FragColor = vec4(col * a, a);
             }`;
 
-/**
- * One flame layer: a noise-displaced additive cone. Verbatim from DC L1808-1816 (campfire)
- * / L2825-2833 (flame) — parameterized on `T` and `parent` instead of closing over `spin`.
- * Returns the mesh so the caller can drive `mat.uniforms.uTime`.
- */
+/** One flame layer: a noise-displaced additive cone. Returns the mesh so the caller can drive `mat.uniforms.uTime`. */
 export function mkFlame(
 	T: typeof THREE,
 	parent: THREE.Object3D,
@@ -124,7 +112,7 @@ export function mkFlame(
 	return m;
 }
 
-/** 2D canvas factory for CanvasTextures (DC L1433). */
+/** 2D canvas factory for CanvasTextures. */
 export function mkCanvas(
 	w: number,
 	h: number,
