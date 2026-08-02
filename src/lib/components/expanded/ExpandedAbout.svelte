@@ -19,7 +19,7 @@
 	<!-- portrait hero + lockup — DC L618–626; img is absolute so the ✕-clearance padding
 	     expand.ts adds to the first non-absolute child can't shrink it -->
 	<div
-		style="position:relative;height:190px;flex:none;border-radius:16px;overflow:hidden;border:1px solid #2f2939"
+		style="position:relative;height:190px;flex:none;border-radius:16px;overflow:hidden;border:1px solid #322a3d"
 	>
 		<img
 			src={about.portrait.src}
@@ -58,7 +58,7 @@
 						style="font:400 8px 'JetBrains Mono',monospace;color:#e2954f;text-transform:uppercase;letter-spacing:.12em;flex:none"
 						>{g.label}</span
 					><span
-						style="flex:1;border-bottom:1px solid #2f2939;transform-origin:left;animation:dcrule .9s cubic-bezier(.2,.7,.3,1) {ruleDelays[
+						style="flex:1;border-bottom:1px solid #322a3d;transform-origin:left;animation:dcrule .9s cubic-bezier(.2,.7,.3,1) {ruleDelays[
 							i
 						]} both"
 					></span></span
@@ -106,7 +106,7 @@
 		<!-- portrait column — 206px bordered box, real <img> in the DC's image-slot place -->
 		<div style="width:172px;flex:none;display:flex;flex-direction:column;justify-content:center">
 			<div
-				style="height:206px;position:relative;border:1px solid #2f2939;border-radius:16px;padding:5px;box-sizing:border-box;background:rgba(255,255,255,.02)"
+				style="height:206px;position:relative;border:1px solid #322a3d;border-radius:16px;padding:5px;box-sizing:border-box;background:rgba(255,255,255,.02)"
 			>
 				<img
 					src={about.portrait.src}
@@ -130,7 +130,7 @@
 		</div>
 		<!-- right rail — 4 plain-text skill groups (no chips/dcrule on desktop) -->
 		<div
-			style="width:230px;flex:none;display:flex;flex-direction:column;justify-content:center;gap:14px;border-left:1px solid #2f2939;padding-left:26px"
+			style="width:230px;flex:none;display:flex;flex-direction:column;justify-content:center;gap:14px;border-left:1px solid #322a3d;padding-left:26px"
 		>
 			{#each about.skillGroups as g (g.label)}
 				<div style="display:flex;flex-direction:column;gap:5px">
@@ -144,7 +144,7 @@
 		</div>
 	</div>
 	<div
-		style="position:relative;display:flex;gap:18px;align-items:baseline;border-top:1px solid #2f2939;padding-top:12px"
+		style="position:relative;display:flex;gap:18px;align-items:baseline;border-top:1px solid #322a3d;padding-top:12px"
 	>
 		<CardLinks resumeColor="#e2954f" linkColor="#9d92ab" />
 	</div>
