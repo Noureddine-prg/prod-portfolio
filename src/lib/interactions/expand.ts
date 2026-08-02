@@ -447,8 +447,13 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 			unmount(panel);
 			clone.remove();
 			// fade the tile's own content back in instead of popping
+			// The migrated canvas (jarCv) is excluded: it owns its visibility via the
+			// jarHome cssText restore above. Letting the tile-content fade-in touch it
+			// schedules an async style-clearing timeout that clobbers a fast reopen's
+			// opacity-fade setup — the small tile scene then stays stuck visible on the
+			// re-expanded card (contact mobile pop-branch bug).
 			const tkids = [...tile.children].filter(
-				(k) => !(k as HTMLElement).hasAttribute('data-expand')
+				(k) => !(k as HTMLElement).hasAttribute('data-expand') && k !== jarCv
 			) as HTMLElement[];
 			tkids.forEach((k) => {
 				k.style.transition = 'none';
