@@ -90,14 +90,21 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 		}
 		if (popT == null) return;
 		const k = Math.min(1, (t - popT) / 0.9);
-		// lift: ease to an apex near 40%, then quadratic ease back to 0 at k=1
-		const lift = k < 0.4 ? Math.sin((k / 0.4) * (Math.PI / 2)) : Math.pow(1 - (k - 0.4) / 0.6, 2);
-		const sweep = Math.sin(Math.PI * k); // parabolic x sweep, peaks mid-flight, 0 at both ends
-		axe.position.x = AXE_X0 + sweep * 0.2;
-		axe.position.y = AXE_Y0 + lift * 0.45;
-		axe.rotation.z = AXE_RZ0 + lift * 0.5;
-		// shudder offset from the stump's REST y — absolute was slamming the log into the blade
-		const e = (k - 0.78) / 0.22;
-		stump.position.y = STUMP_Y0 + (k >= 0.78 ? Math.sin(e * Math.PI * 3) * (1 - e) * 0.02 : 0);
+		const KW = 0.38,
+			KI = 0.8; // windup apex, impact
+		// windup→chop shape: ease up to the cocked apex, then accelerate down into the bite
+		const swing =
+			k < KW
+				? Math.sin((k / KW) * (Math.PI / 2))
+				: k < KI
+					? Math.pow(1 - (k - KW) / (KI - KW), 2)
+					: 0;
+		const arc = k < KI ? Math.sin(Math.PI * (k / KI)) : 0; // head arcs back over the windup, home by impact
+		const u = (k - KI) / (1 - KI);
+		const rec = k >= KI ? Math.sin(u * Math.PI * 3) * (1 - u) : 0; // decaying impact recoil, 0 at k=1
+		axe.position.x = AXE_X0 - arc * 0.28;
+		axe.position.y = AXE_Y0 + swing * 0.5 + rec * 0.03;
+		axe.rotation.z = AXE_RZ0 + swing * 1.1 - rec * 0.06; // cock back, then chop through onto the bite
+		stump.position.y = STUMP_Y0 + rec * 0.03; // impact shudder, offset from REST y
 	};
 }
