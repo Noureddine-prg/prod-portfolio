@@ -72,29 +72,36 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	scene.add(fill);
 	scene.add(new T.AmbientLight(0x2a2020, 0.9));
 
-	// chop-on-pop: expand.ts sets data-pop at Work click — the axe lifts, swings into
-	// the wood with a stump shudder, and settles; resets when the flag clears.
+	// chop-on-pop: expand.ts sets data-pop at Work click — the axe lifts, sweeps a
+	// parabolic arc, and chops back down onto its embedded pose with a stump shudder.
+	// Everything is REST + offset where every offset is exactly 0 at k=1 and when idle,
+	// so re-entry lands pixel-exact on the pre-chop frame and can never clip.
+	const AXE_X0 = 0.42,
+		AXE_Y0 = 0.02,
+		AXE_RZ0 = -0.5,
+		STUMP_Y0 = -0.62;
 	let popT: number | null = null;
 	return (t) => {
 		const popped = ctx.canvas.dataset.pop === '1';
 		if (popped && popT == null) popT = t;
 		if (!popped && popT != null) {
 			popT = null;
-			axe.position.set(0.42, 0.02, 0);
-			stump.position.y = 0;
+			axe.position.set(AXE_X0, AXE_Y0, 0);
+			axe.rotation.z = AXE_RZ0;
+			stump.position.y = STUMP_Y0;
 		}
 		if (popT == null) return;
 		const k = Math.min(1, (t - popT) / 0.9);
-		// lift factor: 0 at rest, 1 at apex, back to 0 — the pose is always REST + offset,
-		// so the axe can only ever land exactly where it started
-		let lift = 0;
-		if (k < 0.5) lift = 1 - Math.pow(1 - k / 0.5, 3);
-		else if (k < 0.78) lift = 1 - Math.pow((k - 0.5) / 0.28, 2);
-		// straight vertical hop — same pose throughout, so re-entry can never clip
-		axe.position.y = 0.02 + lift * 0.45;
-		if (k >= 0.78) {
-			const e = (k - 0.78) / 0.22;
-			stump.position.y = Math.sin(e * Math.PI * 3) * (1 - e) * 0.02; // landing shudder
-		}
+		// arc height: ease up to an apex near 40%, then quadratic ease back to 0 at k=1
+		const lift = k < 0.4 ? Math.sin((k / 0.4) * (Math.PI / 2)) : Math.pow(1 - (k - 0.4) / 0.6, 2);
+		// x sweep: a clean parabola peaking mid-flight, zero at both ends
+		const sweep = Math.sin(Math.PI * k);
+		axe.position.x = AXE_X0 + sweep * 0.2; // out on the way up, back home on the way down
+		axe.position.y = AXE_Y0 + lift * 0.45; // same max height as before
+		axe.rotation.z = AXE_RZ0 + lift * 0.5; // cocks upright at apex, rolls back onto the bite
+		// landing shudder, offset from the stump's REST y (not absolute — that was slamming
+		// the log up into the blade and reading as a clip)
+		const e = (k - 0.78) / 0.22;
+		stump.position.y = STUMP_Y0 + (k >= 0.78 ? Math.sin(e * Math.PI * 3) * (1 - e) * 0.02 : 0);
 	};
 }
