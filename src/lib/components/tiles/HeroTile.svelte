@@ -30,7 +30,7 @@
 	<ThreeCanvas kind="campfire" lite={mobile} style="width:100%;height:100%;display:block" />
 
 	<div
-		style="position:absolute;top:{topPad}px;left:{sidePad}px;right:{sidePad}px;display:flex;gap:{mobile
+		style="position:absolute;bottom:{nameBottom}px;left:{nameBottom}px;right:{nameBottom}px;display:flex;gap:{mobile
 			? 6
 			: 8}px;align-items:center"
 	>
@@ -89,7 +89,7 @@
 	</div>
 
 	<div
-		style="position:absolute;bottom:{nameBottom}px;left:{nameBottom}px;right:{nameBottom}px;display:flex;justify-content:space-between;align-items:flex-end"
+		style="position:absolute;top:{topPad}px;left:{sidePad}px;right:{sidePad}px;display:flex;justify-content:space-between;align-items:flex-end"
 	>
 		<div
 			style="font:400 {nameFont}px/{nameLH} 'Archivo Black',sans-serif;letter-spacing:-.01em;color:#f2ede2;text-shadow:0 2px 20px rgba(0,0,0,.6),0 0 22px rgba(255,170,90,.22);text-transform:uppercase"
