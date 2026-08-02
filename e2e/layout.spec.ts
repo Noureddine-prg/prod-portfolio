@@ -20,13 +20,15 @@ test('desktop 1280w: 900×620 grid board, mobile stage hidden', async ({ page })
 	// poll until the scaled rect appears before asserting exact geometry.
 	const design = await b.evaluate((el) => ({ w: el.clientWidth, h: el.clientHeight }));
 	expect(design.h).toBe(620);
-	expect(design.w).toBe(Math.round((620 * 1280) / 800)); // = 992
+	// design width derives from the measured container (excludes any scrollbar)
+	const mainW = await page.evaluate(() => document.querySelector('main')!.clientWidth);
+	expect(design.w).toBe(Math.round((620 * mainW) / 800));
 	await expect
 		.poll(async () => (await b.boundingBox())!.width, { timeout: 15_000 })
 		.toBeGreaterThan(1200);
 	const box = (await b.boundingBox())!;
-	expect(box.width).toBeGreaterThanOrEqual(1280 - 4);
-	expect(box.width).toBeLessThanOrEqual(1280 + 1);
+	expect(box.width).toBeGreaterThanOrEqual(mainW - 4);
+	expect(box.width).toBeLessThanOrEqual(mainW + 1);
 	expect(box.height).toBeGreaterThanOrEqual(800 - 4);
 	expect(box.height).toBeLessThanOrEqual(800 + 1);
 
@@ -61,8 +63,9 @@ test('mobile 390w: order hero → about → [contact+health] → experience → 
 	await expect(page.locator('.stage--desktop [data-board]')).toBeHidden();
 
 	const box = (await b.boundingBox())!;
-	expect(box.width).toBeGreaterThanOrEqual(388);
-	expect(box.width).toBeLessThanOrEqual(394);
+	const mainWm = await page.evaluate(() => document.querySelector('main')!.clientWidth);
+	expect(box.width).toBeGreaterThanOrEqual(mainWm - 2);
+	expect(box.width).toBeLessThanOrEqual(mainWm + 2);
 
 	const y = async (sel: ReturnType<typeof b.locator>) => (await sel.boundingBox())!.y;
 

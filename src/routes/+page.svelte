@@ -22,6 +22,9 @@
 	// the prerendered HTML (vw 0) keeps the stage hidden via `ready` below, so the
 	// unscaled board never paints.
 	let vw = $state(browser ? window.innerWidth : 0);
+	// layout truth for scaling — innerWidth can disagree with the real container width,
+	// which skews the centered stage; clientWidth cannot
+	let mw = $state(0);
 	let vh = $state(browser ? window.innerHeight : 0);
 	// Small-viewport height (100svh): the minimum area guaranteed visible on mobile
 	// regardless of the browser's dynamic URL bar. innerHeight can report the large
@@ -35,19 +38,46 @@
 	// on extreme aspect ratios), so the fr-based grid itself spans edge-to-edge; a uniform
 	// scale then fills the height with no distortion.
 	const deskW = $derived(
-		vw && vhEff ? Math.round(Math.min(1400, Math.max(760, (DESK_H * vw) / vhEff))) : 900
+		mw && vhEff ? Math.round(Math.min(1400, Math.max(760, (DESK_H * mw) / vhEff))) : 900
 	);
-	const deskScale = $derived(vw ? Math.max(0.5, Math.min(vhEff / DESK_H, vw / deskW)) : 1);
+	const deskScale = $derived(mw ? Math.max(0.5, Math.min(vhEff / DESK_H, mw / deskW)) : 1);
 	// Mobile scales by width, capped so tablet widths get a centered column instead of a
 	// blown-up phone layout. Design height tracks the device (clamped so tiles never
 	// compress below usable) and the column form-fits the screen with no scrolling.
-	const mobScale = $derived(vw ? Math.min(1.25, Math.max(0.75, vw / MOB_W)) : 1);
+	const mobScale = $derived(mw ? Math.min(1.25, Math.max(0.75, mw / MOB_W)) : 1);
 	const mobH = $derived(
-		vw && vhEff ? Math.round(Math.min(1000, Math.max(640, vhEff / mobScale))) : 812
+		mw && vhEff ? Math.round(Math.min(1000, Math.max(640, vhEff / mobScale))) : 812
 	);
 
 	$effect(() => {
-		boardScale.value = vw >= 900 ? deskScale : mobScale;
+		boardScale.value = (mw || vw) >= 900 ? deskScale : mobScale;
+	});
+
+	// The browser tints its bar strips from theme-color / the body color, sampling at
+	// interaction time — during the shade fade it reads the pre-fade state and lags one
+	// transition behind. Setting both explicitly per state keeps the strips in sync.
+	$effect(() => {
+		if (!browser) return;
+		const open = ui.openCard !== null;
+		// top strip follows theme-color; the bottom underfill follows body/root — anchored
+		// to the gradient's respective ends per state
+		const apply = () => {
+			const c = ui.openCard !== null ? '#060505' : '#101a2c';
+			document.documentElement.style.backgroundColor = c;
+			document.body.style.backgroundColor = c;
+			// replace the meta node outright — attribute edits on an existing meta are
+			// ignored by some browsers when re-deriving bar tints
+			document.querySelector('meta[name="theme-color"]')?.remove();
+			const m = document.createElement('meta');
+			m.name = 'theme-color';
+			m.content = c;
+			document.head.appendChild(m);
+		};
+		apply();
+		// the browser samples bar tints at interaction time, while the shade is still
+		// mid-fade — re-apply after the fade so it re-derives from the settled state
+		const nudge = setTimeout(apply, 750);
+		return () => clearTimeout(nudge);
 	});
 
 	function readSvh() {
@@ -65,7 +95,8 @@
 <svelte:window bind:innerWidth={vw} bind:innerHeight={vh} onresize={readSvh} />
 
 <div bind:this={svhProbe} style="position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none" aria-hidden="true"></div>
-<main class:ready>
+<main class:ready bind:clientWidth={mw}>
+	<div class="field"></div>
 	<div class="shade" class:on={ui.openCard !== null}></div>
 	<div
 		class="stage stage--desktop"
@@ -89,21 +120,44 @@
 		align-items: center;
 		justify-content: center;
 		padding: 0;
-		background: linear-gradient(168deg, #121f36 0%, #0e1728 42%, #080d16 100%);
+		background: transparent;
 		overflow-x: hidden; /* ash sway must never create horizontal scroll */
+	}
+
+	/* THE background painter — a normal fixed element (like the intro veil) so the
+	 * browser composites it into the bar strips; sized to the large viewport so it
+	 * never restretches when the URL bar collapses */
+	.field {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: calc(100lvh + 140px); /* overshoot under the bottom toolbar */
+		background: #101a2c;
+		z-index: 0;
+		pointer-events: none;
 	}
 
 	/* black field behind an expanded card; the transparent board lets it show through */
 	.shade {
 		position: fixed;
-		inset: 0;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100lvh;
 		background: #060505;
 		opacity: 0;
 		transition: opacity 0.6s ease;
+		z-index: 1;
 		pointer-events: none;
 	}
 	.shade.on {
 		opacity: 1;
+	}
+
+	.stage {
+		position: relative;
+		z-index: 2;
 	}
 
 	/* Stages stay invisible in the prerendered (unscaled) HTML; the first hydrated

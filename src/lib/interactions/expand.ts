@@ -385,6 +385,9 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		if (shutDone) return;
 		shutDone = true;
 		clearTimeout(settleTimer);
+		// state flips at the close CLICK — the browser samples bar tints at interaction
+		// time, so a late flip leaves the strips stuck on the open-state black
+		ui.openCard = null;
 		close.style.transition = 'opacity .08s ease';
 		close.style.opacity = '0';
 		clone.style.overflow = 'hidden';
@@ -463,7 +466,6 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 				);
 			});
 			delete board.dataset.open;
-			ui.openCard = null;
 		}, 560); // after the .42s shrink + fade tail
 	};
 	close.addEventListener('click', shut);

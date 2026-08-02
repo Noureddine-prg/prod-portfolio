@@ -67,8 +67,15 @@
 }
 
 html {
-	background: #121f36;
+	color-scheme: dark;
+	/* the board form-fits the viewport — the document itself never scrolls */
+	overflow: hidden;
+	height: 100%;
+	/* solid root color propagates to the browser canvas; anchored to the gradient's
+	background: #101a2c;
 }
+
+
 
 html,
 body {
@@ -79,7 +86,7 @@ body {
 body {
 	overflow: hidden; /* board form-fits the viewport; no page scroll or bounce */
 	overscroll-behavior: none;
-	background: linear-gradient(168deg, #121f36 0%, #0e1728 42%, #080d16 100%);
+	background: #101a2c;
 	color: var(--c-text-cream);
 	font-family: var(--f-body);
 	-webkit-font-smoothing: antialiased;
