@@ -72,10 +72,8 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	scene.add(fill);
 	scene.add(new T.AmbientLight(0x2a2020, 0.9));
 
-	// chop-on-pop: expand.ts sets data-pop at Work click — the axe lifts, sweeps a
-	// parabolic arc, and chops back down onto its embedded pose with a stump shudder.
-	// Everything is REST + offset where every offset is exactly 0 at k=1 and when idle,
-	// so re-entry lands pixel-exact on the pre-chop frame and can never clip.
+	// chop-on-pop (data-pop at Work click): axe arcs up and chops back down. All REST +
+	// offset, every offset exactly 0 at k=1/idle, so it lands pixel-exact — no clip.
 	const AXE_X0 = 0.42,
 		AXE_Y0 = 0.02,
 		AXE_RZ0 = -0.5,
@@ -92,15 +90,13 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 		}
 		if (popT == null) return;
 		const k = Math.min(1, (t - popT) / 0.9);
-		// arc height: ease up to an apex near 40%, then quadratic ease back to 0 at k=1
+		// lift: ease to an apex near 40%, then quadratic ease back to 0 at k=1
 		const lift = k < 0.4 ? Math.sin((k / 0.4) * (Math.PI / 2)) : Math.pow(1 - (k - 0.4) / 0.6, 2);
-		// x sweep: a clean parabola peaking mid-flight, zero at both ends
-		const sweep = Math.sin(Math.PI * k);
-		axe.position.x = AXE_X0 + sweep * 0.2; // out on the way up, back home on the way down
-		axe.position.y = AXE_Y0 + lift * 0.45; // same max height as before
-		axe.rotation.z = AXE_RZ0 + lift * 0.5; // cocks upright at apex, rolls back onto the bite
-		// landing shudder, offset from the stump's REST y (not absolute — that was slamming
-		// the log up into the blade and reading as a clip)
+		const sweep = Math.sin(Math.PI * k); // parabolic x sweep, peaks mid-flight, 0 at both ends
+		axe.position.x = AXE_X0 + sweep * 0.2;
+		axe.position.y = AXE_Y0 + lift * 0.45;
+		axe.rotation.z = AXE_RZ0 + lift * 0.5;
+		// shudder offset from the stump's REST y — absolute was slamming the log into the blade
 		const e = (k - 0.78) / 0.22;
 		stump.position.y = STUMP_Y0 + (k >= 0.78 ? Math.sin(e * Math.PI * 3) * (1 - e) * 0.02 : 0);
 	};

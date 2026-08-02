@@ -343,11 +343,8 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		clone.appendChild(jarCv);
 		jarCv.style.zIndex = '0';
 		jarCv.style.pointerEvents = 'none';
-		// dusk-sky backing: the full-bleed (inset:0) ocean covers the clone, so the
-		// gradient below is invisible until the canvas yields. Fade it out across the
-		// grow — the ocean is crisp at click and through the burn, then hands off to the
-		// gradient as the clone starts stretching it (grow begins at 1.4s), leaving the
-		// dusk sky as the backdrop until the panel reveals at settle (1.95s).
+		// dusk-sky backing under the full-bleed ocean; the ocean fades across the grow
+		// (below) so the gradient reads as sky instead of a stretched scene until settle
 		clone.style.background =
 			'linear-gradient(180deg,#140e12 0%,#241428 40%,#43223a 62%,#7a3b3a 78%,#c8703f 90%,#e2954f 100%)';
 		jarCv.style.transition = 'opacity .5s ease 1.25s';
@@ -453,11 +450,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 			unmount(panel);
 			clone.remove();
 			// fade the tile's own content back in instead of popping
-			// The migrated canvas (jarCv) is excluded: it owns its visibility via the
-			// jarHome cssText restore above. Letting the tile-content fade-in touch it
-			// schedules an async style-clearing timeout that clobbers a fast reopen's
-			// opacity-fade setup — the small tile scene then stays stuck visible on the
-			// re-expanded card (contact mobile pop-branch bug).
+			// jarCv excluded: owns its visibility via the jarHome restore; fading it clobbers a fast reopen
 			const tkids = [...tile.children].filter(
 				(k) => !(k as HTMLElement).hasAttribute('data-expand') && k !== jarCv
 			) as HTMLElement[];
