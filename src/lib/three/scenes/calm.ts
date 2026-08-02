@@ -32,13 +32,14 @@ async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
 		const src = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
 		const p = src.getAttribute('position') as THREE.BufferAttribute;
 		const base = (mesh.material as THREE.MeshStandardMaterial).color ?? new T.Color(0.8, 0.8, 0.8);
+		const DIM = 0.55; // dim the cream so it silhouettes against the dusk like the reference
 		for (let i = 0; i < p.count; i += 3) {
 			const gx = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3;
 			const gz = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
 			if (!inWing(gx, gz)) continue;
 			for (let v = 0; v < 3; v++) {
 				pos.push(p.getX(i + v), p.getY(i + v), p.getZ(i + v));
-				col.push(base.r, base.g, base.b);
+				col.push(base.r * DIM, base.g * DIM, base.b * DIM);
 			}
 		}
 	});
@@ -146,10 +147,12 @@ async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
 
 	// anchor into the cam-child porthole framing (tuned so the wing sweeps away toward the
 	// winglet with the nacelle visible under it); base rot Z is the sway pivot
-	const BASE_RZ = -0.4;
-	wgrp.scale.setScalar(0.0115);
-	wgrp.position.set(-0.15, -1.1, -8.5);
-	wgrp.rotation.set(-1.15, 0.55, BASE_RZ);
+	// porthole framing tuned to the hand-built reference: root enters lower-left, the wing
+	// sweeps up to the tip mid-right, top surface toward the camera, sunset/ocean above
+	const BASE_RZ = 1.7;
+	wgrp.scale.setScalar(0.0125);
+	wgrp.position.set(-0.2, -1.2, -6.8);
+	wgrp.rotation.set(-1.0, 0.9, BASE_RZ);
 	wgrp.userData.baseRotZ = BASE_RZ;
 }
 
