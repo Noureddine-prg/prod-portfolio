@@ -343,6 +343,10 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		clone.appendChild(jarCv);
 		jarCv.style.zIndex = '0';
 		jarCv.style.pointerEvents = 'none';
+		// dusk-sky backing: the scene stretches while the clone grows, and the gradient
+		// reads as sky wherever the canvas hasn't caught up yet
+		clone.style.background =
+			'linear-gradient(180deg,#140e12 0%,#241428 40%,#43223a 62%,#7a3b3a 78%,#c8703f 90%,#e2954f 100%)';
 	} else if (jarCv) {
 		jarHome = {
 			parent: jarCv.parentElement as HTMLElement,

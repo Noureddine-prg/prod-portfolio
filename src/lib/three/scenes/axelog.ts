@@ -80,7 +80,6 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 		if (popped && popT == null) popT = t;
 		if (!popped && popT != null) {
 			popT = null;
-			axe.rotation.z = -0.5;
 			axe.position.set(0.42, 0.02, 0);
 			stump.position.y = 0;
 		}
@@ -91,9 +90,8 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 		let lift = 0;
 		if (k < 0.5) lift = 1 - Math.pow(1 - k / 0.5, 3);
 		else if (k < 0.78) lift = 1 - Math.pow((k - 0.5) / 0.28, 2);
-		axe.position.y = 0.02 + lift * 0.62; // head rises clear of the stump rim
-		axe.position.x = 0.42 + lift * 0.1;
-		axe.rotation.z = -0.5 - lift * 0.35; // slight windup tilt at the apex
+		// straight vertical hop — same pose throughout, so re-entry can never clip
+		axe.position.y = 0.02 + lift * 0.45;
 		if (k >= 0.78) {
 			const e = (k - 0.78) / 0.22;
 			stump.position.y = Math.sin(e * Math.PI * 3) * (1 - e) * 0.02; // landing shudder

@@ -59,12 +59,10 @@
 	// scroll-and-back (document is otherwise scroll-locked) forces the resample.
 	$effect(() => {
 		if (!browser) return;
-		const open = ui.openCard !== null;
-		const c = open ? '#060505' : '#101a2c';
-		document.documentElement.style.backgroundColor = c;
-		document.body.style.backgroundColor = c;
-		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', c);
-		if (open) return;
+		// root/body/meta are never written — the top strip renders the root color, and
+		// this browser honors a write going dark at interaction time but does not repaint
+		// the strip when the value is restored. The shade supplies the visible black.
+		if (ui.openCard !== null) return;
 		const jiggle = setTimeout(() => {
 			const de = document.documentElement;
 			de.style.overflow = 'auto';
