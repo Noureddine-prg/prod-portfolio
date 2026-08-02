@@ -49,44 +49,10 @@
 		boardScale.value = mw >= 900 ? deskScale : mobScale;
 	});
 
-
-	// Browser bar tints re-derive on load and on scroll — not on meta/style changes.
-	// Colors flip with the card state, and after the close fade an invisible 1px
-	// scroll-and-back (document is otherwise scroll-locked) forces the resample.
-	$effect(() => {
-		if (!browser) return;
-		// root/body/meta are never written — the top strip renders the root color, and
-		// this browser honors a write going dark at interaction time but does not repaint
-		// the strip when the value is restored. The shade supplies the visible black.
-		if (ui.openCard !== null) return;
-		let r1 = 0,
-			r2 = 0,
-			r3 = 0;
-		const jiggle = setTimeout(() => {
-			const de = document.documentElement;
-			// unlock the root scroller and grow the body so a 1px document scroll is possible
-			de.style.overflow = 'auto';
-			document.body.style.minHeight = 'calc(100lvh + 2px)';
-			// scroll 1px then back on SEPARATE frames — a same-turn 0→1→0 never paints, so
-			// Safari never resamples the bar tint; a painted delta forces the resample to navy
-			r1 = requestAnimationFrame(() => {
-				window.scrollTo(0, 1);
-				r2 = requestAnimationFrame(() => {
-					window.scrollTo(0, 0);
-					r3 = requestAnimationFrame(() => {
-						de.style.overflow = '';
-						document.body.style.minHeight = '';
-					});
-				});
-			});
-		}, 750);
-		return () => {
-			clearTimeout(jiggle);
-			cancelAnimationFrame(r1);
-			cancelAnimationFrame(r2);
-			cancelAnimationFrame(r3);
-		};
-	});
+	// Bar tints: root/body/theme-color stay static navy; the .shade supplies the black while
+	// a card is open and hides INSTANTLY on close (see CSS) so the interaction-time sample on
+	// iOS never catches black. No scroll-jiggle — a programmatic scroll doesn't count as a
+	// resample trigger on that browser.
 
 	function readSvh() {
 		if (svhProbe) svh = svhProbe.clientHeight;
@@ -156,14 +122,14 @@
 		height: calc(100lvh + 140px);
 		background: #060505;
 		opacity: 0;
-		/* fast CLOSE fade so any bar-tint resample after close sees navy, not black */
-		transition: opacity 0.15s ease;
+		/* CLOSE hides instantly so the first paint after the close click is navy edge-to-edge */
+		transition: opacity 0s;
 		z-index: 1;
 		pointer-events: none;
 	}
 	.shade.on {
 		opacity: 1;
-		transition: opacity 0.6s ease; /* slow OPEN fade */
+		transition: opacity 0.6s ease; /* OPEN still fades in */
 	}
 
 	.stage {
