@@ -3,7 +3,8 @@
 	// the ProjDetail overlay via ui.workDetail; body-click close stays disabled for Work in expand.ts.
 	import { onDestroy } from 'svelte';
 	import { ui } from '$lib/stores/ui.svelte';
-	import { work, links } from '$lib/content';
+	import CardLinks from '../CardLinks.svelte';
+	import { work } from '$lib/content';
 	import ProjDetail from './ProjDetail.svelte';
 
 	interface Props {
@@ -131,24 +132,7 @@
 		use:listEl
 		style="display:flex;gap:18px;align-items:baseline;border-top:1px solid rgba(36,29,24,.28);padding-top:12px;margin-top:12px"
 	>
-		<a
-			href={links.resume}
-			target="_blank"
-			style="font:500 9px 'JetBrains Mono',monospace;color:#241d18;text-decoration:none"
-			>Open resume PDF &rarr;</a
-		>
-		<a
-			href={links.linkedin}
-			target="_blank"
-			style="font:500 9px 'JetBrains Mono',monospace;color:#5e544a;text-decoration:none"
-			>LinkedIn &#8599;</a
-		>
-		<a
-			href={links.github}
-			target="_blank"
-			style="font:500 9px 'JetBrains Mono',monospace;color:#5e544a;text-decoration:none"
-			>GitHub &#8599;</a
-		>
+		<CardLinks resumeColor="#241d18" linkColor="#5e544a" />
 	</div>
 {/if}
 

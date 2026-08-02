@@ -4,6 +4,7 @@
 :root {
 	--c-text-cream: #efe9e6;
 	--f-body: 'Archivo', system-ui, sans-serif;
+	--c-field: #101a2c; /* root/backing navy — also paints the browser bar strips (mirror app.html theme-color) */
 }
 
 * {
@@ -15,8 +16,7 @@ html {
 	/* board form-fits the viewport; the document itself never scrolls */
 	overflow: hidden;
 	height: 100%;
-	/* root color also paints the browser chrome / bar strips */
-	background: #101a2c;
+	background: var(--c-field);
 }
 
 html,
@@ -28,7 +28,7 @@ body {
 body {
 	overflow: hidden;
 	overscroll-behavior: none;
-	background: #101a2c;
+	background: var(--c-field);
 	color: var(--c-text-cream);
 	font-family: var(--f-body);
 	-webkit-font-smoothing: antialiased;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { activateOnKey } from '$lib/util/a11y';
 	// Contact tile — clean envelope scene + header + teaser; opens via `onopen`.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { contact } from '$lib/content';
@@ -16,16 +17,6 @@
 	const envH = $derived(mobile ? 96 : 118);
 	const envRight = $derived(mobile ? 4 : 6);
 	const teaserFont = $derived(mobile ? 8.5 : 9.5);
-
-	function activate() {
-		onopen();
-	}
-	function onKey(e: KeyboardEvent) {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			activate();
-		}
-	}
 </script>
 
 <div
@@ -34,8 +25,8 @@
 	data-card="contact"
 	role="button"
 	tabindex="0"
-	onclick={activate}
-	onkeydown={onKey}
+	onclick={onopen}
+	onkeydown={(e) => activateOnKey(e, onopen)}
 	style="{placement};background:radial-gradient(90% 70% at 62% 118%,rgba(255,140,58,.16),transparent 62%),#1c1512;border:1px solid #322619;border-radius:9px;padding:{pad}px;display:flex;flex-direction:column;justify-content:space-between"
 >
 	<span

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { activateOnKey } from '$lib/util/a11y';
 	// Work tile — cream parchment band + axe-in-log scene; opens via `onopen`.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { work } from '$lib/content';
@@ -16,16 +17,6 @@
 	const labelY = $derived(mobile ? 14 : 16);
 	const headFont = $derived(mobile ? 15 : 18);
 	const countFont = $derived(mobile ? 9 : 9.5);
-
-	function activate() {
-		onopen();
-	}
-	function onKey(e: KeyboardEvent) {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			activate();
-		}
-	}
 </script>
 
 <div
@@ -34,8 +25,8 @@
 	data-card="work"
 	role="button"
 	tabindex="0"
-	onclick={activate}
-	onkeydown={onKey}
+	onclick={onopen}
+	onkeydown={(e) => activateOnKey(e, onopen)}
 	style="{placement};background:#cbbfa8;border-radius:9px"
 >
 	<div

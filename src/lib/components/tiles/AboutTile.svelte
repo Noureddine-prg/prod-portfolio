@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { activateOnKey } from '$lib/util/a11y';
 	// About tile — jar fireflies scene + twinkles + availability line; opens via `onopen`.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { about } from '$lib/content';
@@ -19,16 +20,6 @@
 	const avail = $derived(mobile ? about.availabilityShort : about.availability);
 	const dotSize = $derived(mobile ? 7 : 8);
 	const availFont = $derived(mobile ? 9 : 9.5);
-
-	function activate() {
-		onopen();
-	}
-	function onKey(e: KeyboardEvent) {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			activate();
-		}
-	}
 </script>
 
 <div
@@ -37,8 +28,8 @@
 	data-card="about"
 	role="button"
 	tabindex="0"
-	onclick={activate}
-	onkeydown={onKey}
+	onclick={onopen}
+	onkeydown={(e) => activateOnKey(e, onopen)}
 	style="{placement};background:radial-gradient(120% 90% at 50% 115%,rgba(200,112,63,.10),transparent 60%),#1d1824;border:1px solid #2f2939;border-radius:9px;padding:{pad};display:flex;flex-direction:column;justify-content:space-between"
 >
 	<div style="position:absolute;inset:0;pointer-events:none">

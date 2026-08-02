@@ -2,7 +2,8 @@
 	// About expanded panel, mounted into the clone by expand.ts. Portrait column + skill
 	// groups (desktop plain-text, mobile chips) + footer links.
 	import EmberGlass from './EmberGlass.svelte';
-	import { about, links, profile } from '$lib/content';
+	import CardLinks from '../CardLinks.svelte';
+	import { about, profile } from '$lib/content';
 
 	interface Props {
 		mobile?: boolean;
@@ -88,24 +89,7 @@
 	<div
 		style="position:relative;flex:none;display:flex;gap:14px;align-items:baseline;border-top:1px solid #2f2939;padding-top:12px"
 	>
-		<a
-			href={links.resume}
-			target="_blank"
-			style="font:500 8.5px 'JetBrains Mono',monospace;color:#e2954f;text-decoration:none"
-			>Open resume PDF &rarr;</a
-		>
-		<a
-			href={links.linkedin}
-			target="_blank"
-			style="font:500 8.5px 'JetBrains Mono',monospace;color:#b3a8c2;text-decoration:none"
-			>LinkedIn &#8599;</a
-		>
-		<a
-			href={links.github}
-			target="_blank"
-			style="font:500 8.5px 'JetBrains Mono',monospace;color:#b3a8c2;text-decoration:none"
-			>GitHub &#8599;</a
-		>
+		<CardLinks size={8.5} resumeColor="#e2954f" linkColor="#b3a8c2" />
 	</div>
 {:else}
 	<EmberGlass />
@@ -162,23 +146,6 @@
 	<div
 		style="position:relative;display:flex;gap:18px;align-items:baseline;border-top:1px solid #2f2939;padding-top:12px"
 	>
-		<a
-			href={links.resume}
-			target="_blank"
-			style="font:500 9px 'JetBrains Mono',monospace;color:#e2954f;text-decoration:none"
-			>Open resume PDF &rarr;</a
-		>
-		<a
-			href={links.linkedin}
-			target="_blank"
-			style="font:500 9px 'JetBrains Mono',monospace;color:#9d92ab;text-decoration:none"
-			>LinkedIn &#8599;</a
-		>
-		<a
-			href={links.github}
-			target="_blank"
-			style="font:500 9px 'JetBrains Mono',monospace;color:#9d92ab;text-decoration:none"
-			>GitHub &#8599;</a
-		>
+		<CardLinks resumeColor="#e2954f" linkColor="#9d92ab" />
 	</div>
 {/if}

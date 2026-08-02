@@ -3,7 +3,9 @@
 	// envelope + ash sit under the content (z0/z1), the flame bleeds ABOVE it (z2,
 	// pointer-events:none) and is cropped by the container's overflow:hidden.
 	import { onDestroy } from 'svelte';
+	import { activateOnKey } from '$lib/util/a11y';
 	import ThreeCanvas from '../ThreeCanvas.svelte';
+	import CardLinks from '../CardLinks.svelte';
 	import { contact, links, profile } from '$lib/content';
 
 	interface Props {
@@ -78,7 +80,7 @@
 			role="button"
 			tabindex="0"
 			onclick={copyEmail}
-			onkeydown={(e) => e.key === 'Enter' && copyEmail()}
+			onkeydown={(e) => activateOnKey(e, copyEmail)}
 			style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 15px;border-radius:10px;background:#211b1b;border:1px solid #362e2e;cursor:pointer"
 		>
 			<span style="font:500 10.5px 'JetBrains Mono',monospace;color:#efe9e6">{profile.email}</span>
@@ -200,7 +202,7 @@
 				role="button"
 				tabindex="0"
 				onclick={copyEmail}
-				onkeydown={(e) => e.key === 'Enter' && copyEmail()}
+				onkeydown={(e) => activateOnKey(e, copyEmail)}
 				style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:10px;background:#211b1b;border:1px solid #362e2e;cursor:pointer"
 			>
 				<span style="font:500 13px 'JetBrains Mono',monospace;color:#efe9e6">{profile.email}</span>
@@ -222,23 +224,6 @@
 	<div
 		style="position:relative;z-index:1;display:flex;gap:18px;align-items:baseline;border-top:1px solid #2a2424;padding-top:12px"
 	>
-		<a
-			href={links.resume}
-			target="_blank"
-			style="font:500 9px 'JetBrains Mono',monospace;color:#c85a44;text-decoration:none"
-			>{contact.resumeLabel}</a
-		>
-		<a
-			href={links.linkedin}
-			target="_blank"
-			style="font:500 9px 'JetBrains Mono',monospace;color:#94867f;text-decoration:none"
-			>LinkedIn &#8599;</a
-		>
-		<a
-			href={links.github}
-			target="_blank"
-			style="font:500 9px 'JetBrains Mono',monospace;color:#94867f;text-decoration:none"
-			>GitHub &#8599;</a
-		>
+		<CardLinks resumeColor="#c85a44" linkColor="#94867f" resumeLabel={contact.resumeLabel} />
 	</div>
 {/if}
