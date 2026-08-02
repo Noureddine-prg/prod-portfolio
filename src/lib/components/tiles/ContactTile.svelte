@@ -1,6 +1,5 @@
 <script lang="ts">
-	// Contact — clean envelope scene + header + teaser (DC 11a L232-235 / 11b L543-546).
-	// Interactive: `onopen` is a Stage-1 stub.
+	// Contact tile — clean envelope scene + header + teaser; opens via `onopen`.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { contact } from '$lib/content';
 

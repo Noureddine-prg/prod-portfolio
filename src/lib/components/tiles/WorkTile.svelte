@@ -1,6 +1,5 @@
 <script lang="ts">
-	// Work — cream parchment band + axe-in-log scene (DC 11a L355-360 / 11b L657-662).
-	// Interactive: `onopen` is a Stage-1 stub.
+	// Work tile — cream parchment band + axe-in-log scene; opens via `onopen`.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { work } from '$lib/content';
 

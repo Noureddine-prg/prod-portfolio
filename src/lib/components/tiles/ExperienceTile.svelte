@@ -1,6 +1,5 @@
 <script lang="ts">
-	// Experience — ocean (calm) scene under a sea-glass overlay + header + company chips
-	// (DC 11a L115-126 / 11b L450-461). Interactive: `onopen` is a Stage-1 stub.
+	// Experience tile — calm ocean under a sea-glass overlay + header + company chips; opens via `onopen`.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { experience } from '$lib/content';
 

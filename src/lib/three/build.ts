@@ -1,7 +1,5 @@
-// Canvas registration plumbing — ports the head of the DC `buildInner` (L1385-1408):
-// create renderer/scene/cam/pivot/spin, parse variants, dispatch to the per-kind builder,
-// and store the resulting SceneEntry. The context-loss restore path (cv.__ext dance) is
-// handled here too, keyed off the registry's CanvasMeta instead of DOM expandos.
+// Canvas registration plumbing: renderer/scene/cam/pivot/spin, variant parse, per-kind dispatch,
+// SceneEntry store. Context-loss restore is keyed off the registry's CanvasMeta, not DOM expandos.
 
 import type * as THREE from 'three';
 import { getMeta, setEntry, type SceneEntry } from './registry';

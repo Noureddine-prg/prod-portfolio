@@ -1,15 +1,7 @@
 <script lang="ts">
-	// Contact expanded panel — mounted into the clone's [data-expand] by expand.ts.
-	// Desktop z-stack (DC 11a L236–277): burnt envelope scene 400×340 (z0) + 17 ash
-	// spans (z0) under the content (z1), with the flame scene 330×425 bleeding past the
-	// bottom edge ABOVE the content (z2, pointer-events:none; the container's
-	// overflow:hidden crops it). Alpha does the work — copy the z indices exactly.
-	// Mobile (DC 11b L547–575): centered envelope at .6 opacity + flame in a cropped z0
-	// wrapper, 2 ash spans, then the button stack (copy 44 / write-me 44 / socials row /
-	// resume 40) pushed down with margin-top:auto.
-	// Copy-email (DC wireExtras L3123–3136): clipboard write + '✦ signal sent' feedback
-	// reverting after 2200ms — component state instead of document-level delegation.
-	// The email comes from content.ts, not the DC's hardcoded old address.
+	// Contact expanded panel, mounted into the clone by expand.ts. Z-order is load-bearing:
+	// envelope + ash sit under the content (z0/z1), the flame bleeds ABOVE it (z2,
+	// pointer-events:none) and is cropped by the container's overflow:hidden.
 	import { onDestroy } from 'svelte';
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { contact, links, profile } from '$lib/content';

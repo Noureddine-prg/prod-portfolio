@@ -1,10 +1,6 @@
 <script lang="ts">
-	// Experience expanded (desktop) — space-night background (DC 11a L127–141).
-	// In the DC the radial gradient sits on the data-expand container itself and the
-	// stars in an absolute inner wrapper; here both are one absolute overlay so Stage 3
-	// drops it as the first child of the expanded card and layers content above
-	// (position:relative siblings paint over it). 12 dctwinkle stars, exact
-	// positions/sizes/delays from DC L129–140.
+	// Experience expanded (desktop) space-night background: one absolute overlay (radial
+	// gradient + 12 dctwinkle stars) so relative-positioned content paints above it.
 </script>
 
 <div

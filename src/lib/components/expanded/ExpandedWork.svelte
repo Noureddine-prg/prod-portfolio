@@ -1,13 +1,6 @@
 <script lang="ts">
-	// Work expanded panel — parchment ledger, mounted into the clone's [data-expand] by
-	// expand.ts. Desktop (DC 11a L361–417): header, column header + 6 rows on the
-	// `34px 1fr 160px 118px 44px` grid (gap 16) with a real :hover rule (the DC used a
-	// style-hover attribute), spacer, footer links. Mobile (DC 11b L663–698): flex-column
-	// rows. Row click opens the ProjDetail overlay via the ui.workDetail store; rows only
-	// exist while expanded (the panel is only ever mounted inside the clone), and
-	// body-click close stays disabled for Work in expand.ts.
-	// List fade under the detail ports the DC's show()/back handlers (L3302/L3333):
-	// inline opacity → visibility:hidden after 300ms, restored on back.
+	// Work expanded panel — parchment ledger, mounted into the clone by expand.ts. Rows open
+	// the ProjDetail overlay via ui.workDetail; body-click close stays disabled for Work in expand.ts.
 	import { onDestroy } from 'svelte';
 	import { ui } from '$lib/stores/ui.svelte';
 	import { work, links } from '$lib/content';

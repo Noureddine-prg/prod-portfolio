@@ -1,12 +1,6 @@
 <script lang="ts">
-	// About expanded panel — mounted into the clone's [data-expand] by expand.ts.
-	// Desktop (DC 11a L297–352): ember-glass backdrop, header, 3 columns (172px portrait
-	// col with a 206px bordered box → real <img> instead of the DC's image-slot element;
-	// serif intro + Archivo body + availability; 230px right rail with 4 PLAIN-TEXT skill
-	// groups), footer links. Chips/dcrule are mobile-only.
-	// Mobile (DC 11b L609–655): 190px portrait hero with bottom gradient + the
-	// SOFTWARE/ENGINEER lockup (line 2 stroked), summary, 3 chip groups with dcrule
-	// draw-ins (.5/.7/.9s), availability pill with dcpulse dot.
+	// About expanded panel, mounted into the clone by expand.ts. Portrait column + skill
+	// groups (desktop plain-text, mobile chips) + footer links.
 	import EmberGlass from './EmberGlass.svelte';
 	import { about, links, profile } from '$lib/content';
 

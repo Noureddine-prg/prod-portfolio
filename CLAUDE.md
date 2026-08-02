@@ -65,8 +65,10 @@ board runs today and each scene PR is additive.
 
 ## Tokens & content
 
-- `src/lib/tokens.ts` — all colors/radii/spacing/breakpoints (also mirrored as CSS custom
-  properties in `src/app.css`, which also holds every board `@keyframes`, ported verbatim).
+- `src/lib/tokens.ts` — colors/radii/spacing/breakpoints as a reference table (exercised by
+  the token unit tests). Components carry their DC-ported values inline rather than reading
+  tokens; `src/app.css` holds the global base rules plus every board `@keyframes`, ported
+  verbatim.
 - `src/lib/content.ts` — all copy (profile, experience roles, 6 work projects, health,
   contact). Placeholder-grade; edit here, not in components.
 

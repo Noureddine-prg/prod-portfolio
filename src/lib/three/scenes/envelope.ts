@@ -1,8 +1,6 @@
-// Envelope scene — verbatim port of the DC `kind === 'envelope'` branch (L2921–2971).
-// Contact card: kraft paper envelope with wax seal. `clean` variant (tile) is pristine;
-// without it (expanded) the corners are charred with pulsing embers + a flickering fire
-// point light. NO flame mesh here — the burning look on the expanded card comes from the
-// separate flame canvas layered at z2.
+// Envelope scene — verbatim port of the DC `kind === 'envelope'`. `clean` variant (tile) is
+// pristine; without it (expanded) corners char with embers. NO flame mesh here — the burning
+// look on the expanded card is the separate flame canvas layered at z2.
 
 import type * as THREE from 'three';
 import type { SceneCtx, UpdateFn } from '../types';
@@ -67,7 +65,6 @@ export function buildEnvelope(ctx: SceneCtx): UpdateFn | null {
 	emboss.rotation.x = Math.PI / 2;
 	emboss.position.set(0, 0, 0.19);
 	sealGrp.add(emboss);
-	// (address lines removed)
 	const clean = ctx.variants.clean;
 	const embers: EmberMesh[] = [];
 	if (!clean) {

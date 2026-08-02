@@ -1,16 +1,6 @@
 <script lang="ts">
-	// Experience expanded panel — the Stage-2 composite, mounted into the clone's
-	// [data-expand] container by expand.ts.
-	// Desktop (DC 11a L127–206): SpaceNightBg (absolute — excluded from the reveal
-	// stagger) + header row + body row holding the role timeline (96px/20px/1fr grid,
-	// DC L147–168: right-aligned period column / constellation connector column with
-	// per-row dots and a 1px line linking rows / role blocks with icon chip, blurb and
-	// tech pills) next to the PortholeBar, then the quick-link footer (DC L202–206).
-	// Mobile (DC 11b L462–540): MobileOceanStrip (calm strip + sea-glass panel) holding
-	// the three [data-exp-card] role cards — icon 32px + dashed connector, natural
-	// stacking (pb:22). Cards start opacity:0/translateY(-12px) with their own inline
-	// 120/280/440ms transitions; expand.ts clears both at settle (t=1950ms) for the
-	// staggered rise. Education + links footer follows the panel (DC L532–539).
+	// Experience expanded panel, mounted into the clone by expand.ts. Mobile role cards start
+	// hidden (opacity:0/translateY); expand.ts clears their transforms at settle for the staggered rise.
 	import PortholeBar from './PortholeBar.svelte';
 	import SpaceNightBg from './SpaceNightBg.svelte';
 	import MobileOceanStrip from './MobileOceanStrip.svelte';
@@ -143,7 +133,6 @@
 				>&mdash; The journey so far</span
 			></span
 		>
-		<span style="font:400 9px 'JetBrains Mono',monospace;color:#6e6058"></span>
 	</div>
 	<div style="position:relative;display:flex;gap:22px;flex:1;min-height:0">
 		<!-- role timeline — DC L147–168 -->

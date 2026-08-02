@@ -1,13 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { DESKTOP, veilCount, reducedMotionPage } from './helpers';
 
-// Intro veil lifecycle. The veil has no class in the DC port — it is identified as a
-// board child with computed z-index 90 (see helpers.veilCount).
-//
-// NOTE on gate semantics: introPlayed is module state only ("once per load", CLAUDE.md).
-// There is NO sessionStorage persistence, so a full reload REPLAYS the intro — asserted
-// below as the current contract. The within-load once-only gate is unit-tested in
-// src/lib/interactions/intro.test.ts.
+// Intro veil lifecycle. The veil is [data-intro-veil] on document.body (see veilCount).
+// introPlayed is per-load module state (no sessionStorage), so a full reload REPLAYS the
+// intro — asserted below as the current contract.
 
 test('intro plays on a fresh context: veil present early, gone by ~4s', async ({ page }) => {
 	await page.setViewportSize(DESKTOP);

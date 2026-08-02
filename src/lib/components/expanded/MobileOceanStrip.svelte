@@ -1,9 +1,6 @@
 <script lang="ts">
-	// Experience expanded (mobile) — top ocean strip + sea-glass panel (DC 11b L462–477).
-	// 200px calm strip (nowing+lite → no wing, zoom 2.7) blending down into the #101b21
-	// card body, header row over it (meta keeps padding-right:34px to clear the close ✕,
-	// DC L468), then the sea-glass panel with 5 dcfall water particles. Stage 3 renders
-	// the staggered exp-cards into the panel via the children snippet.
+	// Experience expanded (mobile) — calm ocean strip (nowing+lite) blending into the card body,
+	// header row, sea-glass panel. Stage 3 renders the staggered exp-cards via the children snippet.
 	import type { Snippet } from 'svelte';
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { experience } from '$lib/content';
@@ -13,7 +10,6 @@
 		meta?: string;
 		children?: Snippet;
 	}
-	// meta default is the DC string (L469) — fuller than the tile's short period.
 	let { title = experience.header, meta = '2024 — 2026 · NYC', children }: Props = $props();
 </script>
 

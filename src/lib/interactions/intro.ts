@@ -1,13 +1,5 @@
-// Intro sequence — port of DC runIntro (L1241–1358), active paths only.
-// NOT ported: the lemniscate fire-orb tracer (DC L1252–1295) — its container is removed
-// before it is ever appended (`inf.remove()`, L1270), so the whole block is dead code in
-// the source design; and runIntroV4 (L1195), which is never called (only `runIntro(0)`,
-// L1360). The DC retry loop (waiting for boards to exist) is also dropped — we run from
-// the page's onMount with the boards already in the DOM.
-//
-// prefers-reduced-motion skips the intro entirely: the veil is never shown and
-// `introPlayed` is set immediately. A short wait for the 'Archivo Black' webfont lets
-// the particle text sample the display font rather than the fallback.
+// Intro sequence — port of DC runIntro, active paths only. Reduced-motion skips it entirely;
+// a short 'Archivo Black' webfont wait lets the particle text sample the display font.
 
 import { ui } from '$lib/stores/ui.svelte';
 import { boardScale } from '$lib/stores/scale.svelte';

@@ -1,8 +1,5 @@
-// Firefly jar — verbatim port of the DC `kind === 'jar'` branch (L2846–2895).
-//
-// The seeded LCG below (seed=7, Lehmer 16807 % 2^31-1) drives grass-tuft placement AND
-// all 14 fireflies' parameters — the layout is designed-by-seed, so the exact sequence
-// is the art. Do NOT substitute ctx.rand or Math.random.
+// Firefly jar — verbatim port of the DC `kind === 'jar'`. The seeded LCG (seed=7, Lehmer 16807)
+// drives grass + all 14 fireflies — the sequence IS the art; do NOT substitute ctx.rand/Math.random.
 // Glass cylinder creation ORDER matters (transparency sorting with depthWrite:false).
 
 import type * as THREE from 'three';

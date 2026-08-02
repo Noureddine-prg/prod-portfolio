@@ -1,11 +1,6 @@
 <script lang="ts">
-	// Work case-study detail — Svelte port of the DC's innerHTML machinery
-	// (wireProjects show() L3298–3336), driven by the ui.workDetail store instead.
-	// Absolute overlay (class .proj-detail — excluded from both the expand reveal
-	// stagger and the clone's click-to-close). Back link, '0N / 06' counter, prev/next
-	// with modulo wrap, dashed placeholder frames, Problem/Approach/Outcome columns
-	// (3-col desktop, stacked narrow — DC keyed narrow off ex.clientWidth < 520, which
-	// with the fixed board widths is exactly the mobile board).
+	// Work case-study detail — Svelte port of the DC's wireProjects, driven by the ui.workDetail store.
+	// Absolute .proj-detail overlay — excluded from the expand reveal stagger AND the clone's click-to-close.
 	import { onMount } from 'svelte';
 	import { ui } from '$lib/stores/ui.svelte';
 	import { work } from '$lib/content';

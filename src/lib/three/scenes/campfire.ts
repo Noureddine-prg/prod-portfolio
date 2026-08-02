@@ -1,11 +1,8 @@
-// Campfire hero scene — DC `kind === 'campfire'` branch (L1409–2191) ported verbatim onto
-// the SceneCtx contract. NOISE_GLSL / FLAME_VERT / FLAME_FRAG / mkFlame / mkCanvas come
-// from ./shared (they were window.__DC_* globals in the DC file). All build-time and
-// runtime randomness goes through ctx.rand (seeded) instead of Math.random.
+// Campfire hero scene — DC `kind === 'campfire'` ported verbatim onto the SceneCtx contract.
+// mkFlame/mkCanvas come from ./shared; randomness goes through ctx.rand (seeded), never Math.random.
 //
-// Build ORDER is load-bearing: everything added to `spin` before the freeze traverse
-// (DC L2051) gets `matrixAutoUpdate = false` (flameA/B re-exempted); the sky pack
-// (stars, moon, clouds, shooting star), mists and leaves are added AFTER and stay auto.
+// Build ORDER is load-bearing: everything added to `spin` before the freeze traverse gets
+// matrixAutoUpdate=false (flameA/B re-exempted); sky, mists and leaves are added AFTER and stay auto.
 
 import type * as THREE from 'three';
 import type { SceneCtx, UpdateFn } from '../types';

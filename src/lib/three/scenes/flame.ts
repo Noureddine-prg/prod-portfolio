@@ -1,7 +1,5 @@
-// Flame scene — verbatim port of the DC `kind === 'flame'` branch (L2822-2845).
-// Lives on the Contact EXPANDED card; the renderer's alpha compositing (build.ts) is what
-// sits the additive flame over the card — NO lights, NO glow sprite (shader is self-lit).
-// GLSL + cone factory come from shared.ts (was window.__DC_* in the DC file).
+// Flame scene — verbatim port of the DC `kind === 'flame'`, on the Contact expanded card.
+// The renderer's alpha compositing sits the additive flame over the card — no lights, shader is self-lit.
 
 import { mkFlame } from './shared';
 import type { SceneCtx, UpdateFn } from '../types';

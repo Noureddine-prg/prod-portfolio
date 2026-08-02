@@ -1,8 +1,6 @@
 <script lang="ts">
-	// About expanded "firefly-glass" backdrop — golden firefly orbs rising UNDER a
-	// frosted glass veil. Desktop: 10 orbs + blur(9px) (DC 11a L298–309); mobile: 5 orbs
-	// + blur(8px) (DC 11b L610–616). Wrapper is absolute → excluded from the expand
-	// reveal stagger; sibling content sits above via position:relative.
+	// About expanded "firefly-glass" backdrop — golden orbs rising under a frosted veil.
+	// Wrapper is absolute (excluded from the expand reveal stagger); content sits above via position:relative.
 	interface Props {
 		mobile?: boolean;
 	}

@@ -54,8 +54,7 @@ test('mobile 390w: order hero → about → [contact+health] → experience → 
 }) => {
 	await page.setViewportSize(MOBILE);
 	await page.goto('/');
-	// The intro veil renders the full name inside the board — wait it out so the
-	// footer locator below can't accidentally match the veil's name span.
+	// Let the intro finish so board geometry is stable before measuring stack order.
 	await settleIntro(page);
 
 	const b = board(page, 'mobile');

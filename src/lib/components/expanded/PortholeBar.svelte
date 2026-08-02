@@ -1,10 +1,6 @@
 <script lang="ts">
-	// Experience expanded (desktop) — the right porthole bar (DC 11a L170–194).
-	// Pure DOM/CSS shell: light cones, dust motes, warm halo, and the nested porthole
-	// ring stack around a full calm scene (no variant flags → wing visible, zoom 1).
-	// The nested div chain (outer ring → mid ring → inner ring → window) IS the design —
-	// each layer carries its own border-radius percent pair and shadow stack. Do not
-	// flatten it. Stage 3 places this inside the expanded card's flex row.
+	// Experience expanded (desktop) porthole bar — DOM/CSS shell around a full calm scene.
+	// The nested ring chain (outer→mid→inner→window) each carries its own radii/shadows — do not flatten it.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 </script>
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Rising ember/ash overlay (DC L85-100 desktop, L426-436 mobile). Spans are ported
-	// verbatim as data; each drives the `ashrise` keyframe via --ao (opacity) and --sw (sway).
+	// Rising ember/ash overlay — spans ported verbatim as data; each drives the `ashrise`
+	// keyframe via --ao (opacity) and --sw (sway).
 	interface Ash {
 		ao: number;
 		sw: string;

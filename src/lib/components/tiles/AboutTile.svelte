@@ -1,6 +1,5 @@
 <script lang="ts">
-	// About — fireflies jar scene + twinkles + availability line (DC 11a L287-296 / 11b).
-	// Interactive: `onopen` is a Stage-1 stub.
+	// About tile — jar fireflies scene + twinkles + availability line; opens via `onopen`.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { about } from '$lib/content';
 

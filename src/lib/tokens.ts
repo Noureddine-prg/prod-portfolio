@@ -1,7 +1,6 @@
-// Design tokens — extracted verbatim from the DC source of truth
-// (design_handoff_portfolio_svelte/Bento Portfolio.dc.html, boards 11a/11b) and the
-// handoff README token tables. These are the single source for colors, radii, spacing
-// and breakpoints. The same values are mirrored as CSS custom properties in app.css.
+// Design tokens extracted from the DC source of truth (boards 11a/11b) — a reference table
+// exercised by the token unit tests. Components carry their DC-ported values inline; app.css
+// keeps only the base-rule tokens (--c-text-cream, --f-body).
 
 export const color = {
 	// surfaces
