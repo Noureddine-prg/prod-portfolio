@@ -40,3 +40,7 @@ vite.config.ts.timestamp-*
 .claude/worktrees/
 test-results/
 build/
+# stray captures never ship; real assets live in static/
+/*.png
+/*.jpg
+playwright-report/
