@@ -147,12 +147,12 @@ async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
 
 	// anchor into the cam-child porthole framing (tuned so the wing sweeps away toward the
 	// winglet with the nacelle visible under it); base rot Z is the sway pivot
-	// porthole framing tuned to the hand-built reference: root enters lower-left, the wing
-	// sweeps up to the tip mid-right, top surface toward the camera, sunset/ocean above
-	const BASE_RZ = 1.7;
-	wgrp.scale.setScalar(0.0125);
-	wgrp.position.set(-0.2, -1.2, -6.8);
-	wgrp.rotation.set(-1.0, 0.9, BASE_RZ);
+	// porthole framing tuned to the hand-built reference: root low, wing narrow and near-
+	// vertical, tip rising toward center, top edge catching light, sunset/ocean above
+	const BASE_RZ = 1.45;
+	wgrp.scale.setScalar(0.011);
+	wgrp.position.set(0.0, -1.3, -7);
+	wgrp.rotation.set(-1.35, 0.2, BASE_RZ);
 	wgrp.userData.baseRotZ = BASE_RZ;
 }
 
