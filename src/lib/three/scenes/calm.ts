@@ -1,188 +1,9 @@
-// Calm/ocean scene — sunset sea + airplane-window wing, verbatim port of the DC `kind === 'calm'`.
-// Everything parents to `scene` (not `spin`); the wing/contrail parent to the camera. spins.calm = 0.
+// Calm/ocean scene — sunset sea + sky + islands, verbatim port of the DC `kind === 'calm'`.
+// Everything parents to `scene`. spins.calm = 0.
 /* eslint-disable prefer-template */
 
 import type * as THREE from 'three';
-import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { SceneCtx, UpdateFn } from '../types';
-
-// Lazy-load the A320 GLB (Mauro3D, CC-BY 4.0) and graft its starboard wing into the
-// cam-child wgrp. Dynamic import so mobile/tiles/first-paint never pull the loader or model.
-async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
-	const { T, cam, scene } = ctx;
-	let gltf: GLTF;
-	try {
-		const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-		gltf = await new GLTFLoader().loadAsync(import.meta.env.BASE_URL + 'models/a320.glb');
-	} catch {
-		return; // no loader/model — porthole just shows ocean
-	}
-	if (!wgrp.parent) return; // scene disposed mid-load
-
-	// crop the starboard wing SHEET from the single combined airframe mesh: triangles whose
-	// centroid is outboard of the fuselage, within the wing chord, and NOT in the low-y band
-	// (raw glTF axes: x=span, z=nose→tail, y=up). The y>-40 cut drops the underslung engine
-	// nacelle/pylon (a dense blob at x~260-376, y~-180..-40) that otherwise dominates the crop;
-	// also drops fuselage, far wing, tail. Leaves just the thin lifting surface.
-	const inWing = (x: number, y: number, z: number) =>
-		x > 130 && x < 1100 && z > -260 && z < 430 && y > -40;
-	const pos: number[] = [];
-	const col: number[] = [];
-	gltf.scene.updateWorldMatrix(true, true);
-	gltf.scene.traverse((o) => {
-		const mesh = o as THREE.Mesh;
-		if (!mesh.isMesh) return;
-		const src = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
-		const p = src.getAttribute('position') as THREE.BufferAttribute;
-		const base = (mesh.material as THREE.MeshStandardMaterial).color ?? new T.Color(0.8, 0.8, 0.8);
-		const DIM = 0.55; // dim the cream so it silhouettes against the dusk like the reference
-		for (let i = 0; i < p.count; i += 3) {
-			const gx = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3;
-			const gy = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3;
-			const gz = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
-			if (!inWing(gx, gy, gz)) continue;
-			for (let v = 0; v < 3; v++) {
-				pos.push(p.getX(i + v), p.getY(i + v), p.getZ(i + v));
-				col.push(base.r * DIM, base.g * DIM, base.b * DIM);
-			}
-		}
-	});
-	if (!pos.length) return;
-
-	// synthesize a small upturned sharklet at the wingtip (the low-poly A320 mesh has none):
-	// an angled quad rising off the tip chord, tinted red like the reference winglet
-	let mx = -Infinity,
-		mxi = 0;
-	for (let i = 0; i < pos.length; i += 3)
-		if (pos[i] > mx) {
-			mx = pos[i];
-			mxi = i;
-		}
-	const ty0 = pos[mxi + 1],
-		tz0 = pos[mxi + 2];
-	const fin = (a: number[], b: number[], c: number[]) => {
-		pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
-		for (let k = 0; k < 3; k++) col.push(0.62, 0.11, 0.09);
-	};
-	const b0 = [mx, ty0, tz0 - 45],
-		b1 = [mx, ty0, tz0 + 60];
-	const tp0 = [mx + 18, ty0 + 105, tz0 + 30],
-		tp1 = [mx + 18, ty0 + 105, tz0 - 12];
-	fin(b0, b1, tp0);
-	fin(b0, tp0, tp1);
-
-	// recenter to the wing centroid so it scales/rotates about its middle; track the
-	// starboard-most vertex for the nav-light
-	let cx = 0,
-		cy = 0,
-		cz = 0;
-	for (let i = 0; i < pos.length; i += 3) {
-		cx += pos[i];
-		cy += pos[i + 1];
-		cz += pos[i + 2];
-	}
-	const n = pos.length / 3;
-	cx /= n;
-	cy /= n;
-	cz /= n;
-	const tip = new T.Vector3(-Infinity, 0, 0);
-	for (let i = 0; i < pos.length; i += 3) {
-		pos[i] -= cx;
-		pos[i + 1] -= cy;
-		pos[i + 2] -= cz;
-		if (pos[i] > tip.x) tip.set(pos[i], pos[i + 1], pos[i + 2]);
-	}
-	const geo = new T.BufferGeometry();
-	geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
-	geo.setAttribute('color', new T.Float32BufferAttribute(col, 3));
-	geo.computeVertexNormals();
-	const wing = new T.Mesh(
-		geo,
-		new T.MeshStandardMaterial({
-			vertexColors: true,
-			flatShading: true,
-			roughness: 0.6,
-			metalness: 0.3,
-			side: T.DoubleSide
-		})
-	);
-	wing.renderOrder = 20;
-	wgrp.add(wing);
-
-	// nav-light: pulsing amber sprite pinned at the wingtip (model space)
-	const navCv = document.createElement('canvas');
-	navCv.width = navCv.height = 64;
-	const ng = navCv.getContext('2d')!;
-	const ngr = ng.createRadialGradient(32, 32, 0, 32, 32, 32);
-	ngr.addColorStop(0, 'rgba(255,200,130,1)');
-	ngr.addColorStop(0.35, 'rgba(255,150,80,0.55)');
-	ngr.addColorStop(1, 'rgba(255,150,80,0)');
-	ng.fillStyle = ngr;
-	ng.fillRect(0, 0, 64, 64);
-	const navLight = new T.Sprite(
-		new T.SpriteMaterial({
-			map: new T.CanvasTexture(navCv),
-			color: 0xffb36b,
-			transparent: true,
-			depthWrite: false,
-			depthTest: false,
-			blending: T.AdditiveBlending
-		})
-	);
-	navLight.position.copy(tip);
-	navLight.scale.setScalar(70); // model units; scaled down with the group
-	navLight.renderOrder = 30;
-	wgrp.add(navLight);
-	wgrp.userData.navLight = navLight;
-
-	// contrail wisp streaming off the wingtip, re-anchored in camera space each frame
-	const cCv = document.createElement('canvas');
-	cCv.width = 256;
-	cCv.height = 32;
-	const cg = cCv.getContext('2d')!;
-	const cgr = cg.createLinearGradient(0, 0, 256, 0);
-	cgr.addColorStop(0, 'rgba(255,255,255,0.85)');
-	cgr.addColorStop(0.25, 'rgba(255,255,255,0.45)');
-	cgr.addColorStop(1, 'rgba(255,255,255,0)');
-	cg.fillStyle = cgr;
-	cg.beginPath();
-	cg.ellipse(128, 16, 128, 5, 0, 0, Math.PI * 2);
-	cg.fill();
-	const trail = new T.Sprite(
-		new T.SpriteMaterial({
-			map: new T.CanvasTexture(cCv),
-			transparent: true,
-			depthWrite: false,
-			depthTest: false,
-			opacity: 0.4
-		})
-	);
-	trail.renderOrder = 45;
-	cam.add(trail);
-	wgrp.userData.contrail = trail;
-
-	// lights: key travels with the camera (light metallic top), warm bounce from the sea below
-	const wKey = new T.DirectionalLight(0xfff0d8, 1.0);
-	wKey.position.set(0, 3, 2);
-	cam.add(wKey);
-	const bounce = new T.DirectionalLight(0xe8a05f, 0.5);
-	bounce.position.set(0.5, -3, 2.5);
-	scene.add(bounce);
-	wgrp.userData.key = wKey;
-	wgrp.userData.bounce = bounce;
-
-	// anchor into the cam-child porthole framing (tuned so the wing sweeps away toward the
-	// winglet with the nacelle visible under it); base rot Z is the sway pivot
-	// porthole framing tuned to the hand-built reference: root low, wing narrow and near-
-	// vertical, tip rising toward center, top edge catching light, sunset/ocean above
-	// the wing SHEET (nacelle excluded) as a narrow surface climbing from the root at the
-	// lower-left frame up to the tip near center height, top toward the camera, ocean above
-	const BASE_RZ = 0.7;
-	wgrp.scale.setScalar(0.0048);
-	wgrp.position.set(-0.42, -1.4, -6.3);
-	wgrp.rotation.set(1.3, 0.2, BASE_RZ);
-	wgrp.userData.baseRotZ = BASE_RZ;
-}
 
 export function buildCalm(ctx: SceneCtx): UpdateFn {
 	const { T, scene, cam, variants, rand } = ctx;
@@ -404,19 +225,11 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 	const dl2 = new T.DirectionalLight(0xffd9a0, 1.25);
 	dl2.position.set(-1, 2, 1.4);
 	scene.add(dl2);
-	// [wing] the passenger-window wing is the real A320 GLB (Mauro3D, CC-BY 4.0), cropped to
-	// the starboard wing and lazy-loaded only for the wing-visible porthole (see loadWing).
-	scene.add(cam);
-	const wgrp = new T.Group();
-	cam.add(wgrp);
+	// tile/strip variants (nowing) zoom the camera in on the sun; the porthole keeps the wide view
 	if (variants.nowing) {
-		wgrp.visible = false;
 		cam.zoom = variants.sunzoom ? 6.5 : 2.7;
 		cam.position.y += variants.sunzoom ? 1.4 : 0.35;
 		cam.updateProjectionMatrix();
-	} else {
-		// wing-visible porthole only: lazy-load the A320 GLB + GLTFLoader off the main path
-		void loadWing(ctx, wgrp);
 	}
 	// near islands passing below the plane — flat blobs on the water, fast parallax for height cue
 	const mkIsleTop = function (seed: number) {
@@ -522,27 +335,6 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 
 	return function (t: number) {
 		seaMat.uniforms.uTime.value = t;
-		const nv = wgrp.userData.navLight;
-		if (nv) {
-			const ph = t % 1.6;
-			nv.material.opacity = ph < 0.12 ? 1 : ph < 0.24 ? 0.35 : 0.08;
-		}
-		// seesaw sway: very slight roll about the wing's own axis (offset from its base rot)
-		if (wgrp.userData.baseRotZ != null)
-			wgrp.rotation.z =
-				wgrp.userData.baseRotZ + Math.sin(t * 0.4) * 0.009 + Math.sin(t * 0.17 + 2.1) * 0.005;
-		const ct = wgrp.userData.contrail;
-		const nv2 = wgrp.userData.navLight;
-		if (ct && nv2) {
-			const wp = ct.userData.v || (ct.userData.v = new T.Vector3());
-			nv2.getWorldPosition(wp);
-			cam.worldToLocal(wp);
-			const dz = -wp.z;
-			const sx = 0.55 * dz * (1 + Math.sin(t * 1.1) * 0.08);
-			ct.position.set(wp.x + sx * 0.5 + 0.045 * dz, wp.y - 0.115 * dz, wp.z);
-			ct.scale.set(sx, 0.06 * dz, 1);
-			ct.material.opacity = 0.5 + Math.sin(t * 2.3) * 0.1;
-		}
 		if (t > shoot2.next) {
 			const el = shoot2.t0 < 0 ? 0 : t - shoot2.t0;
 			if (el < 1.0) {
@@ -563,15 +355,6 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 
 		stM.opacity = 0.45 + Math.sin(t * 0.8) * 0.15;
 		core2.material.opacity = 0.9 + Math.sin(t * 1.3) * 0.08;
-		// passing clouds shade the wing: slow pseudo-noise dims the key light occasionally
-		if (wgrp.userData.key) {
-			const cn =
-				Math.sin(t * 0.12) * 0.5 + Math.sin(t * 0.27 + 1.7) * 0.3 + Math.sin(t * 0.051 + 4.2) * 0.2;
-			const shade = 1 - Math.max(0, cn - 0.1) * 0.6;
-			wgrp.userData.key.intensity += (1.0 * shade - wgrp.userData.key.intensity) * 0.04;
-			wgrp.userData.bounce.intensity +=
-				(0.5 * (0.6 + 0.4 * shade) - wgrp.userData.bounce.intensity) * 0.04;
-		}
 		nearIsles.forEach(function (o) {
 			if (!o.active) {
 				if (t > o.next) {
