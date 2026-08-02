@@ -343,10 +343,16 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		clone.appendChild(jarCv);
 		jarCv.style.zIndex = '0';
 		jarCv.style.pointerEvents = 'none';
-		// dusk-sky backing: the scene stretches while the clone grows, and the gradient
-		// reads as sky wherever the canvas hasn't caught up yet
+		// dusk-sky backing: the full-bleed (inset:0) ocean covers the clone, so the
+		// gradient below is invisible until the canvas yields. Fade it out across the
+		// grow — the ocean is crisp at click and through the burn, then hands off to the
+		// gradient as the clone starts stretching it (grow begins at 1.4s), leaving the
+		// dusk sky as the backdrop until the panel reveals at settle (1.95s).
 		clone.style.background =
 			'linear-gradient(180deg,#140e12 0%,#241428 40%,#43223a 62%,#7a3b3a 78%,#c8703f 90%,#e2954f 100%)';
+		jarCv.style.transition = 'opacity .5s ease 1.25s';
+		void jarCv.offsetWidth;
+		jarCv.style.opacity = '0';
 	} else if (jarCv) {
 		jarHome = {
 			parent: jarCv.parentElement as HTMLElement,
