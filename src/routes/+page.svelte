@@ -53,32 +53,6 @@
 		boardScale.value = (mw || vw) >= 900 ? deskScale : mobScale;
 	});
 
-	// The browser tints its bar strips from theme-color / the body color, sampling at
-	// interaction time — during the shade fade it reads the pre-fade state and lags one
-	// transition behind. Setting both explicitly per state keeps the strips in sync.
-	$effect(() => {
-		if (!browser) return;
-		const open = ui.openCard !== null;
-		// top strip follows theme-color; the bottom underfill follows body/root — anchored
-		// to the gradient's respective ends per state
-		const apply = () => {
-			const c = ui.openCard !== null ? '#060505' : '#101a2c';
-			document.documentElement.style.backgroundColor = c;
-			document.body.style.backgroundColor = c;
-			// replace the meta node outright — attribute edits on an existing meta are
-			// ignored by some browsers when re-deriving bar tints
-			document.querySelector('meta[name="theme-color"]')?.remove();
-			const m = document.createElement('meta');
-			m.name = 'theme-color';
-			m.content = c;
-			document.head.appendChild(m);
-		};
-		apply();
-		// the browser samples bar tints at interaction time, while the shade is still
-		// mid-fade — re-apply after the fade so it re-derives from the settled state
-		const nudge = setTimeout(apply, 750);
-		return () => clearTimeout(nudge);
-	});
 
 	function readSvh() {
 		if (svhProbe) svh = svhProbe.clientHeight;
@@ -97,17 +71,18 @@
 <div bind:this={svhProbe} style="position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none" aria-hidden="true"></div>
 <main class:ready bind:clientWidth={mw}>
 	<div class="field"></div>
-	<div class="shade" class:on={ui.openCard !== null}></div>
 	<div
 		class="stage stage--desktop"
 		style="width:{deskW * deskScale}px;height:{DESK_H * deskScale}px"
 	>
 		<div class="fit" style="transform:scale({deskScale})">
+			<div class="shade" class:on={ui.openCard !== null}></div>
 			<BoardDesktop designW={deskW} />
 		</div>
 	</div>
 	<div class="stage stage--mobile" style="width:{MOB_W * mobScale}px;height:{mobH * mobScale}px">
 		<div class="fit" style="transform:scale({mobScale})">
+			<div class="shade" class:on={ui.openCard !== null}></div>
 			<BoardMobile designH={mobH} />
 		</div>
 	</div>
@@ -139,12 +114,11 @@
 	}
 
 	/* black field behind an expanded card; the transparent board lets it show through */
+	/* covers the board box only — black must never reach the screen edges, which the
+	 * browser samples for its bar tints */
 	.shade {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100vw;
-		height: 100lvh;
+		position: absolute;
+		inset: 0;
 		background: #060505;
 		opacity: 0;
 		transition: opacity 0.6s ease;
@@ -167,6 +141,7 @@
 	}
 
 	.fit {
+		position: relative;
 		transform-origin: top left;
 	}
 
