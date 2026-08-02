@@ -17,11 +17,17 @@ export async function maybeRunIntro(): Promise<void> {
 	if (ui.introPlayed) return;
 	ui.introPlayed = true; // session gate — the DC's window.__fireIntro (L1244/L1360)
 	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+	// The particle title samples the display face ONCE from an offscreen canvas; if Archivo
+	// Black isn't actually loaded at sample time the canvas draws the thin fallback and the
+	// title reads as absent (only on a cold, uncached first visit). Kick off the load and poll
+	// until it is really available, capped so a font failure never hangs the intro.
 	try {
-		await Promise.race([
-			document.fonts.load('400 76px "Archivo Black"'),
-			new Promise((r) => setTimeout(r, 450))
-		]);
+		const face = '400 76px "Archivo Black"';
+		document.fonts.load(face);
+		const deadline = performance.now() + 2500;
+		while (!document.fonts.check(face) && performance.now() < deadline) {
+			await new Promise((r) => setTimeout(r, 40));
+		}
 	} catch {
 		/* fallback font — same as the DC */
 	}
