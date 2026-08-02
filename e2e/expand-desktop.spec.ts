@@ -86,3 +86,28 @@ test('double-clicked card still settles open', async ({ page }) => {
 	await expect(b.locator('.is-clone.is-settled')).toBeVisible({ timeout: 8_000 });
 	await expect(b).toHaveAttribute('data-open', '1');
 });
+
+// Born-red guard — kills the "settle timer 1950 → 500" survivor. The rest of the suite
+// only bounds settle at ≤ 8s, so a settle that fires *too early* (the card snaps open
+// before the burn reads) slipped through. Pin the lower bound: at 1.2s — long after a
+// 500ms early-settle would have latched, comfortably before the real ~1.95s settle — the
+// clone must NOT yet be settled and the ✕ must still be hidden.
+test('settle waits out the burn — not settled at 1.2s, settles only after', async ({ page }) => {
+	await page.setViewportSize(DESKTOP);
+	await page.goto('/');
+	await settleIntro(page);
+
+	const b = board(page, 'desktop');
+	await b.locator('[data-card="experience"]').click();
+	await expect(b).toHaveAttribute('data-open', '1');
+
+	await page.waitForTimeout(1_200);
+	expect(
+		await b.locator('.is-clone.is-settled').count(),
+		'settle must not fire during the burn — only after ~1.95s'
+	).toBe(0);
+	await expect(b.locator('.clone-close')).toHaveCSS('opacity', '0');
+
+	// …but it does settle once the burn completes.
+	await expect(b.locator('.is-clone.is-settled')).toBeVisible({ timeout: 8_000 });
+});

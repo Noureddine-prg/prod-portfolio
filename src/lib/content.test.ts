@@ -99,7 +99,10 @@ describe('about / health / wildcard / links', () => {
 		for (const g of about.skillGroups) {
 			expect(g.label.length).toBeGreaterThan(0);
 			expect(g.text.length).toBeGreaterThan(0);
-			if (g.chips) g.chips.forEach((c) => expect(c.length).toBeGreaterThan(0));
+		}
+		// chips are optional (desktop-only groups omit them); assert every chip that IS present
+		for (const chip of about.skillGroups.flatMap((g) => g.chips ?? [])) {
+			expect(chip.length).toBeGreaterThan(0);
 		}
 	});
 

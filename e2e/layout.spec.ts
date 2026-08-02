@@ -85,3 +85,28 @@ test('mobile 390w: order hero → about → [contact+health] → experience → 
 	expect(exp).toBeLessThan(work);
 	expect(work).toBeLessThan(footer);
 });
+
+// Born-red guard — kills the "mobScale clamp 1.25 → 5" survivor. At 390w the clamp never
+// bites (390/390 = 1 < 1.25), so the mobile layout test can't see it; the cap only matters
+// at tablet widths, where it keeps the phone column from blowing up to fill the screen.
+// At 720w (mobile stage still active, < 900) the raw scale would be 720/390 ≈ 1.85, so the
+// clamp must hold the stage at MOB_W × 1.25 = 487.5px, NOT stretch it toward the viewport.
+test('tablet 720w: mobile column is clamped (mobScale cap 1.25), not blown up', async ({ page }) => {
+	await page.setViewportSize({ width: 720, height: 900 });
+	await page.goto('/');
+
+	// Below 900w the mobile stage takes over and the desktop stage is hidden. Stages stay
+	// `visibility:hidden` until hydration flips `main.ready`, which can lag several seconds
+	// on a cold/parallel dev server — poll generously rather than assume first paint.
+	const stage = page.locator('.stage--mobile');
+	await expect(stage).toBeVisible({ timeout: 15_000 });
+	await expect(page.locator('.stage--desktop [data-board]')).toBeHidden();
+
+	// Clamped width ≈ 390 × 1.25 = 487.5px. Uncapped (min(5, …)) it would balloon to ~720px.
+	await expect
+		.poll(async () => (await stage.boundingBox())!.width, { timeout: 15_000 })
+		.toBeLessThan(540);
+	const width = (await stage.boundingBox())!.width;
+	expect(width).toBeGreaterThan(455); // still the 1.25 cap, not the 0.75 floor
+	expect(width).toBeLessThan(540); // NOT stretched to the 720px viewport
+});
