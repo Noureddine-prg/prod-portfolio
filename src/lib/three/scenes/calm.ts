@@ -49,6 +49,28 @@ async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
 	});
 	if (!pos.length) return;
 
+	// synthesize a small upturned sharklet at the wingtip (the low-poly A320 mesh has none):
+	// an angled quad rising off the tip chord, tinted red like the reference winglet
+	let mx = -Infinity,
+		mxi = 0;
+	for (let i = 0; i < pos.length; i += 3)
+		if (pos[i] > mx) {
+			mx = pos[i];
+			mxi = i;
+		}
+	const ty0 = pos[mxi + 1],
+		tz0 = pos[mxi + 2];
+	const fin = (a: number[], b: number[], c: number[]) => {
+		pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+		for (let k = 0; k < 3; k++) col.push(0.62, 0.11, 0.09);
+	};
+	const b0 = [mx, ty0, tz0 - 45],
+		b1 = [mx, ty0, tz0 + 60];
+	const tp0 = [mx + 18, ty0 + 105, tz0 + 30],
+		tp1 = [mx + 18, ty0 + 105, tz0 - 12];
+	fin(b0, b1, tp0);
+	fin(b0, tp0, tp1);
+
 	// recenter to the wing centroid so it scales/rotates about its middle; track the
 	// starboard-most vertex for the nav-light
 	let cx = 0,
@@ -155,10 +177,10 @@ async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
 	// vertical, tip rising toward center, top edge catching light, sunset/ocean above
 	// the wing SHEET (nacelle excluded) as a narrow surface climbing from the root at the
 	// lower-left frame up to the tip near center height, top toward the camera, ocean above
-	const BASE_RZ = 2.05;
-	wgrp.scale.setScalar(0.0125);
-	wgrp.position.set(-0.32, -1.55, -6.7);
-	wgrp.rotation.set(-1.1, 0.3, BASE_RZ);
+	const BASE_RZ = 0.7;
+	wgrp.scale.setScalar(0.0052);
+	wgrp.position.set(-0.26, -1.1, -6.3);
+	wgrp.rotation.set(1.3, 0.2, BASE_RZ);
 	wgrp.userData.baseRotZ = BASE_RZ;
 }
 
