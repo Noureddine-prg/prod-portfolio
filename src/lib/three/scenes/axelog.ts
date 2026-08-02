@@ -60,8 +60,8 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	axe.add(edge);
 	axe.rotation.z = -0.5;
 	axe.position.set(0.42, 0.02, 0);
-	// pendulum pivot at the handle grip (top of the handle): the head hangs below it and
-	// sweeps a down-arc so the blade edge leads into the log, instead of dropping head-first
+	// pendulum pivot at the handle grip: the head hangs below and sweeps a down-arc, blade
+	// edge leading (plus a bite tilt at impact), instead of dropping head-first
 	axe.updateMatrix();
 	const grip = new T.Vector3(0, 1.47, 0).applyMatrix4(axe.matrix);
 	const swingGrp = new T.Group();
@@ -80,17 +80,24 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	scene.add(fill);
 	scene.add(new T.AmbientLight(0x2a2020, 0.9));
 
-	// chop-on-pop (data-pop at Work click): the axe cocks back and swings down as a pendulum
-	// about the grip, blade-first. Rotation is 0 at k=1/idle, so it lands on the exact rest pose.
+	// chop-on-pop (data-pop at Work click): the axe cocks up to a horizontal-right windup, then
+	// swings a clockwise quarter-arc down into the log blade-first, and settles to the exact rest.
 	const STUMP_Y0 = -0.62;
-	const COCK = 1.5; // windup angle (rad): head lifts up-and-back, then swings down into the bite
+	const AXE_RZ0 = -0.5;
+	const COCK = 1.5; // windup angle (rad) about the grip — head up-and-back, stays in frame
+	const BITE = -0.3; // extra blade-forward tilt at impact so the sharp edge visibly leads in
 	let popT: number | null = null;
+	let heldSpin = 0;
 	return (t) => {
 		const popped = ctx.canvas.dataset.pop === '1';
-		if (popped && popT == null) popT = t;
+		if (popped && popT == null) {
+			popT = t;
+			heldSpin = spin.rotation.y; // freeze the view for a clean, readable strike
+		}
 		if (!popped && popT != null) {
 			popT = null;
 			swingGrp.rotation.z = 0;
+			axe.rotation.z = AXE_RZ0;
 			stump.position.y = STUMP_Y0;
 		}
 		if (popT == null) return;
@@ -106,7 +113,11 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 					: 0;
 		const u = (k - KI) / (1 - KI);
 		const rec = k >= KI ? Math.sin(u * Math.PI * 3) * (1 - u) : 0; // decaying impact recoil, 0 at k=1
+		// bite tilt peaks as the edge drives in (late downswing / impact), 0 at apex and k=1
+		const bite = k < KW ? 0 : k < KI ? Math.pow((k - KW) / (KI - KW), 2) : 1 - u;
 		swingGrp.rotation.z = sw * COCK + rec * 0.04;
+		axe.rotation.z = AXE_RZ0 + BITE * bite;
 		stump.position.y = STUMP_Y0 + rec * 0.03; // impact shudder, offset from REST y
+		spin.rotation.y = heldSpin; // C: hold the auto-spin steady through the chop
 	};
 }
