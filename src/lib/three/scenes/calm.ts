@@ -19,10 +19,13 @@ async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
 	}
 	if (!wgrp.parent) return; // scene disposed mid-load
 
-	// crop the starboard wing from the single combined airframe mesh: triangles whose centroid
-	// is outboard of the fuselage and within the wing chord (raw glTF axes: x=span, z=nose→tail,
-	// y=up). Drops fuselage, far wing, tail; the underslung nacelle rides along.
-	const inWing = (x: number, z: number) => x > 130 && x < 1100 && z > -260 && z < 430;
+	// crop the starboard wing SHEET from the single combined airframe mesh: triangles whose
+	// centroid is outboard of the fuselage, within the wing chord, and NOT in the low-y band
+	// (raw glTF axes: x=span, z=nose→tail, y=up). The y>-40 cut drops the underslung engine
+	// nacelle/pylon (a dense blob at x~260-376, y~-180..-40) that otherwise dominates the crop;
+	// also drops fuselage, far wing, tail. Leaves just the thin lifting surface.
+	const inWing = (x: number, y: number, z: number) =>
+		x > 130 && x < 1100 && z > -260 && z < 430 && y > -40;
 	const pos: number[] = [];
 	const col: number[] = [];
 	gltf.scene.updateWorldMatrix(true, true);
@@ -35,8 +38,9 @@ async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
 		const DIM = 0.55; // dim the cream so it silhouettes against the dusk like the reference
 		for (let i = 0; i < p.count; i += 3) {
 			const gx = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3;
+			const gy = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3;
 			const gz = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
-			if (!inWing(gx, gz)) continue;
+			if (!inWing(gx, gy, gz)) continue;
 			for (let v = 0; v < 3; v++) {
 				pos.push(p.getX(i + v), p.getY(i + v), p.getZ(i + v));
 				col.push(base.r * DIM, base.g * DIM, base.b * DIM);
@@ -149,10 +153,12 @@ async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
 	// winglet with the nacelle visible under it); base rot Z is the sway pivot
 	// porthole framing tuned to the hand-built reference: root low, wing narrow and near-
 	// vertical, tip rising toward center, top edge catching light, sunset/ocean above
-	const BASE_RZ = 1.6;
-	wgrp.scale.setScalar(0.011);
-	wgrp.position.set(0.0, -1.3, -7);
-	wgrp.rotation.set(-1.15, 0.05, BASE_RZ);
+	// the wing SHEET (nacelle excluded) as a narrow surface climbing from the root at the
+	// lower-left frame up to the tip near center height, top toward the camera, ocean above
+	const BASE_RZ = 1.95;
+	wgrp.scale.setScalar(0.013);
+	wgrp.position.set(-0.12, -1.2, -6.8);
+	wgrp.rotation.set(-1.05, 0.4, BASE_RZ);
 	wgrp.userData.baseRotZ = BASE_RZ;
 }
 
