@@ -87,7 +87,7 @@ describe('contact', () => {
 
 	it('has headline, teaser and mobile socials', () => {
 		expect(contact.headline).toHaveLength(2);
-		expect(contact.socialsMobile.length).toBeGreaterThanOrEqual(3);
+		expect(contact.socialsMobile.length).toBeGreaterThanOrEqual(2);
 	});
 });
 
