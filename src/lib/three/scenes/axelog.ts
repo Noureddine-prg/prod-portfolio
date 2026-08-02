@@ -60,7 +60,15 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	axe.add(edge);
 	axe.rotation.z = -0.5;
 	axe.position.set(0.42, 0.02, 0);
-	spin.add(axe);
+	// pendulum pivot at the handle grip (top of the handle): the head hangs below it and
+	// sweeps a down-arc so the blade edge leads into the log, instead of dropping head-first
+	axe.updateMatrix();
+	const grip = new T.Vector3(0, 1.47, 0).applyMatrix4(axe.matrix);
+	const swingGrp = new T.Group();
+	swingGrp.position.copy(grip);
+	axe.position.sub(grip); // keep the world rest pose after reparenting under the grip
+	swingGrp.add(axe);
+	spin.add(swingGrp);
 
 	spin.rotation.y = 0.5;
 
@@ -72,39 +80,33 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	scene.add(fill);
 	scene.add(new T.AmbientLight(0x2a2020, 0.9));
 
-	// chop-on-pop (data-pop at Work click): axe arcs up and chops back down. All REST +
-	// offset, every offset exactly 0 at k=1/idle, so it lands pixel-exact — no clip.
-	const AXE_X0 = 0.42,
-		AXE_Y0 = 0.02,
-		AXE_RZ0 = -0.5,
-		STUMP_Y0 = -0.62;
+	// chop-on-pop (data-pop at Work click): the axe cocks back and swings down as a pendulum
+	// about the grip, blade-first. Rotation is 0 at k=1/idle, so it lands on the exact rest pose.
+	const STUMP_Y0 = -0.62;
+	const COCK = 1.5; // windup angle (rad) about the grip — head lifts up and back
 	let popT: number | null = null;
 	return (t) => {
 		const popped = ctx.canvas.dataset.pop === '1';
 		if (popped && popT == null) popT = t;
 		if (!popped && popT != null) {
 			popT = null;
-			axe.position.set(AXE_X0, AXE_Y0, 0);
-			axe.rotation.z = AXE_RZ0;
+			swingGrp.rotation.z = 0;
 			stump.position.y = STUMP_Y0;
 		}
 		if (popT == null) return;
 		const k = Math.min(1, (t - popT) / 0.9);
-		const KW = 0.38,
-			KI = 0.8; // windup apex, impact
-		// windup→chop shape: ease up to the cocked apex, then accelerate down into the bite
-		const swing =
+		const KW = 0.4,
+			KI = 0.82; // windup apex, impact
+		// ease up to the cocked apex, then accelerate the head down through the arc into the bite
+		const sw =
 			k < KW
 				? Math.sin((k / KW) * (Math.PI / 2))
 				: k < KI
 					? Math.pow(1 - (k - KW) / (KI - KW), 2)
 					: 0;
-		const arc = k < KI ? Math.sin(Math.PI * (k / KI)) : 0; // head arcs back over the windup, home by impact
 		const u = (k - KI) / (1 - KI);
 		const rec = k >= KI ? Math.sin(u * Math.PI * 3) * (1 - u) : 0; // decaying impact recoil, 0 at k=1
-		axe.position.x = AXE_X0 - arc * 0.28;
-		axe.position.y = AXE_Y0 + swing * 0.5 + rec * 0.03;
-		axe.rotation.z = AXE_RZ0 + swing * 1.1 - rec * 0.06; // cock back, then chop through onto the bite
+		swingGrp.rotation.z = sw * COCK + rec * 0.04;
 		stump.position.y = STUMP_Y0 + rec * 0.03; // impact shudder, offset from REST y
 	};
 }
