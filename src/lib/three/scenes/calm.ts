@@ -155,10 +155,10 @@ async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
 	// vertical, tip rising toward center, top edge catching light, sunset/ocean above
 	// the wing SHEET (nacelle excluded) as a narrow surface climbing from the root at the
 	// lower-left frame up to the tip near center height, top toward the camera, ocean above
-	const BASE_RZ = 1.95;
-	wgrp.scale.setScalar(0.013);
-	wgrp.position.set(-0.12, -1.2, -6.8);
-	wgrp.rotation.set(-1.05, 0.4, BASE_RZ);
+	const BASE_RZ = 2.05;
+	wgrp.scale.setScalar(0.0125);
+	wgrp.position.set(-0.32, -1.55, -6.7);
+	wgrp.rotation.set(-1.1, 0.3, BASE_RZ);
 	wgrp.userData.baseRotZ = BASE_RZ;
 }
 
