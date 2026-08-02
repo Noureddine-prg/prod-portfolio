@@ -22,6 +22,11 @@
 	const nameBottom = $derived(mobile ? 16 : 22);
 	const glow = $derived(mobile ? '0 0 12px rgba(255,150,70,.14)' : '0 0 14px rgba(255,150,70,.14)');
 	const badgeShadow = $derived(mobile ? '0 0 7px rgba(255,150,70,.35)' : '0 0 8px rgba(255,150,70,.35)');
+	// Mobile swaps name↑ / badge+icons↓; desktop keeps the DC arrangement (badge+icons↑ / name↓)
+	const topAnchor = $derived(`top:${topPad}px;left:${sidePad}px;right:${sidePad}px`);
+	const bottomAnchor = $derived(`bottom:${nameBottom}px;left:${nameBottom}px;right:${nameBottom}px`);
+	const rowAnchor = $derived(mobile ? bottomAnchor : topAnchor);
+	const nameAnchor = $derived(mobile ? topAnchor : bottomAnchor);
 </script>
 
 <div
@@ -30,7 +35,7 @@
 	<ThreeCanvas kind="campfire" lite={mobile} style="width:100%;height:100%;display:block" />
 
 	<div
-		style="position:absolute;bottom:{nameBottom}px;left:{nameBottom}px;right:{nameBottom}px;display:flex;gap:{mobile
+		style="position:absolute;{rowAnchor};display:flex;gap:{mobile
 			? 6
 			: 8}px;align-items:center"
 	>
@@ -89,7 +94,7 @@
 	</div>
 
 	<div
-		style="position:absolute;top:{topPad}px;left:{sidePad}px;right:{sidePad}px;display:flex;justify-content:space-between;align-items:flex-end"
+		style="position:absolute;{nameAnchor};display:flex;justify-content:space-between;align-items:flex-end"
 	>
 		<div
 			style="font:400 {nameFont}px/{nameLH} 'Archivo Black',sans-serif;letter-spacing:-.01em;color:#f2ede2;text-shadow:0 2px 20px rgba(0,0,0,.6),0 0 22px rgba(255,170,90,.22);text-transform:uppercase"
