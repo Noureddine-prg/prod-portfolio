@@ -3,7 +3,155 @@
 /* eslint-disable prefer-template */
 
 import type * as THREE from 'three';
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { SceneCtx, UpdateFn } from '../types';
+
+// Lazy-load the A320 GLB (Mauro3D, CC-BY 4.0) and graft its starboard wing into the
+// cam-child wgrp. Dynamic import so mobile/tiles/first-paint never pull the loader or model.
+async function loadWing(ctx: SceneCtx, wgrp: THREE.Group): Promise<void> {
+	const { T, cam, scene } = ctx;
+	let gltf: GLTF;
+	try {
+		const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+		gltf = await new GLTFLoader().loadAsync(import.meta.env.BASE_URL + 'models/a320.glb');
+	} catch {
+		return; // no loader/model — porthole just shows ocean
+	}
+	if (!wgrp.parent) return; // scene disposed mid-load
+
+	// crop the starboard wing from the single combined airframe mesh: triangles whose centroid
+	// is outboard of the fuselage and within the wing chord (raw glTF axes: x=span, z=nose→tail,
+	// y=up). Drops fuselage, far wing, tail; the underslung nacelle rides along.
+	const inWing = (x: number, z: number) => x > 130 && x < 1100 && z > -260 && z < 430;
+	const pos: number[] = [];
+	const col: number[] = [];
+	gltf.scene.updateWorldMatrix(true, true);
+	gltf.scene.traverse((o) => {
+		const mesh = o as THREE.Mesh;
+		if (!mesh.isMesh) return;
+		const src = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
+		const p = src.getAttribute('position') as THREE.BufferAttribute;
+		const base = (mesh.material as THREE.MeshStandardMaterial).color ?? new T.Color(0.8, 0.8, 0.8);
+		for (let i = 0; i < p.count; i += 3) {
+			const gx = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3;
+			const gz = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
+			if (!inWing(gx, gz)) continue;
+			for (let v = 0; v < 3; v++) {
+				pos.push(p.getX(i + v), p.getY(i + v), p.getZ(i + v));
+				col.push(base.r, base.g, base.b);
+			}
+		}
+	});
+	if (!pos.length) return;
+
+	// recenter to the wing centroid so it scales/rotates about its middle; track the
+	// starboard-most vertex for the nav-light
+	let cx = 0,
+		cy = 0,
+		cz = 0;
+	for (let i = 0; i < pos.length; i += 3) {
+		cx += pos[i];
+		cy += pos[i + 1];
+		cz += pos[i + 2];
+	}
+	const n = pos.length / 3;
+	cx /= n;
+	cy /= n;
+	cz /= n;
+	const tip = new T.Vector3(-Infinity, 0, 0);
+	for (let i = 0; i < pos.length; i += 3) {
+		pos[i] -= cx;
+		pos[i + 1] -= cy;
+		pos[i + 2] -= cz;
+		if (pos[i] > tip.x) tip.set(pos[i], pos[i + 1], pos[i + 2]);
+	}
+	const geo = new T.BufferGeometry();
+	geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+	geo.setAttribute('color', new T.Float32BufferAttribute(col, 3));
+	geo.computeVertexNormals();
+	const wing = new T.Mesh(
+		geo,
+		new T.MeshStandardMaterial({
+			vertexColors: true,
+			flatShading: true,
+			roughness: 0.6,
+			metalness: 0.3,
+			side: T.DoubleSide
+		})
+	);
+	wing.renderOrder = 20;
+	wgrp.add(wing);
+
+	// nav-light: pulsing amber sprite pinned at the wingtip (model space)
+	const navCv = document.createElement('canvas');
+	navCv.width = navCv.height = 64;
+	const ng = navCv.getContext('2d')!;
+	const ngr = ng.createRadialGradient(32, 32, 0, 32, 32, 32);
+	ngr.addColorStop(0, 'rgba(255,200,130,1)');
+	ngr.addColorStop(0.35, 'rgba(255,150,80,0.55)');
+	ngr.addColorStop(1, 'rgba(255,150,80,0)');
+	ng.fillStyle = ngr;
+	ng.fillRect(0, 0, 64, 64);
+	const navLight = new T.Sprite(
+		new T.SpriteMaterial({
+			map: new T.CanvasTexture(navCv),
+			color: 0xffb36b,
+			transparent: true,
+			depthWrite: false,
+			depthTest: false,
+			blending: T.AdditiveBlending
+		})
+	);
+	navLight.position.copy(tip);
+	navLight.scale.setScalar(70); // model units; scaled down with the group
+	navLight.renderOrder = 30;
+	wgrp.add(navLight);
+	wgrp.userData.navLight = navLight;
+
+	// contrail wisp streaming off the wingtip, re-anchored in camera space each frame
+	const cCv = document.createElement('canvas');
+	cCv.width = 256;
+	cCv.height = 32;
+	const cg = cCv.getContext('2d')!;
+	const cgr = cg.createLinearGradient(0, 0, 256, 0);
+	cgr.addColorStop(0, 'rgba(255,255,255,0.85)');
+	cgr.addColorStop(0.25, 'rgba(255,255,255,0.45)');
+	cgr.addColorStop(1, 'rgba(255,255,255,0)');
+	cg.fillStyle = cgr;
+	cg.beginPath();
+	cg.ellipse(128, 16, 128, 5, 0, 0, Math.PI * 2);
+	cg.fill();
+	const trail = new T.Sprite(
+		new T.SpriteMaterial({
+			map: new T.CanvasTexture(cCv),
+			transparent: true,
+			depthWrite: false,
+			depthTest: false,
+			opacity: 0.4
+		})
+	);
+	trail.renderOrder = 45;
+	cam.add(trail);
+	wgrp.userData.contrail = trail;
+
+	// lights: key travels with the camera (light metallic top), warm bounce from the sea below
+	const wKey = new T.DirectionalLight(0xfff0d8, 1.0);
+	wKey.position.set(0, 3, 2);
+	cam.add(wKey);
+	const bounce = new T.DirectionalLight(0xe8a05f, 0.5);
+	bounce.position.set(0.5, -3, 2.5);
+	scene.add(bounce);
+	wgrp.userData.key = wKey;
+	wgrp.userData.bounce = bounce;
+
+	// anchor into the cam-child porthole framing (tuned so the wing sweeps away toward the
+	// winglet with the nacelle visible under it); base rot Z is the sway pivot
+	const BASE_RZ = -0.4;
+	wgrp.scale.setScalar(0.0115);
+	wgrp.position.set(-0.15, -1.1, -8.5);
+	wgrp.rotation.set(-1.15, 0.55, BASE_RZ);
+	wgrp.userData.baseRotZ = BASE_RZ;
+}
 
 export function buildCalm(ctx: SceneCtx): UpdateFn {
 	const { T, scene, cam, variants, rand } = ctx;
@@ -225,10 +373,8 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 	const dl2 = new T.DirectionalLight(0xffd9a0, 1.25);
 	dl2.position.set(-1, 2, 1.4);
 	scene.add(dl2);
-	// [wing] low-poly 3D wing + fairings + winglet — replaces the SVG overlay.
-	// Screen-mapped: every vertex is placed on the camera ray of its old SVG coord,
-	// so silhouette/angle/width match the approved 2D wing exactly, but it's real
-	// faceted geometry shaded by the scene lights (voxel style like water/campfire).
+	// [wing] the passenger-window wing is the real A320 GLB (Mauro3D, CC-BY 4.0), cropped to
+	// the starboard wing and lazy-loaded only for the wing-visible porthole (see loadWing).
 	scene.add(cam);
 	const wgrp = new T.Group();
 	cam.add(wgrp);
@@ -237,431 +383,9 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 		cam.zoom = variants.sunzoom ? 6.5 : 2.7;
 		cam.position.y += variants.sunzoom ? 1.4 : 0.35;
 		cam.updateProjectionMatrix();
-	}
-	{
-		const vhW = Math.tan((cam.fov * Math.PI) / 360);
-		const SP = (sx: number, sy: number, d: number) =>
-			new T.Vector3((sx / 100 - 1) * vhW * cam.aspect * d, (1 - sy / 160) * vhW * d, -d);
-		const bez = (p0: number[], p1: number[], p2: number[], p3: number[], t: number) => {
-			const u = 1 - t;
-			return [
-				u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
-				u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]
-			];
-		};
-		const LE0 = (t: number) => bez([-40, 168], [30, 159], [100, 155], [147, 151], t); // near-straight, slight sweep
-		const TE0 = (t: number) => bez([5, 320], [38, 238], [95, 178], [153.5, 156], t); // fast taper at root, slender outboard — like a 787 wing
-		// boomerang bow: both edges sag aft mid-span, zero at root crop + winglet seat (endpoints preserved)
-		const sag = (t: number) => Math.sin((Math.PI * Math.max(0, Math.min(t, 0.7))) / 0.7) * 6;
-		const LE = (t: number) => {
-			const p = LE0(t);
-			return [p[0], p[1] - sag(t)];
-		};
-		const TE = (t: number) => {
-			const p = TE0(t);
-			return [p[0], p[1] - sag(t) * 1.2];
-		};
-		const rndW = (i: number) => {
-			const v = Math.sin(i * 127.1 + 311.7) * 43758.5453;
-			return v - Math.floor(v);
-		};
-		const dAt = (t: number) => 6 + 8 * t;
-		const posA: number[] = [],
-			colA: number[] = [];
-		const pushTri = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, col: THREE.Color) => {
-			posA.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
-			for (let v = 0; v < 3; v++) colA.push(col.r, col.g, col.b);
-		};
-		const baseC = new T.Color('#b2b6bd'),
-			tipWarm = new T.Color('#c4a67d'),
-			flapC = new T.Color('#8f352c'),
-			lipC = new T.Color('#2e3136');
-		const litC = new T.Color('#212428');
-		const NSEG = 10;
-		const SPAN = 0.7;
-		const ck = (t: number) => 1 - 0.52 * Math.max(0, Math.min(1, (t / SPAN - 0.5) / 0.5));
-		const pinchTE = (t: number) => {
-			const le = LE(t),
-				te = TE(t),
-				k = ck(t);
-			return [le[0] + (te[0] - le[0]) * k, le[1] + (te[1] - le[1]) * k];
-		};
-		for (let i = 0; i < NSEG; i++) {
-			const t0 = (i / NSEG) * SPAN,
-				t1 = ((i + 1) / NSEG) * SPAN;
-			const le0 = LE(t0),
-				le1 = LE(t1),
-				te0 = pinchTE(t0),
-				te1 = pinchTE(t1);
-			const mid = (a: number[], b: number[], f: number) => [
-				a[0] + (b[0] - a[0]) * f,
-				a[1] + (b[1] - a[1]) * f
-			];
-			const m0 = mid(le0, te0, 0.88),
-				m1 = mid(le1, te1, 0.88);
-			const d0 = dAt(t0),
-				d1 = dAt(t1);
-			const jb = (bi: number, k: number) => (bi === NSEG ? 0 : (rndW(bi * 4 + k) - 0.5) * 0.18); // per-boundary jitter — shared edges match, no cracks; zero at tip so the winglet seats flush
-			const A = SP(le0[0], le0[1], d0 + jb(i, 0)),
-				B = SP(le1[0], le1[1], d1 + jb(i + 1, 0));
-			const C0 = SP(m0[0], m0[1], d0 + jb(i, 2)),
-				D = SP(m1[0], m1[1], d1 + jb(i + 1, 2));
-			const E = SP(te0[0], te0[1], d0 + jb(i, 0) * 0.5),
-				F = SP(te1[0], te1[1], d1 + jb(i + 1, 0) * 0.5);
-			const warm = t0 * t0;
-			const shade = 0.94 + rndW(i * 9 + 2) * 0.11;
-			const cMain = baseC.clone().lerp(tipWarm, warm * 0.85).multiplyScalar(shade);
-			pushTri(A, C0, B, cMain);
-			pushTri(B, C0, D, cMain.clone().multiplyScalar(0.95));
-			// panel seam: faint darker strip along this segment boundary (every other rib)
-			if (i > 0 && i % 2 === 0) {
-				const sw = 0.55;
-				const les = mid(le0, [le1[0], le1[1]], 0.06),
-					mes = mid(m0, m1, 0.06);
-				const A2 = SP(les[0], les[1] + sw, d0 + jb(i, 0) + 0.01),
-					C2 = SP(mes[0], mes[1] + sw, d0 + jb(i, 2) + 0.01);
-				const seamC = cMain.clone().multiplyScalar(0.82);
-				pushTri(A, A2, C0, seamC);
-				pushTri(C0, A2, C2, seamC);
-			}
-			const cF = flapC
-				.clone()
-				.lerp(new T.Color('#6e2a24'), warm)
-				.multiplyScalar(0.97 + rndW(i * 7) * 0.06);
-			// flap separation groove: crisp dark line where flap meets the main panel
-			const gv0 = SP(m0[0], m0[1] + 0.5, d0 + jb(i, 2) - 0.015),
-				gv1 = SP(m1[0], m1[1] + 0.5, d1 + jb(i + 1, 2) - 0.015);
-			const grooveC = new T.Color('#3a3d42');
-			pushTri(C0, gv0, D, grooveC);
-			pushTri(D, gv0, gv1, grooveC);
-			pushTri(C0, E, D, cF);
-			pushTri(D, E, F, cF.clone().multiplyScalar(0.96));
-			// sunlit leading-edge facet strip
-			const L0b = SP(le0[0] + 0.3, le0[1] + 3.4, d0 + jb(i, 0) + 0.04),
-				L1b = SP(le1[0] + 0.3, le1[1] + 3.4, d1 + jb(i + 1, 0) + 0.04);
-			pushTri(A, L0b, B, litC);
-			pushTri(B, L0b, L1b, litC.clone().multiplyScalar(0.94));
-			// thickness lip under the trailing edge (deep at root, thin at tip)
-			const lp0 = (1 - t0) * 3.5 + 1.2,
-				lp1 = (1 - t1) * 3.5 + 1.2;
-			const E2 = SP(te0[0] + lp0 * 0.22, te0[1] + lp0, d0),
-				F2 = SP(te1[0] + lp1 * 0.22, te1[1] + lp1, d1);
-			pushTri(E, E2, F, lipC);
-			pushTri(F, E2, F2, lipC.clone().multiplyScalar(1.18));
-		}
-		// upturned winglet with red-painted tip
-		const wl = (f: number, e2: number) => {
-			const bx = e2 ? 100.4 : 99.1,
-				by = e2 ? 169.6 : 154.7,
-				tx = e2 ? 136 : 131,
-				ty = e2 ? 160 : 150;
-			return SP(bx + (tx - bx) * f, by + (ty - by) * f, 11.6 + f * 0.6);
-		};
-		const wlG = new T.Color('#a4a2a8'),
-			wlR = new T.Color('#8f352c');
-		pushTri(wl(0, 0), wl(0, 1), wl(0.38, 0), wlG);
-		pushTri(wl(0.38, 0), wl(0, 1), wl(0.38, 1), wlG.clone().multiplyScalar(0.93));
-		pushTri(wl(0.38, 0), wl(0.38, 1), wl(1, 0), wlR);
-		pushTri(wl(1, 0), wl(0.38, 1), wl(1, 1), wlR.clone().multiplyScalar(0.88));
-		// --- surface detail kit ---
-		const cp = (tt: number, ff: number) => {
-			const le = LE(tt),
-				te = pinchTE(tt);
-			return [le[0] + (te[0] - le[0]) * ff, le[1] + (te[1] - le[1]) * ff];
-		};
-		const quad = (
-			a: THREE.Vector3,
-			b: THREE.Vector3,
-			c: THREE.Vector3,
-			d2: THREE.Vector3,
-			col: THREE.Color
-		) => {
-			pushTri(a, b, d2, col);
-			pushTri(d2, b, c, col.clone().multiplyScalar(0.97));
-		};
-		// outlined actuator panels (spoilers mid-chord, aileron near tip)
-		const panel = (t0: number, t1: number, f0: number, f1: number) => {
-			const P = (tt: number, ff: number, dd: number) => {
-				const p = cp(tt, ff);
-				return SP(p[0], p[1], dAt(tt) + dd);
-			};
-			const warm = t0 * t0;
-			const rim = baseC.clone().lerp(tipWarm, warm * 0.85).multiplyScalar(0.74);
-			const face = baseC.clone().lerp(tipWarm, warm * 0.85).multiplyScalar(1.0);
-			quad(P(t0, f0, 0.05), P(t0, f1, 0.05), P(t1, f1, 0.05), P(t1, f0, 0.05), rim);
-			const g = 0.16;
-			const ti = (t1 - t0) * 0.12;
-			quad(
-				P(t0 + ti, f0 + (f1 - f0) * g, 0.09),
-				P(t0 + ti, f1 - (f1 - f0) * g, 0.09),
-				P(t1 - ti, f1 - (f1 - f0) * g, 0.09),
-				P(t1 - ti, f0 + (f1 - f0) * g, 0.09),
-				face
-			);
-		};
-		panel(0.17, 0.29, 0.44, 0.66);
-		panel(0.33, 0.45, 0.46, 0.68);
-		panel(0.6, 0.685, 0.58, 0.93);
-		// flap linework between the two track fairings
-		panel(0.44, 0.58, 0.72, 0.97);
-		// vortex generators: small raised fins in a row behind the leading edge
-		const vgC = new T.Color('#71767e');
-		for (let k = 0; k < 7; k++) {
-			const tt = 0.1 + k * 0.062;
-			const b = cp(tt, 0.15),
-				b2 = cp(tt + 0.016, 0.16),
-				d = dAt(tt);
-			pushTri(
-				SP(b[0], b[1], d + 0.02),
-				SP(b2[0], b2[1], d + 0.02),
-				SP((b[0] + b2[0]) / 2, (b[1] + b2[1]) / 2, d + 0.5),
-				vgC.clone().multiplyScalar(0.92 + rndW(k * 3) * 0.14)
-			);
-		}
-		// static discharge wicks trailing off the back edge
-		const wickC = new T.Color('#26282c');
-		[0.24, 0.44, 0.62].forEach((tt) => {
-			const le = LE(tt),
-				te = pinchTE(tt);
-			const dx = te[0] - le[0],
-				dy = te[1] - le[1],
-				L = Math.hypot(dx, dy),
-				ux = dx / L,
-				uy = dy / L;
-			const d = dAt(tt);
-			pushTri(
-				SP(te[0] - uy * 0.35, te[1] + ux * 0.35, d + 0.01),
-				SP(te[0] + uy * 0.35, te[1] - ux * 0.35, d + 0.01),
-				SP(te[0] + ux * 6.0, te[1] + uy * 6.0, d + 0.01),
-				wickC
-			);
-		});
-		// root walkway band (dark anti-slip strip, cropped by the window)
-		{
-			const P = (tt: number, ff: number) => {
-				const p = cp(tt, ff);
-				return SP(p[0], p[1], dAt(tt) + 0.04);
-			};
-			quad(
-				P(0.02, 0.08),
-				P(0.02, 0.9),
-				P(0.075, 0.9),
-				P(0.075, 0.08),
-				new T.Color('#7b7f87').multiplyScalar(0.82)
-			);
-		}
-		const wgeo = new T.BufferGeometry();
-		wgeo.setAttribute('position', new T.Float32BufferAttribute(posA, 3));
-		wgeo.setAttribute('color', new T.Float32BufferAttribute(colA, 3));
-		wgeo.computeVertexNormals();
-		const wmat = new T.MeshStandardMaterial({
-			vertexColors: true,
-			flatShading: true,
-			roughness: 0.62,
-			metalness: 0.28,
-			side: T.DoubleSide,
-			transparent: true,
-			opacity: 1
-		});
-		wgrp.add(new T.Mesh(wgeo, wmat));
-		// cloud shadows sweeping the wing: duplicate wing surface with drifting noise-alpha dark shader
-		const shadMat = new T.ShaderMaterial({
-			transparent: true,
-			depthWrite: false,
-			polygonOffset: true,
-			polygonOffsetFactor: -1,
-			polygonOffsetUnits: -1,
-			side: T.DoubleSide,
-			vertexShader:
-				'varying vec3 vW; void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vW=wp.xyz; gl_Position=projectionMatrix*viewMatrix*wp; }',
-			fragmentShader: 'uniform float uT; varying vec3 vW;\n' +
-				'float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }\n' +
-				'float n2(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h(i),h(i+vec2(1,0)),f.x), mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x), f.y); }\n' +
-				'void main(){ vec2 q=vec2(vW.x+vW.z*0.4, vW.y)*vec2(0.5,0.85); q.x-=uT*0.16;\n' +
-				'  float d=n2(q)*0.6+n2(q*2.3+vec2(5.0,2.0))*0.4;\n' +
-				'  float s=smoothstep(0.46,0.72,d);\n' +
-				'  gl_FragColor=vec4(vec3(0.06,0.05,0.10), s*0.34); }',
-			uniforms: { uT: { value: 0 } }
-		});
-		wgrp.add(new T.Mesh(wgeo, shadMat));
-		wgrp.userData.cloudShadow = shadMat;
-		const navP = wl(1, 0.5);
-		const navCv = document.createElement('canvas');
-		navCv.width = navCv.height = 64;
-		const ng = navCv.getContext('2d')!;
-		const ngr = ng.createRadialGradient(32, 32, 0, 32, 32, 32);
-		ngr.addColorStop(0, 'rgba(255,200,130,1)');
-		ngr.addColorStop(0.35, 'rgba(255,150,80,0.55)');
-		ngr.addColorStop(1, 'rgba(255,150,80,0)');
-		ng.fillStyle = ngr;
-		ng.fillRect(0, 0, 64, 64);
-		const navTex = new T.CanvasTexture(navCv);
-		const navLight = new T.Sprite(
-			new T.SpriteMaterial({
-				map: navTex,
-				color: 0xffb36b,
-				transparent: true,
-				depthWrite: false,
-				depthTest: false,
-				blending: T.AdditiveBlending
-			})
-		);
-		navLight.position.copy(navP);
-		navLight.scale.setScalar(0.14);
-		navLight.renderOrder = 30;
-		wgrp.add(navLight);
-		wgrp.userData.navLight = navLight;
-		// specular glint sweeping along the leading edge (~10s cycle)
-		{
-			const gCv = document.createElement('canvas');
-			gCv.width = 128;
-			gCv.height = 32;
-			const gg = gCv.getContext('2d')!;
-			const ggr = gg.createRadialGradient(64, 16, 0, 64, 16, 60);
-			ggr.addColorStop(0, 'rgba(255,240,215,0.95)');
-			ggr.addColorStop(0.3, 'rgba(255,220,175,0.4)');
-			ggr.addColorStop(1, 'rgba(255,220,175,0)');
-			gg.fillStyle = ggr;
-			gg.fillRect(0, 0, 128, 32);
-			const glint = new T.Sprite(
-				new T.SpriteMaterial({
-					map: new T.CanvasTexture(gCv),
-					transparent: true,
-					depthWrite: false,
-					depthTest: false,
-					blending: T.AdditiveBlending,
-					opacity: 0
-				})
-			);
-			glint.renderOrder = 29;
-			wgrp.add(glint);
-			wgrp.userData.glint = { spr: glint, LE, SP, SPAN };
-		}
-		// contrail wisp streaming right off the winglet tip
-		{
-			const cCv = document.createElement('canvas');
-			cCv.width = 256;
-			cCv.height = 32;
-			const cg = cCv.getContext('2d')!;
-			const cgr = cg.createLinearGradient(0, 0, 256, 0);
-			cgr.addColorStop(0, 'rgba(255,255,255,0.85)');
-			cgr.addColorStop(0.25, 'rgba(255,255,255,0.45)');
-			cgr.addColorStop(1, 'rgba(255,255,255,0)');
-			cg.fillStyle = cgr;
-			cg.beginPath();
-			cg.ellipse(128, 16, 128, 5, 0, 0, Math.PI * 2);
-			cg.fill();
-			const trail = new T.Sprite(
-				new T.SpriteMaterial({
-					map: new T.CanvasTexture(cCv),
-					transparent: true,
-					depthWrite: false,
-					depthTest: false,
-					opacity: 0.4
-				})
-			);
-			trail.renderOrder = 45;
-			cam.add(trail);
-			wgrp.userData.contrail = trail;
-		}
-		// flap track fairings: low-poly canoe pods sunk half behind the wing (top half occluded)
-		const podAt = (t: number, len: number, rad: number, inset: number, ang: number) => {
-			const te = pinchTE(t),
-				d = dAt(t) + 0.3;
-			const ky = (2 * vhW * d) / 320;
-			const g = new T.CylinderGeometry(rad * 0.6 * ky, rad * ky, len * ky, 6, 2).toNonIndexed();
-			const pp = g.attributes.position as THREE.BufferAttribute,
-				cc = new Float32Array(pp.count * 3);
-			const podC = new T.Color('#6e6b66'),
-				warmC = new T.Color('#a87f52'),
-				redC = new T.Color('#a33c33');
-			for (let f = 0; f < pp.count; f += 3) {
-				let cx = 0,
-					cy = 0;
-				for (let v = 0; v < 3; v++) {
-					cx += pp.getX(f + v);
-					cy += pp.getY(f + v);
-				}
-				cx /= 3;
-				cy /= 3;
-				let c = podC.clone().multiplyScalar(0.9 + rndW(f + t * 90) * 0.2);
-				if (cx < -rad * ky * 0.3) c = c.lerp(warmC, 0.22); // underside catches ocean bounce
-				if (cy < -len * ky * 0.42) c = redC.clone().multiplyScalar(0.88 + rndW(f) * 0.18); // red tail
-				for (let v = 0; v < 3; v++) {
-					cc[(f + v) * 3] = c.r;
-					cc[(f + v) * 3 + 1] = c.g;
-					cc[(f + v) * 3 + 2] = c.b;
-				}
-			}
-			g.setAttribute('color', new T.BufferAttribute(cc, 3));
-			const m = new T.Mesh(g, wmat);
-			m.position.copy(SP(te[0] - rad * 0.38 - (inset || 0) * 0.3, te[1] + rad * 0.3, d + 0.4));
-			m.scale.setScalar(0.8);
-			m.rotation.set(-0.15, 0, ang || -2.91);
-			// then force the pod's world axis perfectly screen-horizontal (compensates group yaw+roll)
-			const qw = new T.Quaternion().setFromEuler(new T.Euler(0, -0.52, Math.PI / 4 + 0.55));
-			m.quaternion.copy(
-				qw.invert().multiply(new T.Quaternion().setFromEuler(new T.Euler(0, 0, -Math.PI / 2)))
-			);
-			wgrp.add(m);
-			return m;
-		};
-		podAt(0.42, 40, 9.5, 0, -3.08);
-		const podOuter = podAt(0.6, 30, 7.5, 0, -2.91);
-		// slightly opaque windstream trailing from the outer fairing (screen-right, with the airflow)
-		const wsMat = new T.SpriteMaterial({
-			map: navTex,
-			color: 0xf2ede4,
-			transparent: true,
-			opacity: 0.16,
-			depthWrite: false
-		});
-		const ws = new T.Sprite(wsMat);
-		ws.position.copy(podOuter.position).add(new T.Vector3(0.234, -0.972, 0).multiplyScalar(1.15));
-		ws.scale.set(2.6, 0.16, 1);
-		ws.renderOrder = 22;
-		wgrp.add(ws);
-		wgrp.userData.windstream = ws;
-		// key light travelling with the camera so the top surface reads light metallic
-		const wKey = new T.DirectionalLight(0xfff0d8, 1.0);
-		wKey.position.set(0, 3, 2);
-		cam.add(wKey);
-		// warm bounce light from the sea below
-		const bounce = new T.DirectionalLight(0xe8a05f, 0.5);
-		bounce.position.set(0.5, -3, 2.5);
-		scene.add(bounce);
-		wgrp.userData.key = wKey;
-		wgrp.userData.bounce = bounce;
-		// rotate the entire wing 45° left (CCW) about its own centroid, in the screen plane
-		let wcx = 0,
-			wcy = 0,
-			wcz = 0;
-		for (let i = 0; i < posA.length; i += 3) {
-			wcx += posA[i];
-			wcy += posA[i + 1];
-			wcz += posA[i + 2];
-		}
-		const nWP = posA.length / 3;
-		const wCen = new T.Vector3(wcx / nWP, wcy / nWP, wcz / nWP);
-		wgrp.children.forEach((ch) => ch.position.sub(wCen));
-		wgrp.position.copy(wCen);
-		wgrp.position.x = -1.15;
-		wgrp.position.y -= 2.15;
-		wgrp.scale.setScalar(1.32);
-		wgrp.rotation.z = Math.PI / 4 + 0.55;
-		wgrp.rotation.y = -0.52 - 0.087; // root swung slightly left/up; +5deg yaw right
-		// wing always paints over nearby clouds: draw last, opaque, on top of transparent layers
-		wgrp.traverse((ch) => {
-			if ((ch as THREE.Mesh).isMesh) {
-				const mesh = ch as THREE.Mesh;
-				mesh.renderOrder = 20;
-				const mat = mesh.material as THREE.Material;
-				if (mat && !mat.transparent) {
-					mat.transparent = true;
-					mat.opacity = 1;
-				}
-			}
-		});
+	} else {
+		// wing-visible porthole only: lazy-load the A320 GLB + GLTFLoader off the main path
+		void loadWing(ctx, wgrp);
 	}
 	// near islands passing below the plane — flat blobs on the water, fast parallax for height cue
 	const mkIsleTop = function (seed: number) {
@@ -772,19 +496,10 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 			const ph = t % 1.6;
 			nv.material.opacity = ph < 0.12 ? 1 : ph < 0.24 ? 0.35 : 0.08;
 		}
-		// seesaw sway: very slight roll about the wing's own axis
-		wgrp.rotation.z = Math.PI / 4 + 0.55 + Math.sin(t * 0.4) * 0.009 + Math.sin(t * 0.17 + 2.1) * 0.005;
-		const gl = wgrp.userData.glint;
-		if (gl) {
-			const gp = (t % 10) / 10;
-			const vis = gp < 0.35 ? Math.sin((gp / 0.35) * Math.PI) : 0;
-			gl.spr.material.opacity = vis * 0.55;
-			const gt = Math.min(gl.SPAN, (gp / 0.35) * gl.SPAN);
-			const p = gl.LE(gt);
-			gl.spr.position.copy(gl.SP(p[0] + 0.5, p[1] + 1.5, 6 + 8 * gt - 0.4));
-			const sc = 0.5 + gt * 0.4;
-			gl.spr.scale.set(sc, sc * 0.28, 1);
-		}
+		// seesaw sway: very slight roll about the wing's own axis (offset from its base rot)
+		if (wgrp.userData.baseRotZ != null)
+			wgrp.rotation.z =
+				wgrp.userData.baseRotZ + Math.sin(t * 0.4) * 0.009 + Math.sin(t * 0.17 + 2.1) * 0.005;
 		const ct = wgrp.userData.contrail;
 		const nv2 = wgrp.userData.navLight;
 		if (ct && nv2) {
@@ -813,11 +528,6 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 				shoot2.next = t + 18 + rand() * 22;
 			}
 		}
-		const ws2 = wgrp.userData.windstream;
-		if (ws2) {
-			ws2.material.opacity = 0.13 + Math.sin(t * 1.7) * 0.05;
-			ws2.scale.x = 2.6 + Math.sin(t * 0.9) * 0.3;
-		}
 		fitBackdrop();
 
 		stM.opacity = 0.45 + Math.sin(t * 0.8) * 0.15;
@@ -830,7 +540,6 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 			wgrp.userData.key.intensity += (1.0 * shade - wgrp.userData.key.intensity) * 0.04;
 			wgrp.userData.bounce.intensity +=
 				(0.5 * (0.6 + 0.4 * shade) - wgrp.userData.bounce.intensity) * 0.04;
-			if (wgrp.userData.cloudShadow) wgrp.userData.cloudShadow.uniforms.uT.value = t;
 		}
 		nearIsles.forEach(function (o) {
 			if (!o.active) {

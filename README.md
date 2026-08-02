@@ -40,3 +40,7 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+
+## Credits
+
+Low Poly Airliner by Mauro3D (sketchfab.com/3d-models/low-poly-airliner-f06d488f08764e3ca26f2917d4053c69), CC-BY 4.0 — used for the porthole wing.
