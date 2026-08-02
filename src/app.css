@@ -1,65 +1,9 @@
-/* Global stylesheet — design tokens mirrored as CSS custom properties, plus every
- * board-relevant @keyframes ported verbatim from the DC <style> block (L46-61).
- * Keep these keyframe definitions byte-identical to the source of truth. */
+/* Global stylesheet: board @keyframes ported verbatim from the DC <style> (keep
+ * byte-identical) plus base rules. Components carry their own ported inline styles. */
 
 :root {
-	/* surfaces */
-	--c-board: #121010;
-	--c-board-border: #262020;
-	--c-tile: #1a1616;
-	--c-tile-border: #2a2424;
-	--c-scene-bg: #0a0c12;
-
-	/* tile tints */
-	--c-about-bg: #1d1824;
-	--c-about-border: #2f2939;
-	--c-contact-bg: #1c1512;
-	--c-contact-border: #322619;
-	--c-health-bg: #161a17;
-	--c-health-border: #263028;
-	--c-wildcard-border: #453a36;
-	--c-glass-sea: rgba(22, 38, 46, 0.34);
-
-	/* work / parchment */
-	--c-cream: #cbbfa8;
-	--c-cream-text: #241d18;
-	--c-cream-muted: #5e544a;
-	--c-cream-faint: #8a7d6e;
-	--c-cream-accent: #2a0d06;
-
-	/* text */
 	--c-text-cream: #efe9e6;
-	--c-text-cream-2: #f2ede2;
-	--c-text-body: #94867f;
-	--c-mono-muted: #6e6058;
-
-	/* fire accents */
-	--c-ember: #ff8c3a;
-	--c-amber: #e2954f;
-	--c-warm-light: #ffb066;
-	--c-glow: #ffd28a;
-	--c-terracotta: #c85a44;
-	--c-terracotta-2: #d4654c;
-
-	/* ash */
-	--c-ash-1: #6b5f57;
-	--c-ash-2: #5d534c;
-
-	--c-flap-band: #8f352c;
-	--c-health-ring: #e0654c;
-
-	/* radii */
-	--r-board: 24px;
-	--r-board-mobile: 28px;
-	--r-tile: 12px;
-	--r-hero: 14px;
-	--r-scene: 18px;
-
-	/* fonts */
-	--f-display: 'Archivo Black', sans-serif;
 	--f-body: 'Archivo', system-ui, sans-serif;
-	--f-mono: 'JetBrains Mono', monospace;
-	--f-serif: 'Cormorant Garamond', serif;
 }
 
 * {
@@ -68,14 +12,12 @@
 
 html {
 	color-scheme: dark;
-	/* the board form-fits the viewport — the document itself never scrolls */
+	/* board form-fits the viewport; the document itself never scrolls */
 	overflow: hidden;
 	height: 100%;
-	/* solid root color propagates to the browser canvas; anchored to the gradient's
+	/* root color also paints the browser chrome / bar strips */
 	background: #101a2c;
 }
-
-
 
 html,
 body {
@@ -84,7 +26,7 @@ body {
 }
 
 body {
-	overflow: hidden; /* board form-fits the viewport; no page scroll or bounce */
+	overflow: hidden;
 	overscroll-behavior: none;
 	background: #101a2c;
 	color: var(--c-text-cream);
@@ -93,7 +35,7 @@ body {
 	text-rendering: optimizeLegibility;
 }
 
-/* ── Board / tile base (DC L38-39) ─────────────────────────────────────────── */
+/* ── Board / tile base ─────────────────────────────────────────────────────── */
 .board {
 	position: relative;
 	box-sizing: border-box;
@@ -111,11 +53,7 @@ body {
 		opacity 0.3s ease;
 }
 
-/* ── Keyframes (DC L46-61) — consumed ones only, verbatim ──────────────────────
- * NOT ported (unused by boards 11a/11b, per the interaction sheets): dcflame (L54),
- * dcemberup (L55), sway (L46), blink (L47), wingflex (L48), mar (L49). ashburst (L56)
- * is also dropped — it has no static consumer, and the burn ember specks animate via
- * inline transitions (expand.ts burnEmbers), not a keyframe. */
+/* ── Keyframes — the consumed ones only, verbatim from the DC ─────────────────── */
 @keyframes dcdust {
 	0% {
 		transform: translate(0, 0);
@@ -229,8 +167,7 @@ body {
 	}
 }
 
-/* ── Card clone close button (DC L64, verbatim; bg/color/z-index come inline from
- * expand.ts, matching the DC expand()) ─────────────────────────────────────── */
+/* Card clone close button; bg/color/z-index come inline from expand.ts. */
 .clone-close {
 	position: absolute;
 	top: 16px;
@@ -245,10 +182,8 @@ body {
 	z-index: 5;
 }
 
-/* Respect reduced motion (README mandate — not in the DC): disables the ambient CSS
- * animations (ashrise/dcfall/dctwinkle/dcdust/firering…). The intro is skipped in
- * intro.ts; the three.js scenes still animate — the loop has no still-frame hook yet
- * (gap reported, loop.ts untouched). */
+/* Reduced motion (README mandate): quiet the ambient CSS animations. The intro
+ * self-skips in intro.ts; three.js scenes render one still frame via the loop. */
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,
