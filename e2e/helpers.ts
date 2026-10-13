@@ -30,7 +30,7 @@ export function veilCount(page: Page): Promise<number> {
 	return page.evaluate(() => document.querySelectorAll('[data-intro-veil]').length);
 }
 
-/** Wait out the intro (veil mounts ~0.5s, self-removes ~3.6s). Non-reduced-motion only. */
+/** Wait out the intro (veil mounts ~0.4s, self-removes within ~3.3s). */
 export async function settleIntro(page: Page): Promise<void> {
 	// Generous first poll: cold-dev-server hydration can lag the intro several seconds.
 	await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBeGreaterThan(0);

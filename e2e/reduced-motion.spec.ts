@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { veilCount, reducedMotionPage } from './helpers';
 
 // prefers-reduced-motion: scenes render ONE still frame instead of animating (loop.ts
-// stillMode), the intro never plays, and app.css collapses all CSS animations
+// stillMode), the intro is a short static fade, and app.css collapses all CSS animations
 // (duration 0.001ms, 1 iteration) so the ashrise drift cannot run.
 //
 // NOTE: contexts are built manually via reducedMotionPage() — on Playwright 1.62.1,
@@ -15,8 +15,8 @@ test('scenes are still: campfire canvas pixel-identical across 1.2s', async ({
 	try {
 		await page.goto('/');
 
-		// No intro under reduced motion; give the loop time to build + paint still frames.
-		expect(await veilCount(page)).toBe(0);
+		// The reduced intro is a static fade; wait it out, then let the loop paint still frames.
+		await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBe(0);
 		await page.waitForTimeout(1_800);
 		// Belt & braces: freeze CSS-driven repaints so only canvas painting could differ.
 		await page.addStyleTag({

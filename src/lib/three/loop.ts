@@ -136,19 +136,19 @@ function startLoop(T: typeof THREE): LoopState {
 		}
 		let live = cvs.filter((cv) => getEntry(cv)).length;
 
-		// Build offscreen→onscreen canvases up to the context cap.
-		for (const cv of cvs) {
-			if (live >= CTX_CAP) break;
+		// Build offscreen→onscreen canvases up to the context cap — ONE per tick, hero first.
+		// Each build compiles shaders on the main thread; building them all in one frame
+		// stalled the page for ~1.5s at load. Spread out, each costs a single frame.
+		const pending = cvs.filter((cv) => {
 			const m = getMeta(cv);
-			if (
-				!getEntry(cv) &&
-				!m.failed &&
-				!m.pending &&
-				isOn(cv) &&
-				getComputedStyle(cv).visibility !== 'hidden'
-			) {
-				if (buildCanvas(T, cv)) live++;
-			}
+			return !getEntry(cv) && !m.failed && !m.pending && isOn(cv);
+		});
+		pending.sort((a, b) => +(b.dataset.scene === 'campfire') - +(a.dataset.scene === 'campfire'));
+		for (const cv of pending) {
+			if (live >= CTX_CAP) break;
+			if (getComputedStyle(cv).visibility === 'hidden') continue;
+			if (buildCanvas(T, cv)) live++;
+			break;
 		}
 
 		// (DC's `data-hover-only` warm/hover gating, L3068, is unused by boards 11a/11b — skipped.)
