@@ -1,8 +1,10 @@
-// Campfire hero scene — DC `kind === 'campfire'` ported verbatim onto the SceneCtx contract.
+// Campfire hero scene — DC `kind === 'campfire'` ported onto the SceneCtx contract; trees, ground and
+// rocks reworked (owner-approved) into the grass's language: alpha cards / shader-lit, fogged alike.
 // mkFlame/mkCanvas come from ./shared; randomness goes through ctx.rand (seeded), never Math.random.
 //
 // Build ORDER is load-bearing: everything added to `spin` before the freeze traverse gets
 // matrixAutoUpdate=false (flameA/B re-exempted); sky, mists and leaves are added AFTER and stay auto.
+// The sky dome hangs off `scene`, not `spin`, so it never enters the freeze traverse.
 
 import type * as THREE from 'three';
 import type { SceneCtx, UpdateFn } from '../types';
@@ -13,15 +15,15 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	const rand = ctx.rand;
 
 	renderer.toneMapping = T.ACESFilmicToneMapping;
-	renderer.toneMappingExposure = 1.25;
+	renderer.toneMappingExposure = 1.1;
 	renderer.outputEncoding = T.sRGBEncoding;
 	const lite = ctx.variants.lite;
 	const hr = ctx.variants.hour; // DC L1415 data-hour / ?hour= / local hour, resolved upstream
 	const TOD = hr >= 20 || hr < 6 ? 'night' : hr < 12 ? 'dawn' : 'dusk';
 	const todP = {
-		night: { bg: 0x060302, fog: 0x0a0502, fd: 0.115, sky: 0x1c2a44, hemi: 0.3, moon: 0.42, fire: 1.0, ff: 1.0, amb: [0.15, 0.19, 0.27] },
-		dawn: { bg: 0x2a2233, fog: 0x2e2436, fd: 0.095, sky: 0x8a6a72, hemi: 0.75, moon: 0.2, fire: 0.6, ff: 0.25, amb: [0.34, 0.28, 0.33] },
-		dusk: { bg: 0x33222a, fog: 0x3a262c, fd: 0.095, sky: 0xc8784a, hemi: 0.7, moon: 0.15, fire: 0.8, ff: 0.55, amb: [0.4, 0.29, 0.27] }
+		night: { bg: 0x05060a, fog: 0x0b0a0e, fd: 0.115, sky: 0x1c2a44, hemi: 0.26, moon: 0.42, fire: 1.0, ff: 1.0, amb: [0.15, 0.19, 0.27], hor: 0x232a3c, zen: 0x05070d },
+		dawn: { bg: 0x2a2233, fog: 0x2e2436, fd: 0.095, sky: 0x8a6a72, hemi: 0.65, moon: 0.2, fire: 0.6, ff: 0.25, amb: [0.34, 0.28, 0.33], hor: 0x7a5e6a, zen: 0x231c2e },
+		dusk: { bg: 0x33222a, fog: 0x3a262c, fd: 0.095, sky: 0xc8784a, hemi: 0.6, moon: 0.15, fire: 0.8, ff: 0.55, amb: [0.4, 0.29, 0.27], hor: 0x80463a, zen: 0x22161f }
 	}[TOD];
 	scene.fog = new T.FogExp2(todP.fog, todP.fd);
 	scene.background = new T.Color(todP.bg);
@@ -38,75 +40,68 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		if (dz > -0.3) return false;
 		return Math.atan2(Math.abs(x), -dz) < 0.84 + (extra || 0);
 	};
+	// shared shader-lighting inputs (grass, ground, tree cards all read the same ones)
+	const FIRE_POS = new T.Vector3(0, 0.7, 0);
+	const fogUni = { value: new T.Color(todP.fog) };
+	const flickUni = { value: 1 };
+	const timeUni = { value: 0 };
+	const ambUni = { value: new T.Vector3(todP.amb[0], todP.amb[1], todP.amb[2]) };
+	// grass's fog curve, shared by every custom shader in the scene
+	const FOG_GLSL = `
+              vec3 fogMix(vec3 c, vec3 w, float k) {
+                float camD = distance(w, cameraPosition);
+                return mix(c, uFogC, clamp(1.0 - exp(-pow(camD * k, 2.0)), 0.0, 1.0));
+              }`;
+	// concatenate non-indexed copies of same-layout geometries into one (one draw call)
+	const mergeGeos = function (list: THREE.BufferGeometry[], names: string[]) {
+		const geos = list.map(function (g) {
+			return g.index ? g.toNonIndexed() : g;
+		});
+		let n = 0;
+		geos.forEach(function (g) {
+			n += g.attributes.position.count;
+		});
+		const out = new T.BufferGeometry();
+		names.forEach(function (nm) {
+			const isz = geos[0].attributes[nm].itemSize;
+			const arr = new Float32Array(n * isz);
+			let o = 0;
+			geos.forEach(function (g) {
+				const a = g.attributes[nm] as THREE.BufferAttribute;
+				arr.set(a.array as Float32Array, o);
+				o += a.count * isz;
+			});
+			out.setAttribute(nm, new T.BufferAttribute(arr, isz));
+		});
+		return out;
+	};
+	// non-indexed geometry → averaged normals across coincident vertices (smooth, crack-free)
+	const smoothNormals = function (g: THREE.BufferGeometry) {
+		g.computeVertexNormals();
+		const p = g.attributes.position as THREE.BufferAttribute;
+		const nn = g.attributes.normal as THREE.BufferAttribute;
+		const acc = new Map<string, number[]>();
+		const key = function (i: number) {
+			return p.getX(i).toFixed(4) + ',' + p.getY(i).toFixed(4) + ',' + p.getZ(i).toFixed(4);
+		};
+		for (let i = 0; i < p.count; i++) {
+			const k = key(i);
+			const a = acc.get(k) || [0, 0, 0];
+			a[0] += nn.getX(i);
+			a[1] += nn.getY(i);
+			a[2] += nn.getZ(i);
+			acc.set(k, a);
+		}
+		for (let i = 0; i < p.count; i++) {
+			const a = acc.get(key(i)) as number[];
+			const l = Math.hypot(a[0], a[1], a[2]) || 1;
+			nn.setXYZ(i, a[0] / l, a[1] / l, a[2] / l);
+		}
+	};
+	// ground contact shadows (x, z, radius) — tree bases, seat logs, boulders; read by the ground shader
+	const aoPts: [number, number, number][] = [];
 
 	// --- procedural textures ---
-	const groundTex = new T.CanvasTexture(
-		mkCanvas(512, 512, function (g, w, h) {
-			g.fillStyle = '#1c1006';
-			g.fillRect(0, 0, w, h);
-			// large soft tonal patches for unevenness
-			for (let i = 0; i < 26; i++) {
-				const x = rand() * w, y = rand() * h, r = 30 + rand() * 90;
-				const gr = g.createRadialGradient(x, y, 0, x, y, r);
-				const dark = rand() < 0.5;
-				gr.addColorStop(0, dark ? 'rgba(8,4,1,.28)' : 'rgba(64,42,18,.16)');
-				gr.addColorStop(1, 'rgba(0,0,0,0)');
-				g.fillStyle = gr;
-				g.beginPath();
-				g.arc(x, y, r, 0, Math.PI * 2);
-				g.fill();
-			}
-			for (let i = 0; i < 9000; i++) {
-				const x = rand() * w, y = rand() * h, a = rand() * Math.PI;
-				g.strokeStyle = 'hsl(' + (24 + rand() * 26) + ',46%,' + (13 + rand() * 27) + '%)';
-				g.lineWidth = 1 + rand();
-				g.beginPath();
-				g.moveTo(x, y);
-				g.lineTo(x + Math.cos(a) * (3 + rand() * 8), y + Math.sin(a) * (3 + rand() * 8));
-				g.stroke();
-			}
-			// fine grain speckle
-			for (let i = 0; i < 26000; i++) {
-				const x = rand() * w, y = rand() * h;
-				const l = rand();
-				g.fillStyle =
-					l < 0.55
-						? 'rgba(0,0,0,' + (0.12 + rand() * 0.2) + ')'
-						: 'hsla(' + (26 + rand() * 24) + ',42%,' + (22 + rand() * 30) + '%,' + (0.14 + rand() * 0.22) + ')';
-				g.fillRect(x, y, 1, 1);
-			}
-			// pebbles
-			for (let i = 0; i < 170; i++) {
-				const x = rand() * w, y = rand() * h, r = 1.2 + rand() * 3.2, a = rand() * Math.PI;
-				const li = 16 + rand() * 22;
-				g.save();
-				g.translate(x, y);
-				g.rotate(a);
-				g.fillStyle = 'hsl(' + (22 + rand() * 18) + ',18%,' + li + '%)';
-				g.beginPath();
-				g.ellipse(0, 0, r, r * (0.55 + rand() * 0.3), 0, 0, Math.PI * 2);
-				g.fill();
-				g.fillStyle = 'hsla(' + (26 + rand() * 18) + ',22%,' + (li + 14) + '%,.6)';
-				g.beginPath();
-				g.ellipse(-r * 0.22, -r * 0.24, r * 0.45, r * 0.26, 0, 0, Math.PI * 2);
-				g.fill();
-				g.restore();
-			}
-		})
-	);
-	groundTex.wrapS = groundTex.wrapT = T.RepeatWrapping;
-	groundTex.repeat.set(5, 5);
-	groundTex.encoding = T.sRGBEncoding;
-	// coast_sand_rocks_02 (Poly Haven, CC0) replaces the procedural strokes once loaded;
-	// darkened toward soil via material color multiply below
-	new T.TextureLoader().load('/textures/ground.jpg', function (tex) {
-		tex.wrapS = tex.wrapT = T.RepeatWrapping;
-		tex.repeat.set(5, 5);
-		tex.encoding = T.sRGBEncoding;
-		groundMat.map = tex;
-		groundMat.color.set(0x6a5844);
-		groundMat.needsUpdate = true;
-	});
 	const barkTex = new T.CanvasTexture(
 		mkCanvas(256, 512, function (g, w, h) {
 			g.fillStyle = '#170e06';
@@ -221,17 +216,23 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	);
 	rockTex.wrapS = rockTex.wrapT = T.RepeatWrapping;
 	rockTex.encoding = T.sRGBEncoding;
-	// organic rock geometry: subdivided icosahedron with noise displacement
-	const mkRockGeo = function (r: number) {
-		const g = new T.IcosahedronGeometry(r, 1);
+	// organic rock geometry: icosahedron with a per-rock phase-shifted lobe field (no two alike),
+	// displacement is a pure function of direction so the non-indexed faces stay sealed
+	const mkRockGeo = function (r: number, detail: number) {
+		const g = new T.IcosahedronGeometry(r, detail);
 		const p = g.attributes.position as THREE.BufferAttribute;
+		const ph = rand() * 40, sx = 0.8 + rand() * 0.45, sz = 0.8 + rand() * 0.45, flat = 0.15 + rand() * 0.25;
 		for (let i = 0; i < p.count; i++) {
-			const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-			const n =
-				1 + (Math.sin(x * 21.7) + Math.cos(y * 17.3) + Math.sin(z * 25.1)) * 0.09 + (rand() - 0.5) * 0.1;
-			p.setXYZ(i, x * n, y * n * 0.72, z * n);
+			const x = p.getX(i) / r, y = p.getY(i) / r, z = p.getZ(i) / r;
+			let n =
+				1 +
+				Math.sin(x * 2.6 + ph) * Math.sin(y * 2.2 + ph * 1.3) * Math.sin(z * 2.9 + ph * 0.7) * 0.32 +
+				Math.sin(x * 6.3 + z * 4.1 + ph) * 0.05 +
+				Math.sin(y * 7.7 - x * 5.2 + ph * 2.0) * 0.04;
+			if (y > 1 - flat) n *= 1 - (y - (1 - flat)) * 0.5; // weathered flat-ish crown
+			p.setXYZ(i, x * r * n * sx, y * r * n, z * r * n * sz);
 		}
-		g.computeVertexNormals();
+		smoothNormals(g);
 		return g;
 	};
 	const glowTex = new T.CanvasTexture(
@@ -264,6 +265,107 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	);
 	flameTex.encoding = T.sRGBEncoding;
 
+	// needle-spray branch card: stem runs base (u=0, at the trunk) → tip (u=1); grey level = needle shade
+	const needleTex = new T.CanvasTexture(
+		mkCanvas(256, 128, function (g, w, h) {
+			g.clearRect(0, 0, w, h);
+			g.lineCap = 'round';
+			const env = function (t: number) {
+				return t < 0.06 ? 0 : Math.pow(Math.sin(Math.PI * Math.min(1, (t - 0.06) / 0.97)), 0.55);
+			};
+			const needle = function (x: number, y: number, a: number, len: number, shade: number) {
+				const v = Math.round(Math.min(255, shade));
+				g.strokeStyle = 'rgb(' + v + ',' + v + ',' + v + ')';
+				g.lineWidth = 1.2 + rand() * 0.7;
+				g.beginPath();
+				g.moveTo(x, y);
+				g.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+				g.stroke();
+			};
+			const stem = function (x0: number, y0: number, a0: number, len: number, sub: boolean, t0: number) {
+				let x = x0, y = y0, a = a0;
+				const pts: number[][] = [];
+				for (let s = 0; s <= len; s += 2) {
+					pts.push([x, y, a, s / len]);
+					a += (rand() - 0.5) * 0.03;
+					x += Math.cos(a) * 2;
+					y += Math.sin(a) * 2;
+				}
+				g.strokeStyle = 'rgb(60,60,60)';
+				g.lineWidth = sub ? 1.4 : 3;
+				g.beginPath();
+				g.moveTo(x0, y0);
+				pts.forEach(function (q) {
+					g.lineTo(q[0], q[1]);
+				});
+				g.stroke();
+				pts.forEach(function (q) {
+					const t = q[3];
+					const e = sub ? (1 - t * 0.55) * env(t0) : env(t);
+					if (e <= 0.05) return;
+					for (let side = -1; side <= 1; side += 2) {
+						const na = q[2] + side * (0.55 + rand() * 0.55);
+						needle(q[0], q[1], na, (10 + rand() * 11) * (0.55 + 0.45 * e), 110 + rand() * 110 + (sub ? t : t0) * 40);
+					}
+				});
+				if (!sub) {
+					let side = 1;
+					for (let s = len * 0.12; s < len * 0.86; s += 15 + rand() * 9) {
+						const q = pts[Math.min(pts.length - 1, Math.round(s / 2))];
+						const t = s / len;
+						stem(q[0], q[1], q[2] + side * (0.5 + rand() * 0.25), 58 * env(t) * (0.75 + rand() * 0.35), true, t);
+						side = -side;
+					}
+				}
+			};
+			// faint underlay along the spray: invisible at full res (below the alpha cut), it keeps
+			// the averaged mip coverage above the cut so distant cards stay solid instead of dissolving
+			g.fillStyle = "rgba(90,90,90,0.3)";
+			g.beginPath();
+			g.moveTo(8, h / 2);
+			g.quadraticCurveTo(w * 0.45, h * 0.06, w - 8, h / 2);
+			g.quadraticCurveTo(w * 0.45, h * 0.94, 8, h / 2);
+			g.fill();
+			stem(3, h / 2, 0, w - 12, false, 0);
+		})
+	);
+	// far-treeline pine silhouette (alpha only) — jagged drooping tiers on a thin spine
+	const silTex = new T.CanvasTexture(
+		mkCanvas(128, 256, function (g, w, h) {
+			g.clearRect(0, 0, w, h);
+			g.fillStyle = '#ffffff';
+			const cx = w / 2;
+			g.fillRect(cx - 3, h * 0.8, 6, h * 0.2);
+			// tiers: apex → drooping tips → arched underside back to the spine
+			const tiers = 8;
+			for (let k = 0; k < tiers; k++) {
+				const f = k / (tiers - 1);
+				const yb = h * (0.9 - f * 0.76);
+				const th = h * (0.19 - f * 0.07);
+				const wd = (w / 2 - 3) * (1 - f * 0.8) * (0.9 + rand() * 0.1);
+				g.beginPath();
+				g.moveTo(cx, yb - th);
+				g.quadraticCurveTo(cx - wd * 0.45, yb - th * 0.35, cx - wd, yb + th * 0.16);
+				g.quadraticCurveTo(cx - wd * 0.45, yb - th * 0.32, cx, yb - th * 0.12);
+				g.quadraticCurveTo(cx + wd * 0.45, yb - th * 0.32, cx + wd, yb + th * 0.16);
+				g.quadraticCurveTo(cx + wd * 0.45, yb - th * 0.35, cx, yb - th);
+				g.fill();
+				// needle fringe along the drooping edges
+				g.strokeStyle = '#ffffff';
+				g.lineWidth = 1.2;
+				for (let i = 0; i < 26; i++) {
+					const side = i % 2 ? 1 : -1;
+					const t = rand();
+					const x = cx + side * wd * t, y = yb - th + (th * 1.16) * Math.pow(t, 1.4);
+					g.beginPath();
+					g.moveTo(x, y);
+					g.lineTo(x + side * (2 + rand() * 4), y + 2 + rand() * 5);
+					g.stroke();
+				}
+			}
+		})
+	);
+
 	// --- lights: fire is the scene's sun ---
 	scene.add(new T.HemisphereLight(todP.sky, 0x000000, todP.hemi));
 	const moonRim = new T.DirectionalLight(0x5f7fb8, todP.moon);
@@ -288,25 +390,36 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	bounceLight2.position.set(-1.6, 0.55, 2.2);
 	scene.add(bounceLight2);
 
-	// --- uneven textured ground ---
-	const gGeo = new T.CircleGeometry(13, 48);
-	gGeo.rotateX(-Math.PI / 2);
-	{
-		const p = (gGeo.attributes.position as THREE.BufferAttribute).array as Float32Array;
-		for (let i = 0; i < p.length; i += 3) {
-			const d = Math.hypot(p[i], p[i + 2]);
-			if (d > 1.2) p[i + 1] = (rand() - 0.5) * 0.14 * Math.min(1, d / 4);
-		}
-		gGeo.computeVertexNormals();
-	}
-	const groundMat = new T.MeshStandardMaterial({
-		map: groundTex,
-		bumpMap: groundTex,
-		bumpScale: 0.14,
-		roughness: 1,
-		metalness: 0
-	});
-	spin.add(new T.Mesh(gGeo, groundMat));
+	// --- sky dome: horizon a shade lighter than the fog so canopies read as dark masses ---
+	const sky = new T.Mesh(
+		new T.SphereGeometry(70, 24, 12),
+		new T.ShaderMaterial({
+			uniforms: { uHor: { value: new T.Color(todP.hor) }, uZen: { value: new T.Color(todP.zen) }, uFogC: fogUni },
+			side: T.BackSide,
+			depthWrite: false,
+			vertexShader: `
+              varying vec3 vDir;
+              void main() {
+                vDir = normalize(position);
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+              }`,
+			fragmentShader: `
+              uniform vec3 uHor;
+              uniform vec3 uZen;
+              uniform vec3 uFogC;
+              varying vec3 vDir;
+              void main() {
+                float k = smoothstep(0.04, 0.6, vDir.y);
+                // below the horizon it meets the fogged ground edge seamlessly
+                vec3 c = mix(uFogC, uHor, smoothstep(-0.1, 0.06, vDir.y));
+                gl_FragColor = vec4(mix(c, uZen, sqrt(k)), 1.0);
+              }`
+		})
+	);
+	sky.renderOrder = -10;
+	scene.add(sky);
+
+	// glow decal over the ground shader's firelight pool (flicker driven in the update)
 	const gGlowMat = new T.MeshBasicMaterial({
 		map: glowTex,
 		transparent: true,
@@ -319,40 +432,43 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	gGlow.position.y = 0.012;
 	spin.add(gGlow);
 
-	// --- close trees: warped bark trunks + dark canopy blobs ---
-	const trunkMat = new T.MeshStandardMaterial({
-		map: barkTex,
-		bumpMap: barkTex,
-		bumpScale: 0.05,
-		color: 0x9a7c5e,
-		roughness: 0.95
-	});
-	const darkTrunkMat = new T.MeshStandardMaterial({
-		map: barkTex,
-		bumpMap: barkTex,
-		bumpScale: 0.04,
-		color: 0x3a2e22,
-		roughness: 1
-	});
-	const folMat = new T.MeshStandardMaterial({ color: 0x1a2b1c, roughness: 1, flatShading: true });
-	const folMatDark = new T.MeshStandardMaterial({ color: 0x0c1409, roughness: 1, flatShading: true });
-	// stacked jagged pine tier (low-poly cone, base ring jittered)
-	const mkTier = function (r: number, h: number, mat: THREE.Material) {
-		const cg = new T.ConeGeometry(r, h, 8, 1);
-		const p = (cg.attributes.position as THREE.BufferAttribute).array as Float32Array;
-		for (let i = 0; i < p.length; i += 3) {
-			if (p[i + 1] < 0) {
-				const jr = 1 + (rand() - 0.5) * 0.3;
-				p[i] *= jr;
-				p[i + 2] *= jr;
-				p[i + 1] += (rand() - 0.5) * h * 0.14;
-			}
-		}
-		cg.computeVertexNormals();
-		return new T.Mesh(cg, mat);
+	// --- pines: merged bark trunks + instanced needle-branch cards (grass-family shader) ---
+	const trunkGeos: THREE.BufferGeometry[] = [];
+	const coreGeos: THREE.BufferGeometry[] = [];
+	const cardM: number[] = [];
+	const cardInfo: number[] = [];
+	const tmpM = new T.Matrix4(),
+		tmpQ = new T.Quaternion(),
+		tmpE = new T.Euler(),
+		tmpP = new T.Vector3(),
+		tmpS = new T.Vector3();
+	// card = unit plane, stem along +x from its base; roll about the stem, then pitch (droop), then yaw
+	const pushCard = function (
+		base: THREE.Matrix4,
+		px: number,
+		py: number,
+		pz: number,
+		yaw: number,
+		pitch: number,
+		roll: number,
+		L: number,
+		W: number,
+		info: number[]
+	) {
+		tmpE.set(roll, yaw, pitch, 'YZX');
+		tmpQ.setFromEuler(tmpE);
+		tmpM.compose(tmpP.set(px, py, pz), tmpQ, tmpS.set(L, W, 1)).premultiply(base);
+		for (let i = 0; i < 16; i++) cardM.push(tmpM.elements[i]);
+		cardInfo.push(info[0], info[1], info[2], info[3]);
 	};
+	const NEAR_BARK = new T.Color(0x52443a),
+		DARK_BARK = new T.Color(0x2c2219);
 	const mkTree = function (x: number, z: number, s: number, lean: number, dark?: boolean) {
-		const g = new T.Group();
+		const base = new T.Matrix4().compose(
+			new T.Vector3(x, 0, z),
+			new T.Quaternion().setFromEuler(new T.Euler(0, 0, lean)),
+			new T.Vector3(1, 1, 1)
+		);
 		const th = 5.5 * s * (0.78 + rand() * 0.5);
 		const tg = new T.CylinderGeometry(0.11 * s, 0.22 * s, th, 9, 7);
 		{
@@ -361,40 +477,93 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 				const k = p[i + 1] / th + 0.5;
 				p[i] += Math.sin(k * 9 + x) * 0.035 * s;
 				p[i + 2] += Math.cos(k * 7 + z) * 0.035 * s;
+				// root flare: the bottom ring splays out (lobed) so the foot reads as gripping the soil
+				if (k < 0.01) {
+					const fl = 1.55 + Math.sin(Math.atan2(p[i + 2], p[i]) * 5 + x * 3) * 0.25;
+					p[i] *= fl;
+					p[i + 2] *= fl;
+				}
 			}
 			tg.computeVertexNormals();
 		}
-		const trunk = new T.Mesh(tg, dark ? darkTrunkMat : trunkMat);
-		trunk.position.y = th / 2;
-		g.add(trunk);
-		// pine canopy: overlapping tapered tiers, wide at base, spire at top
-		const mat = dark ? folMatDark : folMat;
-		const tiers = 8;
-		const y0 = th * 0.34, y1 = th * 1.02;
-		for (let k = 0; k < tiers; k++) {
-			const f = k / (tiers - 1);
-			const r = (1.1 - f * 0.78) * s;
-			const h = (1.55 - f * 0.5) * s;
-			const tier = mkTier(r, h, mat);
-			tier.position.set((rand() - 0.5) * 0.06 * s, y0 + (y1 - y0) * f, (rand() - 0.5) * 0.06 * s);
-			tier.rotation.y = rand() * Math.PI;
-			g.add(tier);
+		// base sunk 0.2 below y=0 (ground jitter ±0.07, lean tilts the flared foot ±0.03) so no trunk can float
+		tg.translate(0, th / 2 - 0.2, 0);
+		const tgn = tg.toNonIndexed();
+		tgn.applyMatrix4(base);
+		const bc = dark ? DARK_BARK : NEAR_BARK;
+		const tpa = (tgn.attributes.position as THREE.BufferAttribute).array as Float32Array;
+		const tc = new Float32Array(tpa.length);
+		for (let i = 0; i < tc.length; i += 3) {
+			// trunk foot sinks into shadow
+			const k = 0.55 + 0.45 * Math.min(1, tpa[i + 1] / 0.9);
+			tc[i] = bc.r * k;
+			tc[i + 1] = bc.g * k;
+			tc[i + 2] = bc.b * k;
 		}
-		g.position.set(x, 0, z);
-		g.rotation.z = lean;
-		spin.add(g);
+		tgn.setAttribute('color', new T.BufferAttribute(tc, 3));
+		trunkGeos.push(tgn);
+		// whorls of drooping branch cards: wide at the base, a few upright cards as the spire
+		const info = [x, z, th, rand() + (dark ? 1 : 0)];
+		const whorls = lite ? 8 : 10,
+			per = lite ? 6 : 8;
+		const y0 = th * 0.36,
+			y1 = th * 0.95;
+		for (let k = 0; k < whorls; k++) {
+			const f = k / (whorls - 1);
+			const y = y0 + (y1 - y0) * f + (rand() - 0.5) * 0.12 * s;
+			const reach = s * (1.4 * Math.pow(1 - f, 0.85) + 0.24);
+			const off = rand() * Math.PI * 2;
+			const nb = per - Math.round(f * 2);
+			for (let b = 0; b < nb; b++) {
+				const yaw = off + (b / nb) * Math.PI * 2 + (rand() - 0.5) * 0.5;
+				const L = reach * (0.8 + rand() * 0.35);
+				pushCard(
+					base,
+					Math.cos(yaw) * 0.07 * s,
+					y,
+					-Math.sin(yaw) * 0.07 * s,
+					yaw,
+					-0.5 + f * 0.6 + (rand() - 0.5) * 0.22,
+					Math.PI / 2 + (rand() - 0.5) * 1.4,
+					L,
+					Math.max(0.3 * s, L * 0.56),
+					info
+				);
+			}
+			// short inner boughs fill the shelf between the trunk and the outer sprays
+			for (let b = 0; b < (lite ? 2 : 4); b++) {
+				const yaw = off + ((b + 0.5) / (lite ? 2 : 4)) * Math.PI * 2 + (rand() - 0.5) * 0.6;
+				const L = reach * (0.45 + rand() * 0.2);
+				pushCard(base, 0, y + 0.06 * s, 0, yaw, -0.2 + (rand() - 0.5) * 0.3, Math.PI / 2 + (rand() - 0.5) * 0.8, L, L * 0.62, info);
+			}
+		}
+		for (let b = 0; b < 3; b++) {
+			const yaw = (b / 3) * Math.PI * 2 + rand();
+			pushCard(base, 0, y1 - 0.1 * s, 0, yaw, 1.15 + rand() * 0.25, rand() * Math.PI, 0.8 * s, 0.32 * s, info);
+		}
+		// dark inner core so the canopy reads as a mass, not a lattice
+		const cg = new T.ConeGeometry(0.36 * s, th * 0.97 - y0 - 0.2, 7, 1, true);
+		cg.translate(0, y0 + 0.2 + (th * 0.97 - y0 - 0.2) / 2, 0);
+		const cgn = cg.toNonIndexed();
+		cgn.applyMatrix4(base);
+		coreGeos.push(cgn);
+		aoPts.push([x, z, 0.55 * s]);
 	};
 	const treeDefs: [number, number, number, number, boolean?][] = [
 		[-1.25, -1.6, 1.0, 0.05], [1.35, -1.9, 1.15, -0.04], [-1.95, -3.2, 1.3, 0.02], [2.1, -3.4, 1.2, -0.06], [0.7, -4.6, 1.1, 0.03], [-3.3, -0.6, 1.2, 0.04], [3.3, -0.2, 1.35, -0.02], [-2.6, 1.6, 1.1, -0.05, true], [2.8, 1.9, 1.25, 0.05, true],
 		[-4.4, -6.2, 1.7, 0.03, true], [3.9, -5.8, 1.6, -0.04, true], [-1.3, -7.4, 1.85, 0.02, true], [1.7, -8.0, 1.8, -0.02, true], [-6.2, -8.5, 2.0, 0.04, true], [6.0, -8.2, 1.95, -0.03, true]
 	];
+	// the back rows (z <= -5.8) become fogged silhouette cards instead (below)
+	const isFar = function (d: [number, number, number, number, boolean?]) {
+		return d[1] <= -5.8;
+	};
 	(lite
 		? treeDefs.filter(function (d, i) {
 				return i % 2 === 0;
 			})
 		: treeDefs
 	).forEach(function (d) {
-		if (inView(d[0], d[1], 1.6 * d[2])) mkTree(d[0], d[1], d[2], d[3], d[4]);
+		if (!isFar(d) && inView(d[0], d[1], 1.6 * d[2])) mkTree(d[0], d[1], d[2], d[3], d[4]);
 	});
 	// extra flanking trees for mobile — the halved treeDefs leave the frame edges sparse
 	if (lite) {
@@ -406,25 +575,147 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		mkTree(3.4, -2.8, 1.2, 0.03);
 	}
 
-	// --- fire kit (procedural fallback; replaced by GLB model when it loads) ---
+	// --- far treeline: camera-facing silhouette cards in three fogged rows ---
+	const silM: number[] = [];
+	const silAt = function (x: number, z: number, hgt: number) {
+		tmpM.compose(
+			tmpP.set(x, -0.15, z),
+			tmpQ.setFromEuler(tmpE.set(0, Math.atan2(-x, 5.8 - z), 0)),
+			tmpS.set(hgt * 0.5, hgt, 1)
+		);
+		for (let i = 0; i < 16; i++) silM.push(tmpM.elements[i]);
+	};
+	treeDefs.forEach(function (d) {
+		if (isFar(d)) silAt(d[0], d[1], 4.6 * d[2] * (0.85 + rand() * 0.3));
+	});
+	[-7.0, -10.0, -13.5].forEach(function (zr, ri) {
+		const n = (lite ? [7, 8, 9] : [10, 12, 14])[ri];
+		const half = Math.tan(1.0) * (5.8 - zr);
+		for (let i = 0; i < n; i++) {
+			const x = -half + ((i + 0.2 + rand() * 0.6) / n) * half * 2;
+			silAt(x, zr + (rand() - 0.5) * 1.6, (4.2 + rand() * 2.6) * (1 + ri * 0.22));
+		}
+	});
+	const silGeo = new T.PlaneGeometry(1, 1);
+	silGeo.translate(0, 0.5, 0);
+	const silMesh = new T.InstancedMesh(
+		silGeo,
+		new T.ShaderMaterial({
+			uniforms: { uAlpha: { value: silTex }, uFogC: fogUni, uHor: { value: new T.Color(todP.hor) } },
+			vertexShader: `
+              varying vec2 vUv;
+              varying vec3 vWorld;
+              void main() {
+                vUv = uv;
+                vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0);
+                vWorld = w.xyz;
+                gl_Position = projectionMatrix * viewMatrix * w;
+              }`,
+			fragmentShader:
+				`
+              uniform sampler2D uAlpha;
+              uniform vec3 uFogC;
+              uniform vec3 uHor;
+              varying vec2 vUv;
+              varying vec3 vWorld;` +
+				FOG_GLSL +
+				`
+              void main() {
+                if (texture2D(uAlpha, vUv).a < 0.5) discard;
+                vec3 c = mix(vec3(0.012, 0.018, 0.02), uHor * 0.5, vUv.y * 0.25);
+                gl_FragColor = vec4(fogMix(c, vWorld, 0.072), 1.0);
+              }`
+		}),
+		silM.length / 16
+	);
+	(silMesh.instanceMatrix.array as Float32Array).set(silM);
+	silMesh.instanceMatrix.needsUpdate = true;
+	silMesh.frustumCulled = false;
+	spin.add(silMesh);
+
 	const fireKit = new T.Group();
 	spin.add(fireKit);
+	// --- fire ring + clearing boulders: one merged, vertex-tinted rock mesh (soot / moss baked) ---
+	const rockGeos: THREE.BufferGeometry[] = [];
+	const MOSS = [0.36, 0.72, 0.2];
+	const addRock = function (
+		g: THREE.BufferGeometry,
+		x: number,
+		y: number,
+		z: number,
+		rx: number,
+		ry: number,
+		rz: number,
+		sy: number,
+		kind: 'ring' | 'boulder' | 'pebble'
+	) {
+		tmpM.compose(tmpP.set(x, y, z), tmpQ.setFromEuler(tmpE.set(rx, ry, rz, 'XYZ')), tmpS.set(1, sy, 1));
+		g.applyMatrix4(tmpM);
+		const p = g.attributes.position as THREE.BufferAttribute;
+		const nn = g.attributes.normal as THREE.BufferAttribute;
+		const c = new Float32Array(p.count * 3);
+		for (let i = 0; i < p.count; i++) {
+			const wx = p.getX(i), wy = p.getY(i), wz = p.getZ(i);
+			const nx = nn.getX(i), ny = nn.getY(i), nz = nn.getZ(i);
+			let k = (kind === 'boulder' ? 0.38 : 0.5) + (kind === 'boulder' ? 0.42 : 0.5) * Math.min(1, Math.max(0, wy / (kind === 'boulder' ? 0.28 : 0.09)));
+			let col = [k, k, k];
+			if (kind === 'ring') {
+				// soot: faces turned toward the flames and the stone's crown blacken
+				const tx = -wx, ty = FIRE_POS.y - wy, tz = -wz, tl = Math.hypot(tx, ty, tz);
+				const soot = Math.max(0, (nx * tx + ny * ty + nz * tz) / tl) * 0.8 + Math.max(0, ny) * 0.25;
+				k *= 1 - Math.min(0.82, soot * 0.9);
+				col = [k, k * 0.96, k * 0.93];
+			} else if (kind === 'boulder') {
+				const m = Math.min(1, Math.max(0, (ny - 0.05 + Math.sin(wx * 9 + wz * 7) * 0.2) * 2.6));
+				col = [k * (1 - m + m * MOSS[0]), k * (1 - m + m * MOSS[1]), k * (1 - m + m * MOSS[2])];
+			}
+			c[i * 3] = col[0];
+			c[i * 3 + 1] = col[1];
+			c[i * 3 + 2] = col[2];
+		}
+		g.setAttribute('color', new T.BufferAttribute(c, 3));
+		rockGeos.push(g);
+	};
+	const RING_N = 12;
+	for (let i = 0; i < RING_N; i++) {
+		const a = (i / RING_N) * Math.PI * 2 + 0.3 + (rand() - 0.5) * 0.16;
+		const big = i % 3 === 0;
+		const r = big ? 0.14 + rand() * 0.04 : 0.085 + rand() * 0.045;
+		const rr = 0.6 + (big ? 0.03 : 0) + (rand() - 0.5) * 0.06;
+		addRock(
+			mkRockGeo(r, 2),
+			Math.cos(a) * rr,
+			r * 0.12,
+			Math.sin(a) * rr,
+			(rand() - 0.5) * 0.5,
+			rand() * Math.PI * 2,
+			(rand() - 0.5) * 0.5,
+			0.62 + rand() * 0.2,
+			'ring'
+		);
+	}
+	// mossy boulders at the clearing edge (composition anchors left / right / back)
+	const boulders: [number, number, number][] = [
+		[-2.3, -1.25, 0.46],
+		[2.15, -0.75, 0.52],
+		[-0.85, -2.75, 0.32]
+	];
+	boulders.forEach(function (b) {
+		if (!inView(b[0], b[1], 0.2)) return;
+		addRock(mkRockGeo(b[2], 2), b[0], b[2] * 0.08, b[1], (rand() - 0.5) * 0.3, rand() * Math.PI * 2, (rand() - 0.5) * 0.3, 0.68, 'boulder');
+		// a satellite stone at each boulder's foot
+		const a = rand() * Math.PI * 2;
+		addRock(mkRockGeo(b[2] * 0.38, 1), b[0] + Math.cos(a) * b[2] * 1.05, 0.02, b[1] + Math.sin(a) * b[2] * 1.05, rand(), rand() * 6, rand() * 0.4, 0.6, 'boulder');
+		aoPts.push([b[0], b[1], b[2] * 1.5]);
+	});
 	const stoneMat = new T.MeshStandardMaterial({
 		map: rockTex,
 		bumpMap: rockTex,
 		bumpScale: 0.02,
 		color: 0x9a8672,
 		roughness: 0.96,
-		flatShading: true
+		vertexColors: true
 	});
-	for (let i = 0; i < 15; i++) {
-		const a = (i / 15) * Math.PI * 2 + 0.3;
-		const st = new T.Mesh(mkRockGeo(0.115 + rand() * 0.035), stoneMat);
-		st.position.set(Math.cos(a) * 0.6, 0.05, Math.sin(a) * 0.6);
-		st.rotation.set(rand() * 0.6, rand() * Math.PI, rand() * 0.6);
-		st.scale.y = 0.65;
-		fireKit.add(st);
-	}
 
 	// --- burning logs + flickering coals ---
 	// perlin-twist smoke column above the fire (adapted from the coffee-smoke shader)
@@ -762,49 +1053,50 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	spin.add(grass);
 	// anchor points for dedicated grass clumps (bushes push theirs below)
 	const clumpPts: [number, number, number][] = [];
-	// bushes hugging the tree line
-	const bushMat = new T.MeshStandardMaterial({ color: 0x0e150a, roughness: 1, flatShading: true });
+	// low needle shrubs hugging the tree line — same branch cards as the pines, splayed upward
+	const IDENT = new T.Matrix4();
 	for (let i = 0; i < 12; i++) {
 		const a = rand() * Math.PI * 2;
 		const r = 2.6 + rand() * 2.6;
 		const bx = Math.cos(a) * r,
 			bz = Math.sin(a) * r;
 		if (bz > 2.4 || !inView(bx, bz, 0.1)) continue;
-		const bush = new T.Group();
-		const n = 2 + Math.floor(rand() * 3);
+		const info = [bx, bz, 0.55, rand()];
+		const n = lite ? 6 : 9;
 		for (let k = 0; k < n; k++) {
-			const b = new T.Mesh(new T.IcosahedronGeometry(0.16 + rand() * 0.16, 1), bushMat);
-			b.position.set((rand() - 0.5) * 0.4, 0.08 + rand() * 0.1, (rand() - 0.5) * 0.4);
-			b.scale.y = 0.6;
-			bush.add(b);
+			const yaw = (k / n) * Math.PI * 2 + rand() * 0.6;
+			const L = 0.32 + rand() * 0.24;
+			pushCard(IDENT, bx + Math.cos(yaw) * 0.04, 0.02, bz - Math.sin(yaw) * 0.04, yaw, 0.35 + rand() * 0.6, Math.PI / 2 + (rand() - 0.5) * 1.6, L, L * 0.6, info);
 		}
-		bush.position.set(bx, 0, bz);
-		spin.add(bush);
+		aoPts.push([bx, bz, 0.4]);
 		clumpPts.push([bx, bz, 0.55]);
 	}
-	// scattered twigs & pebbles
-	const twigMat = new T.MeshStandardMaterial({ color: 0x2e2013, roughness: 1 });
+	// scattered twigs (merged) & pebbles (into the rock mesh)
+	const twigGeos: THREE.BufferGeometry[] = [];
 	for (let i = 0; i < 14; i++) {
 		const a = rand() * Math.PI * 2,
 			r = 1.2 + rand() * 3.4;
-		const tw = new T.Mesh(
-			new T.CylinderGeometry(0.008 + rand() * 0.007, 0.012 + rand() * 0.008, 0.2 + rand() * 0.35, 5),
-			twigMat
-		);
+		const tw = new T.CylinderGeometry(0.008 + rand() * 0.007, 0.012 + rand() * 0.008, 0.2 + rand() * 0.35, 5);
 		if (!inView(Math.cos(a) * r, Math.sin(a) * r, 0)) continue;
-		tw.position.set(Math.cos(a) * r, 0.015, Math.sin(a) * r);
-		tw.rotation.set(Math.PI / 2, 0, rand() * Math.PI);
-		spin.add(tw);
+		tmpM.compose(
+			tmpP.set(Math.cos(a) * r, 0.015, Math.sin(a) * r),
+			tmpQ.setFromEuler(tmpE.set(Math.PI / 2, 0, rand() * Math.PI, 'XYZ')),
+			tmpS.set(1, 1, 1)
+		);
+		const twn = tw.toNonIndexed();
+		twn.applyMatrix4(tmpM);
+		twigGeos.push(twn);
 	}
+	if (twigGeos.length)
+		spin.add(new T.Mesh(mergeGeos(twigGeos, ['position', 'normal']), new T.MeshStandardMaterial({ color: 0x2e2013, roughness: 1 })));
 	for (let i = 0; i < 24; i++) {
 		const a = rand() * Math.PI * 2,
 			r = 0.9 + rand() * 3.6;
-		const pb = new T.Mesh(mkRockGeo(0.02 + rand() * 0.035), stoneMat);
+		const pr = 0.02 + rand() * 0.035;
 		if (!inView(Math.cos(a) * r, Math.sin(a) * r, 0)) continue;
-		pb.position.set(Math.cos(a) * r, 0.02, Math.sin(a) * r);
-		pb.rotation.set(rand(), rand(), rand());
-		spin.add(pb);
+		addRock(mkRockGeo(pr, 1), Math.cos(a) * r, pr * 0.2, Math.sin(a) * r, rand(), rand() * 6, rand(), 0.7, 'pebble');
 	}
+
 
 	// --- seating logs ---
 	const seatGeo = new T.CylinderGeometry(0.16, 0.175, 1.3, 13);
@@ -864,6 +1156,250 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		clumps.instanceMatrix.needsUpdate = true;
 		spin.add(clumps);
 	}
+
+	// --- assemble the merged / instanced forest pieces (one draw call each) ---
+	spin.add(
+		new T.Mesh(
+			mergeGeos(trunkGeos, ['position', 'normal', 'uv', 'color']),
+			new T.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.05, roughness: 0.95, vertexColors: true })
+		)
+	);
+	spin.add(
+		new T.Mesh(
+			mergeGeos(coreGeos, ['position']),
+			new T.ShaderMaterial({
+				uniforms: { uFogC: fogUni, uFogD: { value: todP.fd } },
+				side: T.DoubleSide,
+				vertexShader: `
+              varying vec3 vWorld;
+              void main() {
+                vec4 w = modelMatrix * vec4(position, 1.0);
+                vWorld = w.xyz;
+                gl_Position = projectionMatrix * viewMatrix * w;
+              }`,
+				fragmentShader:
+					`
+              uniform vec3 uFogC;
+              uniform float uFogD;
+              varying vec3 vWorld;` +
+					FOG_GLSL +
+					`
+              void main() { gl_FragColor = vec4(fogMix(vec3(0.007, 0.011, 0.009), vWorld, uFogD), 1.0); }`
+			})
+		)
+	);
+	spin.add(new T.Mesh(mergeGeos(rockGeos, ['position', 'normal', 'uv', 'color']), stoneMat));
+	const cardGeo = new T.PlaneGeometry(1, 1, 4, 1);
+	cardGeo.translate(0.5, 0, 0);
+	const CARD_N = cardM.length / 16;
+	const cardUni = {
+		uTime: timeUni,
+		uFlick: flickUni,
+		uAmb: ambUni,
+		uFogC: fogUni,
+		uFogD: { value: todP.fd },
+		uMoon: { value: todP.moon },
+		uFire: { value: FIRE_POS },
+		uTex: { value: needleTex }
+	};
+	const cards = new T.InstancedMesh(
+		cardGeo,
+		new T.ShaderMaterial({
+			uniforms: cardUni,
+			side: T.DoubleSide,
+			vertexShader: `
+              uniform float uTime;
+              attribute vec4 aInfo;
+              varying vec2 vUv;
+              varying vec3 vLocal;
+              varying vec3 vWorld;
+              varying vec4 vInfo;
+              varying vec3 vN;
+              void main() {
+                vUv = uv;
+                vec4 p = instanceMatrix * vec4(position, 1.0);
+                float L = length(instanceMatrix[0].xyz);
+                float u2 = uv.x * uv.x;
+                p.y -= u2 * L * 0.22;
+                float sw = sin(uTime * 0.7 + aInfo.x * 1.7 + aInfo.y * 1.3 + p.y * 0.5) * 0.03
+                         + sin(uTime * 2.3 + p.y * 3.0 + aInfo.w * 6.0) * 0.008;
+                p.x += sw * u2 * L;
+                p.z += sw * 0.6 * u2 * L;
+                vLocal = p.xyz;
+                vInfo = aInfo;
+                vN = normalize(mat3(instanceMatrix) * vec3(0.0, 0.0, 1.0));
+                vec4 w = modelMatrix * p;
+                vWorld = w.xyz;
+                gl_Position = projectionMatrix * viewMatrix * w;
+              }`,
+			fragmentShader:
+				`
+              uniform sampler2D uTex;
+              uniform float uFlick;
+              uniform float uFogD;
+              uniform float uMoon;
+              uniform vec3 uAmb;
+              uniform vec3 uFogC;
+              uniform vec3 uFire;
+              varying vec2 vUv;
+              varying vec3 vLocal;
+              varying vec3 vWorld;
+              varying vec4 vInfo;
+              varying vec3 vN;` +
+				FOG_GLSL +
+				`
+              void main() {
+                vec4 tx = texture2D(uTex, vUv);
+                if (tx.a < 0.4) discard;
+                float rnd = fract(vInfo.w);
+                float dk = step(1.0, vInfo.w);
+                vec2 rad = vLocal.xz - vInfo.xy;
+                vec2 rd = rad / max(length(rad), 1e-3);
+                float hN = clamp(vLocal.y / vInfo.z, 0.0, 1.0);
+                // needle tone: deep at the stem root, fresher toward the tips
+                vec3 tipC = mix(vec3(0.06, 0.095, 0.062), vec3(0.075, 0.09, 0.05), rnd);
+                vec3 col = mix(vec3(0.018, 0.03, 0.022), tipC, smoothstep(0.05, 0.9, vUv.x)) * (0.55 + 0.75 * tx.r);
+                col *= 1.0 - dk * 0.45;
+                // AO toward the trunk core and toward the crown (crown silhouettes against the sky)
+                float ao = mix(0.3, 1.0, smoothstep(0.0, 0.75, vUv.x)) * mix(1.0, 0.5, smoothstep(0.5, 1.0, hN));
+                // firelight: the fire-facing side and the low boughs catch it, falling off with distance
+                vec3 tf = uFire - vLocal;
+                float fd = length(tf);
+                float face = clamp(dot(rd, normalize(tf.xz)) * 0.65 + 0.35, 0.0, 1.0);
+                float low = mix(1.0, 0.45, smoothstep(1.5, 5.5, vLocal.y));
+                float fall = pow(clamp(1.0 - fd / 8.5, 0.0, 1.0), 1.8);
+                // two-sided lambert per card so each bough shelf reads as its own plane
+                float lam = abs(dot(vN, tf / fd));
+                vec3 fire = vec3(1.0, 0.5, 0.17) * face * low * fall * (0.3 + 0.9 * lam) * uFlick * 3.6;
+                // cool moon rim on the far (moon-side) tips + moon-facing shelf tops
+                float rim = pow(max(dot(rd, vec2(-0.8, -0.6)), 0.0), 2.0) * smoothstep(0.45, 1.0, vUv.x);
+                float mlam = abs(dot(vN, vec3(-0.51, 0.77, -0.38)));
+                vec3 moon = vec3(0.22, 0.32, 0.55) * uMoon * (rim * 0.2 * (0.4 + hN) + mlam * 0.05 * smoothstep(0.3, 1.0, vUv.x));
+                vec3 lit = col * (uAmb * ao * 1.3 + fire * ao) + moon * (0.6 + 0.8 * tx.r);
+                gl_FragColor = vec4(fogMix(lit, vWorld, uFogD), 1.0);
+              }`
+		}),
+		CARD_N
+	);
+	(cards.instanceMatrix.array as Float32Array).set(cardM);
+	cards.instanceMatrix.needsUpdate = true;
+	cardGeo.setAttribute('aInfo', new T.InstancedBufferAttribute(new Float32Array(cardInfo), 4));
+	cards.frustumCulled = false;
+	spin.add(cards);
+
+	// --- forest floor: procedural soil / needle litter / moss, ash ring, firelight pool (grass-family shader) ---
+	[
+		[0.72, 1.5, 0.35],
+		[-1.35, 1.1, -0.6]
+	].forEach(function (pr) {
+		for (let k = -1; k <= 1; k++) aoPts.push([pr[0] + Math.cos(pr[2]) * 0.45 * k, pr[1] - Math.sin(pr[2]) * 0.45 * k, 0.36]);
+	});
+	const AO_N = aoPts.length;
+	const gGeo = new T.CircleGeometry(13, 48);
+	gGeo.rotateX(-Math.PI / 2);
+	{
+		const p = (gGeo.attributes.position as THREE.BufferAttribute).array as Float32Array;
+		// CircleGeometry duplicates the theta=0 / theta=2PI spoke; coincident vertices must share
+		// one height or the ground cracks open along +x. rand() still runs per vertex so the
+		// seeded stream (and everything built after) is unchanged.
+		const seamH = new Map<string, number>();
+		for (let i = 0; i < p.length; i += 3) {
+			const d = Math.hypot(p[i], p[i + 2]);
+			if (d > 1.2) {
+				const key = p[i].toFixed(4) + ',' + p[i + 2].toFixed(4);
+				const h = (rand() - 0.5) * 0.14 * Math.min(1, d / 4);
+				if (!seamH.has(key)) seamH.set(key, h);
+				p[i + 1] = seamH.get(key) as number;
+			}
+		}
+		gGeo.computeVertexNormals();
+	}
+	const groundMat = new T.ShaderMaterial({
+		uniforms: {
+			uTime: timeUni,
+			uFlick: flickUni,
+			uAmb: ambUni,
+			uFogC: fogUni,
+			uFogD: { value: todP.fd },
+			uAO: {
+				value: aoPts.map(function (a) {
+					return new T.Vector3(a[0], a[1], a[2]);
+				})
+			}
+		},
+		vertexShader: `
+              varying vec3 vLocal;
+              varying vec3 vWorld;
+              void main() {
+                vLocal = position;
+                vec4 w = modelMatrix * vec4(position, 1.0);
+                vWorld = w.xyz;
+                gl_Position = projectionMatrix * viewMatrix * w;
+              }`,
+		fragmentShader:
+			`
+              #define AO_N ${AO_N}
+              uniform float uTime;
+              uniform float uFlick;
+              uniform float uFogD;
+              uniform vec3 uAmb;
+              uniform vec3 uFogC;
+              uniform vec3 uAO[AO_N];
+              varying vec3 vLocal;
+              varying vec3 vWorld;` +
+			FOG_GLSL +
+			`
+              float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+              float vn(vec2 p) {
+                vec2 i = floor(p), f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
+              }
+              float fbm(vec2 p) {
+                float v = 0.0, a = 0.5;
+                for (int i = 0; i < 4; i++) { v += vn(p) * a; p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; }
+                return v;
+              }
+              // thin anisotropic streaks = fallen needles
+              float streaks(vec2 p, float ang) {
+                float c = cos(ang), s = sin(ang);
+                vec2 q = mat2(c, -s, s, c) * p;
+                return vn(q * vec2(2.2, 46.0));
+              }
+              void main() {
+                vec2 p = vLocal.xz;
+                float d = length(p);
+                float big = fbm(p * 0.45);
+                float mid = fbm(p * 1.7 + 4.0);
+                vec3 col = vec3(0.065, 0.045, 0.03) * (0.7 + 0.6 * mid);
+                float ang = fbm(p * 0.35 + 2.0) * 6.28;
+                float nd = max(smoothstep(0.6, 0.92, streaks(p * 3.0, ang)), smoothstep(0.6, 0.92, streaks(p * 3.0 + 7.0, ang + 1.2)));
+                float litM = smoothstep(0.4, 0.6, big + (mid - 0.5) * 0.4);
+                vec3 litter = mix(vec3(0.075, 0.042, 0.024), vec3(0.3, 0.16, 0.075), nd);
+                col = mix(col, litter, litM * (0.45 + 0.55 * nd));
+                float mossM = smoothstep(0.52, 0.7, fbm(p * 0.8 + 13.0)) * smoothstep(1.4, 3.0, d);
+                col = mix(col, vec3(0.05, 0.08, 0.03) * (0.75 + 0.6 * mid), mossM);
+                col *= 0.72 + 0.56 * h21(floor(p * 140.0));
+                // ash ring, then the charred bed under the fire
+                float n2 = fbm(p * 5.0);
+                float ashM = 1.0 - smoothstep(0.7, 1.15, d + (n2 - 0.5) * 0.4);
+                col = mix(col, vec3(0.24, 0.225, 0.21) * (0.45 + 0.8 * n2), ashM * 0.9);
+                float charM = 1.0 - smoothstep(0.32, 0.58, d + (n2 - 0.5) * 0.25);
+                col = mix(col, vec3(0.022, 0.018, 0.015), charM);
+                float ao = 1.0;
+                for (int i = 0; i < AO_N; i++) ao *= mix(0.35, 1.0, smoothstep(0.0, uAO[i].z, length(p - uAO[i].xy)));
+                // firelight: grass's falloff plus a tighter pool right around the ring
+                float glow = pow(clamp(1.0 - d / 5.4, 0.0, 1.0), 1.7) * uFlick;
+                float pool = pow(clamp(1.0 - d / 2.0, 0.0, 1.0), 2.0) * uFlick;
+                vec3 lit = col * (uAmb * ao + vec3(1.0, 0.52, 0.18) * (glow * 2.8 + pool * 2.2) * mix(0.55, 1.0, ao));
+                // live embers glinting in the char bed
+                vec2 ec = floor(p * 26.0);
+                float em = step(0.9, h21(ec)) * smoothstep(0.32, 0.12, length(fract(p * 26.0) - 0.5)) * charM;
+                lit += vec3(1.0, 0.33, 0.07) * em * (0.45 + 0.55 * sin(uTime * 2.6 + h21(ec + 3.0) * 30.0)) * 0.9;
+                gl_FragColor = vec4(fogMix(lit, vWorld, uFogD), 1.0);
+              }`
+	});
+	spin.add(new T.Mesh(gGeo, groundMat));
 
 	// freeze static transforms: only the flames change their matrices per-frame
 	spin.traverse(function (n) {
@@ -1031,8 +1567,10 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		canopyLight.intensity = (0.55 * flick + 0.1) * todP.fire;
 		glowMat.opacity = (0.62 * flick + 0.12) * fmul;
 		glow2Mat.opacity = (0.42 * flick + 0.1) * fmul;
-		gGlowMat.opacity = (0.34 * flick + 0.1) * fmul;
+		gGlowMat.opacity = (0.2 * flick + 0.06) * fmul;
 		grassUni.uTime.value = t;
+		timeUni.value = t;
+		flickUni.value = (0.7 + flick * 0.5) * todP.fire;
 		grassUni.uFlick.value = (0.7 + flick * 0.5) * todP.fire;
 		smokeMat.uniforms.uTime.value = t;
 		coals.forEach(function (co, i) {
