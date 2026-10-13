@@ -9,6 +9,7 @@
 import type * as THREE from 'three';
 import type { SceneCtx, UpdateFn } from '../types';
 import { mkFlame, mkCanvas } from './shared';
+import { mulberry32, hashSeed } from '$lib/util/rand';
 
 export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	const { T, scene, cam, spin, renderer } = ctx;
@@ -100,6 +101,137 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	};
 	// ground contact shadows (x, z, radius) — tree bases, seat logs, boulders; read by the ground shader
 	const aoPts: [number, number, number][] = [];
+
+	// quality switches — a device tier can flip any of these off without touching the rest
+	const Q = { gusts: true, shadows: true, landingEmbers: true, dither: true, rockDetail: true };
+	// second seeded stream for pass-2 additions so ctx.rand (and the grass layout it seeds) is unchanged
+	const rand2 = mulberry32(hashSeed('campfire-pass2'));
+
+	// --- one wind field for grass, boughs, shrubs, flames, smoke, embers and leaves ---
+	// steady breeze + travelling gust fronts along WIND_DIR; GLSL and JS evaluate the same math
+	const WIND_DIR = [0.97, 0.243];
+	const windUni = {
+		uWindDir: { value: new T.Vector2(WIND_DIR[0], WIND_DIR[1]) },
+		uWindBase: { value: 1 },
+		uGustPos: { value: -50 },
+		uGustAmp: { value: 0 }
+	};
+	const WIND_GLSL = `
+              uniform vec2 uWindDir;
+              uniform float uWindBase;
+              uniform float uGustPos;
+              uniform float uGustAmp;
+              // signed distance past the front: short leading edge, long trailing tail
+              float gustAt(vec2 xz, float lag) {
+                float x = dot(xz, uWindDir) - (uGustPos - lag);
+                return uGustAmp * (x > 0.0 ? exp(-x * x * 1.2) : exp(-x * x * 0.12));
+              }
+              float breezeAt(vec2 xz, float t) {
+                return uWindBase * (0.65 + 0.35 * sin(t * 0.37 + dot(xz, uWindDir) * 0.45));
+              }`;
+	const gustAt = function (x: number, z: number, lag: number) {
+		const d = x * WIND_DIR[0] + z * WIND_DIR[1] - (windUni.uGustPos.value - lag);
+		return windUni.uGustAmp.value * (d > 0 ? Math.exp(-d * d * 1.2) : Math.exp(-d * d * 0.12));
+	};
+	const breezeAt = function (x: number, z: number, t: number) {
+		return windUni.uWindBase.value * (0.65 + 0.35 * Math.sin(t * 0.37 + (x * WIND_DIR[0] + z * WIND_DIR[1]) * 0.45));
+	};
+	// gust schedule: seeded gaps of 8-20s, cycled — a pure function of the accumulated clock
+	const GUSTS: { t0: number; amp: number; v: number }[] = [];
+	let gustPeriod = 0;
+	for (let i = 0; i < 48; i++) {
+		gustPeriod += 8 + rand2() * 12;
+		GUSTS.push({ t0: gustPeriod, amp: 0.6 + rand2() * 0.4, v: 3 + rand2() * 1.2 });
+	}
+	gustPeriod += 10;
+	const GUST_SPAN = 22; // the front runs from s=-11 to s=+11 along WIND_DIR
+	const updateWind = function (t: number) {
+		if (!Q.gusts) return;
+		const c = t % gustPeriod;
+		let g = null;
+		for (let i = GUSTS.length - 1; i >= 0; i--)
+			if (GUSTS[i].t0 <= c) {
+				g = GUSTS[i];
+				break;
+			}
+		const el = g ? c - g.t0 : 1e9;
+		const dur = g ? GUST_SPAN / g.v : 0;
+		if (g && el < dur) {
+			windUni.uGustPos.value = -GUST_SPAN / 2 + g.v * el;
+			windUni.uGustAmp.value = g.amp * Math.pow(Math.sin((Math.PI * el) / dur), 0.5);
+		} else {
+			windUni.uGustAmp.value = 0;
+			windUni.uGustPos.value = -50;
+		}
+	};
+
+	// --- one flicker signal (drives flames, lights, ground pool, grass/bough warm terms, coals) ---
+	const h1 = function (i: number) {
+		const v = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+		return v - Math.floor(v);
+	};
+	const vn1 = function (x: number) {
+		const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f);
+		return h1(i) * (1 - u) + h1(i + 1) * u;
+	};
+	const flickAt = function (t: number, gustFire: number) {
+		return 0.82 + (vn1(t * 6.1) - 0.5) * 0.22 + (vn1(t * 11.3 + 17) - 0.5) * 0.14 + Math.sin(t * 5.3) * 0.03 + gustFire * 0.1;
+	};
+
+	// --- soft fire shadows: casters (x, z, radius, height) occlude the fire's light across the ground ---
+	const casters: [number, number, number, number][] = [];
+	const fireLUni = { value: new T.Vector3(0, 0, 0.7) }; // light centre xz (sways with the flames) + height
+	const SHADOW_GLSL = (n: number) =>
+		n > 0 && Q.shadows
+			? `
+              uniform vec4 uCast[${n}];
+              uniform vec3 uFireL;
+              float fireShadow(vec2 p) {
+                vec2 q = p - uFireL.xy;
+                float lp = length(q);
+                if (lp > 5.6) return 0.0;
+                vec2 dir = q / max(lp, 1e-3);
+                float sh = 0.0;
+                for (int i = 0; i < ${n}; i++) {
+                  vec2 c = uCast[i].xy - uFireL.xy;
+                  float s = dot(c, dir);
+                  if (s <= 0.05 || s >= lp) continue;
+                  float behind = lp - s;
+                  float perp = abs(c.x * dir.y - c.y * dir.x);
+                  // finite casters: the ray from the flame clears the top at lp = s / (1 - H/h)
+                  float hk = uCast[i].w / uFireL.z;
+                  float reach = hk >= 0.98 ? 1e3 : s / (1.0 - hk) - s;
+                  // penumbra widens with distance behind the caster (fire is ~0.25 wide)
+                  float pen = 0.03 + 0.18 * behind / s;
+                  float a = 1.0 - smoothstep(uCast[i].z - pen, uCast[i].z + pen, perp);
+                  a *= smoothstep(0.0, 0.06, behind) * exp(-behind * 0.2);
+                  a *= 1.0 - smoothstep(reach * 0.55, reach, behind);
+                  a /= 1.0 + pen * 1.2;
+                  sh = max(sh, a);
+                }
+                return sh;
+              }`
+			: `
+              float fireShadow(vec2 p) { return 0.0; }`;
+	const DITHER = Q.dither
+		? `gl_FragColor.rgb += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;`
+		: '';
+	// value noise shared by the ground and rock shaders
+	const NOISE2_GLSL = `
+              float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+              float vn(vec2 p) {
+                vec2 i = floor(p), f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
+              }`;
+	// seat logs (x, z, yaw) — shared by grass exclusion, AO, casters and ember landing
+	const SEATS = [
+		[0.72, 1.5, 0.35],
+		[-1.35, 1.1, -0.6]
+	];
+	SEATS.forEach(function (pr) {
+		for (let k = -1; k <= 1; k++) casters.push([pr[0] + Math.cos(pr[2]) * 0.45 * k, pr[1] - Math.sin(pr[2]) * 0.45 * k, 0.17, 0.32]);
+	});
 
 	// --- procedural textures ---
 	const barkTex = new T.CanvasTexture(
@@ -222,6 +354,12 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		const g = new T.IcosahedronGeometry(r, detail);
 		const p = g.attributes.position as THREE.BufferAttribute;
 		const ph = rand() * 40, sx = 0.8 + rand() * 0.45, sz = 0.8 + rand() * 0.45, flat = 0.15 + rand() * 0.25;
+		const cav = new Float32Array(p.count);
+		const cuts: number[][] = [];
+		for (let c = 0, nc = 5 + Math.floor(rand2() * 4); c < nc; c++) {
+			const a = rand2() * Math.PI * 2, el = (rand2() - 0.3) * 1.6;
+			cuts.push([Math.cos(a) * Math.cos(el), Math.sin(el), Math.sin(a) * Math.cos(el), 0.6 + rand2() * 0.22]);
+		}
 		for (let i = 0; i < p.count; i++) {
 			const x = p.getX(i) / r, y = p.getY(i) / r, z = p.getZ(i) / r;
 			let n =
@@ -230,8 +368,22 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 				Math.sin(x * 6.3 + z * 4.1 + ph) * 0.05 +
 				Math.sin(y * 7.7 - x * 5.2 + ph * 2.0) * 0.04;
 			if (y > 1 - flat) n *= 1 - (y - (1 - flat)) * 0.5; // weathered flat-ish crown
-			p.setXYZ(i, x * r * n * sx, y * r * n, z * r * n * sz);
+			let vx = x * n * sx, vy = y * n, vz = z * n * sz;
+			// chisel: shave flat facets with a few planes so the outline reads hand-cut, not a smooth lump
+			if (Q.rockDetail)
+				for (let c = 0; c < cuts.length; c++) {
+					const k = vx * cuts[c][0] + vy * cuts[c][1] + vz * cuts[c][2] - cuts[c][3];
+					if (k > 0) {
+						vx -= cuts[c][0] * k * 0.9;
+						vy -= cuts[c][1] * k * 0.9;
+						vz -= cuts[c][2] * k * 0.9;
+					}
+				}
+			p.setXYZ(i, vx * r, vy * r, vz * r);
+			// cavity: lobes pushed inward read as crevices (1 = open face, 0 = deep crevice)
+			cav[i] = Math.min(1, Math.max(0, (n - 0.8) / 0.32));
 		}
+		g.setAttribute('aCav', new T.BufferAttribute(cav, 1));
 		smoothNormals(g);
 		return g;
 	};
@@ -329,38 +481,55 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 			stem(3, h / 2, 0, w - 12, false, 0);
 		})
 	);
-	// far-treeline pine silhouette (alpha only) — jagged drooping tiers on a thin spine
+	// far-treeline silhouettes: a 3-variant atlas (ragged spruce, broken-top snag, lopsided pine) with
+	// sawtooth tier hems — no smooth arches. Burns the old texture's 632 ctx.rand() calls so the seeded
+	// stream (grass layout etc.) is unchanged; the new shapes draw from rand2.
+	for (let i = 0; i < 632; i++) rand();
 	const silTex = new T.CanvasTexture(
-		mkCanvas(128, 256, function (g, w, h) {
+		mkCanvas(384, 256, function (g, w, h) {
 			g.clearRect(0, 0, w, h);
 			g.fillStyle = '#ffffff';
-			const cx = w / 2;
-			g.fillRect(cx - 3, h * 0.8, 6, h * 0.2);
-			// tiers: apex → drooping tips → arched underside back to the spine
-			const tiers = 8;
-			for (let k = 0; k < tiers; k++) {
-				const f = k / (tiers - 1);
-				const yb = h * (0.9 - f * 0.76);
-				const th = h * (0.19 - f * 0.07);
-				const wd = (w / 2 - 3) * (1 - f * 0.8) * (0.9 + rand() * 0.1);
-				g.beginPath();
-				g.moveTo(cx, yb - th);
-				g.quadraticCurveTo(cx - wd * 0.45, yb - th * 0.35, cx - wd, yb + th * 0.16);
-				g.quadraticCurveTo(cx - wd * 0.45, yb - th * 0.32, cx, yb - th * 0.12);
-				g.quadraticCurveTo(cx + wd * 0.45, yb - th * 0.32, cx + wd, yb + th * 0.16);
-				g.quadraticCurveTo(cx + wd * 0.45, yb - th * 0.35, cx, yb - th);
-				g.fill();
-				// needle fringe along the drooping edges
-				g.strokeStyle = '#ffffff';
-				g.lineWidth = 1.2;
-				for (let i = 0; i < 26; i++) {
-					const side = i % 2 ? 1 : -1;
-					const t = rand();
-					const x = cx + side * wd * t, y = yb - th + (th * 1.16) * Math.pow(t, 1.4);
+			const cw = w / 3;
+			for (let v = 0; v < 3; v++) {
+				const cx = cw * v + cw / 2 + (rand2() - 0.5) * 6;
+				const tiers = v === 1 ? 7 : 10;
+				const topF = v === 1 ? 0.62 : 1; // snag: foliage stops, a dead spike carries on
+				const lop = v === 2 ? 0.35 : 0.12;
+				g.fillRect(cx - 2, h * 0.86, 4, h * 0.14);
+				for (let k = 0; k < tiers; k++) {
+					const f = (k / (tiers - 1)) * topF;
+					const yb = h * (0.99 - f * 0.86);
+					const th = h * (0.17 - f * 0.08);
+					const wdL = (cw / 2 - 3) * (1 - f * 0.85) * (0.7 + rand2() * 0.3) * (1 + (rand2() - 0.5) * lop);
+					const wdR = (cw / 2 - 3) * (1 - f * 0.85) * (0.7 + rand2() * 0.3) * (1 + (rand2() - 0.5) * lop);
+					const sx = cx + (rand2() - 0.5) * 4;
 					g.beginPath();
-					g.moveTo(x, y);
-					g.lineTo(x + side * (2 + rand() * 4), y + 2 + rand() * 5);
-					g.stroke();
+					g.moveTo(sx, yb - th);
+					// ragged flank down to the left tip
+					for (let j = 1; j <= 5; j++) {
+						const u = j / 5;
+						g.lineTo(sx - wdL * u + (rand2() - 0.5) * 3, yb - th + th * 1.1 * Math.pow(u, 1.3) + (rand2() - 0.5) * th * 0.18);
+					}
+					// hem: irregular needle tufts hanging below the tier (random spacing and depth)
+					let x = sx - wdL;
+					while (x < sx + wdR - 3) {
+						x += 2 + rand2() * Math.max(3, (wdL + wdR) * 0.12);
+						g.lineTo(Math.min(x, sx + wdR), yb + (rand2() < 0.5 ? -th * (0.1 + rand2() * 0.35) : th * rand2() * 0.15));
+					}
+					for (let j = 4; j >= 0; j--) {
+						const u = j / 5;
+						g.lineTo(sx + wdR * u + (rand2() - 0.5) * 3, yb - th + th * 1.1 * Math.pow(u, 1.3) + (rand2() - 0.5) * th * 0.18);
+					}
+					g.closePath();
+					g.fill();
+				}
+				if (v === 1) {
+					g.beginPath();
+					g.moveTo(cx - 2, h * 0.5);
+					g.lineTo(cx + 1, h * 0.12);
+					g.lineTo(cx + 2.5, h * 0.5);
+					g.fill();
+					g.fillRect(cx, h * 0.3, 10, 2); // one bare stub
 				}
 			}
 		})
@@ -413,6 +582,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
                 // below the horizon it meets the fogged ground edge seamlessly
                 vec3 c = mix(uFogC, uHor, smoothstep(-0.1, 0.06, vDir.y));
                 gl_FragColor = vec4(mix(c, uZen, sqrt(k)), 1.0);
+                ${DITHER}
               }`
 		})
 	);
@@ -455,13 +625,14 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		W: number,
 		info: number[]
 	) {
-		tmpE.set(roll, yaw, pitch, 'YZX');
+		// rand2 jitter breaks up the regular lattice crossing boughs made against the sky
+		tmpE.set(roll + (rand2() - 0.5) * 0.5, yaw + (rand2() - 0.5) * 0.3, pitch + (rand2() - 0.5) * 0.12, 'YZX');
 		tmpQ.setFromEuler(tmpE);
 		tmpM.compose(tmpP.set(px, py, pz), tmpQ, tmpS.set(L, W, 1)).premultiply(base);
 		for (let i = 0; i < 16; i++) cardM.push(tmpM.elements[i]);
 		cardInfo.push(info[0], info[1], info[2], info[3]);
 	};
-	const NEAR_BARK = new T.Color(0x52443a),
+	const NEAR_BARK = new T.Color(0x56514c),
 		DARK_BARK = new T.Color(0x2c2219);
 	const mkTree = function (x: number, z: number, s: number, lean: number, dark?: boolean) {
 		const base = new T.Matrix4().compose(
@@ -542,12 +713,35 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 			pushCard(base, 0, y1 - 0.1 * s, 0, yaw, 1.15 + rand() * 0.25, rand() * Math.PI, 0.8 * s, 0.32 * s, info);
 		}
 		// dark inner core so the canopy reads as a mass, not a lattice
-		const cg = new T.ConeGeometry(0.36 * s, th * 0.97 - y0 - 0.2, 7, 1, true);
-		cg.translate(0, y0 + 0.2 + (th * 0.97 - y0 - 0.2) / 2, 0);
+		const ch = th * 0.97 - y0;
+		const cg = new T.LatheGeometry(
+			[
+				new T.Vector2(0.05 * s, y0 + 0.15 * ch),
+				new T.Vector2(0.36 * s, y0 + 0.3 * ch),
+				new T.Vector2(0.22 * s, y0 + 0.7 * ch),
+				new T.Vector2(0.001, y0 + ch)
+			],
+			7
+		);
 		const cgn = cg.toNonIndexed();
 		cgn.applyMatrix4(base);
 		coreGeos.push(cgn);
 		aoPts.push([x, z, 0.55 * s]);
+		casters.push([x, z, 0.19 * s, 50]);
+		// fuller canopy: in-between boughs bridging each tier gap, and wider inner shelves
+		const fillPer = lite ? 3 : 5;
+		for (let k = 0; k < whorls - 1; k++) {
+			const f = (k + 0.5) / (whorls - 1);
+			const y = y0 + (y1 - y0) * f;
+			const reach = s * (1.4 * Math.pow(1 - f, 0.85) + 0.24);
+			const off = rand2() * Math.PI * 2;
+			for (let b = 0; b < fillPer; b++) {
+				const yaw = off + (b / fillPer) * Math.PI * 2 + (rand2() - 0.5) * 0.6;
+				const L = reach * (0.55 + rand2() * 0.35);
+				pushCard(base, Math.cos(yaw) * 0.05 * s, y, -Math.sin(yaw) * 0.05 * s, yaw, -0.42 + f * 0.5 + (rand2() - 0.5) * 0.3,
+					Math.PI / 2 + (rand2() - 0.5) * 1.2, L, Math.max(0.32 * s, L * 0.7), info);
+			}
+		}
 	};
 	const treeDefs: [number, number, number, number, boolean?][] = [
 		[-1.25, -1.6, 1.0, 0.05], [1.35, -1.9, 1.15, -0.04], [-1.95, -3.2, 1.3, 0.02], [2.1, -3.4, 1.2, -0.06], [0.7, -4.6, 1.1, 0.03], [-3.3, -0.6, 1.2, 0.04], [3.3, -0.2, 1.35, -0.02], [-2.6, 1.6, 1.1, -0.05, true], [2.8, 1.9, 1.25, 0.05, true],
@@ -577,6 +771,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 
 	// --- far treeline: camera-facing silhouette cards in three fogged rows ---
 	const silM: number[] = [];
+	const silVar: number[] = [];
 	const silAt = function (x: number, z: number, hgt: number) {
 		tmpM.compose(
 			tmpP.set(x, -0.15, z),
@@ -584,6 +779,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 			tmpS.set(hgt * 0.5, hgt, 1)
 		);
 		for (let i = 0; i < 16; i++) silM.push(tmpM.elements[i]);
+		silVar.push(Math.floor(rand2() * 3));
 	};
 	treeDefs.forEach(function (d) {
 		if (isFar(d)) silAt(d[0], d[1], 4.6 * d[2] * (0.85 + rand() * 0.3));
@@ -593,7 +789,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		const half = Math.tan(1.0) * (5.8 - zr);
 		for (let i = 0; i < n; i++) {
 			const x = -half + ((i + 0.2 + rand() * 0.6) / n) * half * 2;
-			silAt(x, zr + (rand() - 0.5) * 1.6, (4.2 + rand() * 2.6) * (1 + ri * 0.22));
+			silAt(x, zr + (rand() - 0.5) * 1.6, (4.2 + rand() * 2.6) * (1 + ri * 0.22) * (0.65 + rand2() * 0.3));
 		}
 	});
 	const silGeo = new T.PlaneGeometry(1, 1);
@@ -603,10 +799,13 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		new T.ShaderMaterial({
 			uniforms: { uAlpha: { value: silTex }, uFogC: fogUni, uHor: { value: new T.Color(todP.hor) } },
 			vertexShader: `
+              attribute float aVar;
               varying vec2 vUv;
+              varying vec2 vAt;
               varying vec3 vWorld;
               void main() {
                 vUv = uv;
+                vAt = vec2((uv.x + aVar) / 3.0, uv.y);
                 vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0);
                 vWorld = w.xyz;
                 gl_Position = projectionMatrix * viewMatrix * w;
@@ -617,18 +816,23 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
               uniform vec3 uFogC;
               uniform vec3 uHor;
               varying vec2 vUv;
+              varying vec2 vAt;
               varying vec3 vWorld;` +
 				FOG_GLSL +
 				`
               void main() {
-                if (texture2D(uAlpha, vUv).a < 0.5) discard;
+                if (texture2D(uAlpha, vAt).a < 0.5) discard;
                 vec3 c = mix(vec3(0.012, 0.018, 0.02), uHor * 0.5, vUv.y * 0.25);
-                gl_FragColor = vec4(fogMix(c, vWorld, 0.072), 1.0);
+                c = fogMix(c, vWorld, 0.072);
+                // the foot dissolves into the ground mist instead of ending on a hard band
+                gl_FragColor = vec4(mix(c, uFogC, (1.0 - smoothstep(0.0, 0.3, vUv.y)) * 0.55), 1.0);
+                ${DITHER}
               }`
 		}),
 		silM.length / 16
 	);
 	(silMesh.instanceMatrix.array as Float32Array).set(silM);
+	silGeo.setAttribute('aVar', new T.InstancedBufferAttribute(new Float32Array(silVar), 1));
 	silMesh.instanceMatrix.needsUpdate = true;
 	silMesh.frustumCulled = false;
 	spin.add(silMesh);
@@ -637,7 +841,6 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	spin.add(fireKit);
 	// --- fire ring + clearing boulders: one merged, vertex-tinted rock mesh (soot / moss baked) ---
 	const rockGeos: THREE.BufferGeometry[] = [];
-	const MOSS = [0.36, 0.72, 0.2];
 	const addRock = function (
 		g: THREE.BufferGeometry,
 		x: number,
@@ -653,25 +856,24 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		g.applyMatrix4(tmpM);
 		const p = g.attributes.position as THREE.BufferAttribute;
 		const nn = g.attributes.normal as THREE.BufferAttribute;
+		const cv = g.attributes.aCav as THREE.BufferAttribute;
 		const c = new Float32Array(p.count * 3);
 		for (let i = 0; i < p.count; i++) {
 			const wx = p.getX(i), wy = p.getY(i), wz = p.getZ(i);
 			const nx = nn.getX(i), ny = nn.getY(i), nz = nn.getZ(i);
-			let k = (kind === 'boulder' ? 0.38 : 0.5) + (kind === 'boulder' ? 0.42 : 0.5) * Math.min(1, Math.max(0, wy / (kind === 'boulder' ? 0.28 : 0.09)));
-			let col = [k, k, k];
+			// contact darkening where the stone meets the soil, folded into the cavity term
+			const contact = 0.5 + 0.5 * Math.min(1, Math.max(0, wy / (kind === 'boulder' ? 0.22 : 0.035)));
+			let soot = 0, moss = 0;
 			if (kind === 'ring') {
 				// soot: faces turned toward the flames and the stone's crown blacken
 				const tx = -wx, ty = FIRE_POS.y - wy, tz = -wz, tl = Math.hypot(tx, ty, tz);
-				const soot = Math.max(0, (nx * tx + ny * ty + nz * tz) / tl) * 0.8 + Math.max(0, ny) * 0.25;
-				k *= 1 - Math.min(0.82, soot * 0.9);
-				col = [k, k * 0.96, k * 0.93];
+				soot = Math.min(0.85, (Math.max(0, (nx * tx + ny * ty + nz * tz) / tl) * 0.8 + Math.max(0, ny) * 0.25) * 0.9);
 			} else if (kind === 'boulder') {
-				const m = Math.min(1, Math.max(0, (ny - 0.05 + Math.sin(wx * 9 + wz * 7) * 0.2) * 2.6));
-				col = [k * (1 - m + m * MOSS[0]), k * (1 - m + m * MOSS[1]), k * (1 - m + m * MOSS[2])];
+				moss = Math.min(1, Math.max(0, (ny - 0.05 + Math.sin(wx * 9 + wz * 7) * 0.2) * 2.6));
 			}
-			c[i * 3] = col[0];
-			c[i * 3 + 1] = col[1];
-			c[i * 3 + 2] = col[2];
+			c[i * 3] = soot;
+			c[i * 3 + 1] = moss;
+			c[i * 3 + 2] = (0.55 + 0.45 * cv.getX(i)) * contact;
 		}
 		g.setAttribute('color', new T.BufferAttribute(c, 3));
 		rockGeos.push(g);
@@ -707,14 +909,72 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		const a = rand() * Math.PI * 2;
 		addRock(mkRockGeo(b[2] * 0.38, 1), b[0] + Math.cos(a) * b[2] * 1.05, 0.02, b[1] + Math.sin(a) * b[2] * 1.05, rand(), rand() * 6, rand() * 0.4, 0.6, 'boulder');
 		aoPts.push([b[0], b[1], b[2] * 1.5]);
+		casters.push([b[0], b[1], b[2] * 0.85, b[2] * 0.7]);
 	});
-	const stoneMat = new T.MeshStandardMaterial({
-		map: rockTex,
-		bumpMap: rockTex,
-		bumpScale: 0.02,
-		color: 0x9a8672,
-		roughness: 0.96,
-		vertexColors: true
+	const stoneMat = new T.ShaderMaterial({
+		uniforms: { uFlick: flickUni, uAmb: ambUni, uFogC: fogUni, uFogD: { value: todP.fd }, uMoon: { value: todP.moon }, uFire: { value: FIRE_POS } },
+		vertexShader: `
+              attribute vec3 color;
+              varying vec3 vLocal;
+              varying vec3 vWorld;
+              varying vec3 vN;
+              varying vec3 vC;
+              void main() {
+                vLocal = position;
+                vN = normal;
+                vC = color;
+                vec4 w = modelMatrix * vec4(position, 1.0);
+                vWorld = w.xyz;
+                gl_Position = projectionMatrix * viewMatrix * w;
+              }`,
+		fragmentShader:
+			`
+              uniform float uFlick;
+              uniform float uFogD;
+              uniform float uMoon;
+              uniform vec3 uAmb;
+              uniform vec3 uFogC;
+              uniform vec3 uFire;
+              varying vec3 vLocal;
+              varying vec3 vWorld;
+              varying vec3 vN;
+              varying vec3 vC;` +
+			FOG_GLSL +
+			NOISE2_GLSL +
+			`
+              float tri(vec3 p, vec3 b, float sc) { return vn(p.yz * sc) * b.x + vn(p.xz * sc) * b.y + vn(p.xy * sc) * b.z; }
+              void main() {
+                vec3 n = normalize(vN);
+                vec3 b = pow(abs(n), vec3(4.0));
+                b /= b.x + b.y + b.z;
+                float g1 = tri(vLocal, b, 22.0), g2 = tri(vLocal + 5.3, b, 64.0), g3 = tri(vLocal + 3.1, b, 7.0);
+                float grain = g1 * 0.6 + g2 * 0.4;
+                float pits = smoothstep(0.8, 0.93, tri(vLocal + 7.0, b, 40.0));
+                float crack = 1.0 - smoothstep(0.0, 0.016, abs(tri(vLocal + 11.0, b, 13.0) - 0.5));
+                vec3 alb = mix(vec3(0.26, 0.24, 0.22), vec3(0.42, 0.385, 0.34), g3) * (0.78 + 0.44 * grain);
+                alb *= (1.0 - pits * 0.45) * (1.0 - crack * 0.4);
+                alb *= vC.b;
+                alb *= 1.0 - vC.r * 0.75;
+                float m = vC.g * smoothstep(0.32, 0.62, g3 + grain * 0.35);
+                vec3 mossC = mix(vec3(0.085, 0.14, 0.04), vec3(0.17, 0.25, 0.06), g1);
+                alb = mix(alb, mossC, m);
+                // purely diffuse: wrapped fire lambert, camera-side ember bounce, sky ambient, moon
+                vec3 L = uFire - vLocal;
+                float d = length(L);
+                L /= d;
+                float att = uFlick * 2.2 / (1.0 + d * d * 0.7);
+                vec3 fireC = vec3(1.0, 0.52, 0.18);
+                vec3 lit = alb * fireC * clamp((dot(n, L) + 0.2) / 1.2, 0.0, 1.0) * att;
+                vec3 B = vec3(0.1, 0.7, 2.9) - vLocal;
+                float dB = length(B);
+                lit += alb * fireC * max(dot(n, B / dB), 0.0) * 1.6 * uFlick / (1.0 + dB * dB * 0.12);
+                lit += alb * uAmb * (0.7 + 0.5 * n.y) * mix(0.6, 1.0, vC.b);
+                lit += alb * vec3(0.30, 0.40, 0.62) * uMoon * max(dot(n, vec3(-0.51, 0.77, -0.38)), 0.0) * 0.6;
+                // moss keeps a little cool moonlit lift on its tops so it still reads at night
+                lit += mossC * m * vec3(0.3, 0.4, 0.55) * uMoon * 0.35 * max(n.y, 0.0);
+                gl_FragColor = vec4(fogMix(lit, vWorld, uFogD), 1.0);
+                ${DITHER}
+              }`
 	});
 
 	// --- burning logs + flickering coals ---
@@ -765,23 +1025,30 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		transparent: true,
 		depthWrite: false,
 		side: T.DoubleSide,
-		uniforms: { uTime: { value: 0 }, uPerlin: { value: perlinTex } },
+		uniforms: Object.assign(
+			{ uTime: { value: 0 }, uPerlin: { value: perlinTex }, uRise: { value: 0 } },
+			windUni
+		),
 		vertexShader:
+			WIND_GLSL +
 			'uniform float uTime; uniform sampler2D uPerlin; varying vec2 vUv;\n' +
 			'vec2 rot2(vec2 v, float a){ float s=sin(a), c=cos(a); return mat2(c,-s,s,c)*v; }\n' +
 			'void main(){ vec3 np=position;\n' +
 			'  float tw=texture2D(uPerlin, vec2(0.5, uv.y*0.2 - uTime*0.005)).r;\n' +
 			'  np.xz=rot2(np.xz, tw*10.0);\n' +
 			'  vec2 wind=vec2(texture2D(uPerlin, vec2(0.25, uTime*0.01)).r-0.5, texture2D(uPerlin, vec2(0.75, uTime*0.01)).r-0.5);\n' +
+			'  wind = wind*0.55 + uWindDir*(breezeAt(vec2(0.0), uTime)*0.22 + gustAt(vec2(0.0), 0.3 - uv.y*0.9)*0.85);\n' +
 			'  np.xz+=wind*pow(uv.y,2.0)*2.2;\n' +
 			'  gl_Position=projectionMatrix*modelViewMatrix*vec4(np,1.0); vUv=uv; }',
 		fragmentShader:
-			'uniform float uTime; uniform sampler2D uPerlin; varying vec2 vUv;\n' +
+			'uniform float uTime; uniform float uRise; uniform sampler2D uPerlin; varying vec2 vUv;\n' +
 			'void main(){ vec2 suv=vUv; suv.x*=0.5; suv.y*=0.3; suv.y-=uTime*0.03;\n' +
 			'  float s=texture2D(uPerlin, suv).r; s=smoothstep(0.4,1.0,s);\n' +
 			'  s*=smoothstep(0.0,0.1,vUv.x)*smoothstep(1.0,0.9,vUv.x);\n' +
 			'  s*=smoothstep(0.0,0.16,vUv.y)*smoothstep(1.0,0.4,vUv.y);\n' +
-			'  gl_FragColor=vec4(0.42,0.40,0.38, s*0.32); }'
+			// emerge: a soft front climbs the column as uRise goes 0 -> 1, thickening as it goes
+			'  float front=uRise*1.3; s*=smoothstep(front, front-0.3, vUv.y)*smoothstep(0.0,0.4,uRise);\n' +
+			'  gl_FragColor=vec4(0.42,0.40,0.38, s*0.32); ' + DITHER + ' }'
 	});
 	const smoke = new T.Mesh(smokeGeo, smokeMat);
 	smoke.position.set(0, 0.55, 0);
@@ -792,9 +1059,13 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		bumpMap: barkTex,
 		bumpScale: 0.028,
 		color: 0x8a6242,
-		roughness: 0.95
+		roughness: 1,
+		dithering: Q.dither
 	});
-	const endMat = new T.MeshStandardMaterial({ map: ringTex, color: 0xd8b98a, roughness: 0.85 });
+	const endMat = new T.MeshStandardMaterial({ map: ringTex, color: 0xd8b98a, roughness: 1, dithering: Q.dither });
+	// burning logs get charred, ember-lit ends: the old pale cut-wood caps sat a hand's width from the
+	// fire's point light and popped in and out of the flame base every flicker — the "flashing logs"
+	const charEndMat = new T.MeshStandardMaterial({ color: 0x1c120c, roughness: 1, emissive: 0xff5a1a, emissiveIntensity: 0.2, dithering: Q.dither });
 	// teepee-stacked logs leaning into the fire
 	const UP = new T.Vector3(0, 1, 0);
 	for (let i = 0; i < 5; i++) {
@@ -803,14 +1074,14 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		const tip = new T.Vector3((rand() - 0.5) * 0.12, 0.6 + rand() * 0.08, (rand() - 0.5) * 0.12);
 		const dir = tip.clone().sub(base);
 		const len = dir.length();
-		const lg = new T.Mesh(new T.CylinderGeometry(0.042, 0.058, len, 10), [logMat, endMat, endMat]);
+		const lg = new T.Mesh(new T.CylinderGeometry(0.042, 0.058, len, 10), [logMat, charEndMat, charEndMat]);
 		lg.position.copy(base).add(tip).multiplyScalar(0.5);
 		lg.quaternion.setFromUnitVectors(UP, dir.normalize());
 		fireKit.add(lg);
 	}
 	// two collapsed logs lying low across the base
 	[[0.55, 0.09], [1.9, 0.07]].forEach(function (pr) {
-		const lg = new T.Mesh(new T.CylinderGeometry(0.05, 0.062, 0.7, 10), [logMat, endMat, endMat]);
+		const lg = new T.Mesh(new T.CylinderGeometry(0.05, 0.062, 0.7, 10), [logMat, charEndMat, charEndMat]);
 		lg.position.set(0, pr[1], 0);
 		lg.rotation.z = Math.PI / 2 - 0.06;
 		lg.rotation.y = pr[0];
@@ -875,6 +1146,9 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		ec[i * 3 + 2] = cc.b;
 		ev.push(0.004 + rand() * 0.009);
 	}
+	// 0 = rising spark, 1 = falling lander, 2 = smouldering on the ground / a log
+	const eSt = new Uint8Array(en), eVel = new Float32Array(en * 3), eAge = new Float32Array(en), eLife = new Float32Array(en);
+	const eBase = new Float32Array(ec);
 	eg.setAttribute('position', new T.BufferAttribute(ep, 3));
 	eg.setAttribute('color', new T.BufferAttribute(ec, 3));
 	spin.add(
@@ -934,21 +1208,41 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 			}
 		})
 	);
+	// only casters near the fire throw a visible shadow; lite keeps the 10 closest
+	const castN = casters
+		.filter(function (c) {
+			return Math.hypot(c[0], c[1]) < 5.2;
+		})
+		.sort(function (a, b) {
+			return Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]);
+		})
+		.slice(0, lite ? 10 : 18);
+	const castUni = {
+		value: castN.map(function (c) {
+			return new T.Vector4(c[0], c[1], c[2], c[3]);
+		})
+	};
 	const grassUni = {
 		uTime: { value: 0 },
 		uFlick: { value: 1 },
 		uAlpha: { value: bladeAlpha },
 		uAmb: { value: new T.Vector3(todP.amb[0], todP.amb[1], todP.amb[2]) },
-		uFogC: { value: new T.Color(todP.fog) }
+		uFogC: { value: new T.Color(todP.fog) },
+		uCast: castUni,
+		uFireL: fireLUni
 	};
 	const grassMat = new T.ShaderMaterial({
-		uniforms: grassUni,
+		uniforms: Object.assign(grassUni, windUni),
 		side: T.DoubleSide,
 		transparent: false,
-		vertexShader: `
+		vertexShader:
+			WIND_GLSL +
+			`
               uniform float uTime;
               varying vec2 vUv;
               varying vec3 vWorld;
+              varying vec2 vLocal;
+              varying float vGust;
               varying float vRnd;
               void main() {
                 vUv = uv;
@@ -958,23 +1252,32 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
                   p = instanceMatrix * p;
                   iorigin = vec2(instanceMatrix[3][0], instanceMatrix[3][2]);
                 #endif
+                vLocal = p.xz;
                 vec4 w = modelMatrix * p;
                 float sway = uv.y * uv.y;
-                float wind = sin(uTime * 1.6 + w.x * 1.4 + w.z * 1.1) * 0.06
-                           + sin(uTime * 3.9 + w.x * 3.0 + w.z * 2.2) * 0.022;
-                w.x += wind * sway;
-                w.z += wind * 0.6 * sway;
+                float g = gustAt(p.xz, 0.0);
+                float br = breezeAt(p.xz, uTime);
+                float wind = sin(uTime * 1.6 + w.x * 1.4 + w.z * 1.1) * 0.06 * (0.8 + 0.25 * br)
+                           + sin(uTime * 3.9 + w.x * 3.0 + w.z * 2.2) * 0.022 * (1.0 + 2.5 * g);
+                vec2 lean = uWindDir * (br * 0.018 + g * 0.11);
+                w.x += (wind + lean.x) * sway;
+                w.z += (wind * 0.6 + lean.y) * sway;
+                vGust = g;
                 vRnd = fract(sin(dot(iorigin, vec2(12.9898, 78.233))) * 43758.5453);
                 vWorld = w.xyz;
                 gl_Position = projectionMatrix * viewMatrix * w;
               }`,
-		fragmentShader: `
+		fragmentShader:
+			SHADOW_GLSL(castN.length) +
+			`
               uniform sampler2D uAlpha;
               uniform float uFlick;
               uniform vec3 uAmb;
               uniform vec3 uFogC;
               varying vec2 vUv;
               varying vec3 vWorld;
+              varying vec2 vLocal;
+              varying float vGust;
               varying float vRnd;
               void main() {
                 float a = texture2D(uAlpha, vUv).a;
@@ -985,11 +1288,15 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
                 vec3 col = mix(base, mix(tipA, tipB, vRnd), vUv.y);
                 float d = length(vWorld.xz);
                 float glow = pow(clamp(1.0 - d / 5.4, 0.0, 1.0), 1.7) * uFlick;
+                glow *= 1.0 - 0.85 * fireShadow(vLocal);
                 vec3 lit = col * (uAmb + vec3(1.0, 0.52, 0.18) * glow * 2.8);
+                // a passing gust flips the blade tips: a faint cool sheen rides the front
+                lit += uAmb * vGust * vUv.y * vUv.y * 0.22;
                 float camD = distance(vWorld, cameraPosition);
                 float fogF = clamp(1.0 - exp(-pow(camD * 0.115, 2.0)), 0.0, 1.0);
                 lit = mix(lit, uFogC, fogF);
                 gl_FragColor = vec4(lit, 1.0);
+                ${DITHER}
               }`
 	});
 	const bladeGeoG = new T.PlaneGeometry(0.3, 0.34, 1, 3);
@@ -999,12 +1306,8 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	const dummy = new T.Object3D();
 	// keep blades out of the seat logs' footprint (axis-segment distance test)
 	const nearLog = function (x: number, z: number) {
-		const logs = [
-			[0.72, 1.5, 0.35],
-			[-1.35, 1.1, -0.6]
-		];
 		for (let li = 0; li < 2; li++) {
-			const L = logs[li],
+			const L = SEATS[li],
 				dirx = Math.cos(L[2]),
 				dirz = -Math.sin(L[2]);
 			const dx = x - L[0],
@@ -1114,7 +1417,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		seatGeo.computeVertexNormals();
 	}
 	const seatMat = [
-		new T.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.03, color: 0xc09468, roughness: 0.82 }),
+		new T.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.03, color: 0xc09468, roughness: 1, dithering: Q.dither }),
 		endMat,
 		endMat
 	];
@@ -1158,10 +1461,23 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	}
 
 	// --- assemble the merged / instanced forest pieces (one draw call each) ---
+	const trunkMat = new T.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.05, roughness: 1, vertexColors: true, dithering: Q.dither });
+	// the bark texture is red-brown; pull the trunks toward brown-grey so firelight doesn't paint them red
+	trunkMat.onBeforeCompile = function (sh) {
+		sh.fragmentShader = sh.fragmentShader.replace(
+			'#include <map_fragment>',
+			'#include <map_fragment>\n\tdiffuseColor.rgb = mix(vec3(dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114))), diffuseColor.rgb, 0.25) * vec3(1.0, 0.97, 0.95);'
+		);
+		// and keep the lit result brown-grey: firelight warms the bark without painting it red
+		sh.fragmentShader = sh.fragmentShader.replace(
+			'#include <output_fragment>',
+			'outgoingLight = mix(vec3(dot(outgoingLight, vec3(0.299, 0.587, 0.114))), outgoingLight, 0.6);\n\t#include <output_fragment>'
+		);
+	};
 	spin.add(
 		new T.Mesh(
 			mergeGeos(trunkGeos, ['position', 'normal', 'uv', 'color']),
-			new T.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.05, roughness: 0.95, vertexColors: true })
+			trunkMat
 		)
 	);
 	spin.add(
@@ -1184,7 +1500,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
               varying vec3 vWorld;` +
 					FOG_GLSL +
 					`
-              void main() { gl_FragColor = vec4(fogMix(vec3(0.007, 0.011, 0.009), vWorld, uFogD), 1.0); }`
+              void main() { gl_FragColor = vec4(fogMix(vec3(0.007, 0.011, 0.009), vWorld, uFogD), 1.0); ${DITHER} }`
 			})
 		)
 	);
@@ -1205,9 +1521,11 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	const cards = new T.InstancedMesh(
 		cardGeo,
 		new T.ShaderMaterial({
-			uniforms: cardUni,
+			uniforms: Object.assign({}, cardUni, windUni),
 			side: T.DoubleSide,
-			vertexShader: `
+			vertexShader:
+				WIND_GLSL +
+				`
               uniform float uTime;
               attribute vec4 aInfo;
               varying vec2 vUv;
@@ -1221,10 +1539,13 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
                 float L = length(instanceMatrix[0].xyz);
                 float u2 = uv.x * uv.x;
                 p.y -= u2 * L * 0.22;
-                float sw = sin(uTime * 0.7 + aInfo.x * 1.7 + aInfo.y * 1.3 + p.y * 0.5) * 0.03
-                         + sin(uTime * 2.3 + p.y * 3.0 + aInfo.w * 6.0) * 0.008;
-                p.x += sw * u2 * L;
-                p.z += sw * 0.6 * u2 * L;
+                float g = gustAt(p.xz, 1.2);
+                float br = breezeAt(p.xz, uTime);
+                float sw = sin(uTime * 0.7 + aInfo.x * 1.7 + aInfo.y * 1.3 + p.y * 0.5) * 0.03 * (0.8 + 0.3 * br)
+                         + sin(uTime * 2.3 + p.y * 3.0 + aInfo.w * 6.0) * 0.008 * (1.0 + 3.0 * g);
+                vec2 lean = uWindDir * (br * 0.012 + g * 0.07);
+                p.x += (sw + lean.x) * u2 * L;
+                p.z += (sw * 0.6 + lean.y) * u2 * L;
                 vLocal = p.xyz;
                 vInfo = aInfo;
                 vN = normalize(mat3(instanceMatrix) * vec3(0.0, 0.0, 1.0));
@@ -1250,7 +1571,9 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 				`
               void main() {
                 vec4 tx = texture2D(uTex, vUv);
-                if (tx.a < 0.4) discard;
+                // cards turning edge-on to the camera thin out instead of drawing hard diagonal strokes
+                float facing = abs(dot(vN, normalize(cameraPosition - vWorld)));
+                if (tx.a < mix(0.4, 1.01, 1.0 - smoothstep(0.08, 0.3, facing))) discard;
                 float rnd = fract(vInfo.w);
                 float dk = step(1.0, vInfo.w);
                 vec2 rad = vLocal.xz - vInfo.xy;
@@ -1277,6 +1600,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
                 vec3 moon = vec3(0.22, 0.32, 0.55) * uMoon * (rim * 0.2 * (0.4 + hN) + mlam * 0.05 * smoothstep(0.3, 1.0, vUv.x));
                 vec3 lit = col * (uAmb * ao * 1.3 + fire * ao) + moon * (0.6 + 0.8 * tx.r);
                 gl_FragColor = vec4(fogMix(lit, vWorld, uFogD), 1.0);
+                ${DITHER}
               }`
 		}),
 		CARD_N
@@ -1325,7 +1649,9 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 				value: aoPts.map(function (a) {
 					return new T.Vector3(a[0], a[1], a[2]);
 				})
-			}
+			},
+			uCast: castUni,
+			uFireL: fireLUni
 		},
 		vertexShader: `
               varying vec3 vLocal;
@@ -1348,13 +1674,9 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
               varying vec3 vLocal;
               varying vec3 vWorld;` +
 			FOG_GLSL +
+			NOISE2_GLSL +
+			SHADOW_GLSL(castN.length) +
 			`
-              float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
-              float vn(vec2 p) {
-                vec2 i = floor(p), f = fract(p);
-                f = f * f * (3.0 - 2.0 * f);
-                return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
-              }
               float fbm(vec2 p) {
                 float v = 0.0, a = 0.5;
                 for (int i = 0; i < 4; i++) { v += vn(p) * a; p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; }
@@ -1391,12 +1713,16 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
                 // firelight: grass's falloff plus a tighter pool right around the ring
                 float glow = pow(clamp(1.0 - d / 5.4, 0.0, 1.0), 1.7) * uFlick;
                 float pool = pow(clamp(1.0 - d / 2.0, 0.0, 1.0), 2.0) * uFlick;
+                float sh = 1.0 - 0.9 * fireShadow(p);
+                glow *= sh;
+                pool *= sh;
                 vec3 lit = col * (uAmb * ao + vec3(1.0, 0.52, 0.18) * (glow * 2.8 + pool * 2.2) * mix(0.55, 1.0, ao));
                 // live embers glinting in the char bed
                 vec2 ec = floor(p * 26.0);
                 float em = step(0.9, h21(ec)) * smoothstep(0.32, 0.12, length(fract(p * 26.0) - 0.5)) * charM;
-                lit += vec3(1.0, 0.33, 0.07) * em * (0.45 + 0.55 * sin(uTime * 2.6 + h21(ec + 3.0) * 30.0)) * 0.9;
+                lit += vec3(1.0, 0.33, 0.07) * em * (0.45 + 0.55 * sin(uTime * 2.6 + h21(ec + 3.0) * 30.0)) * 0.9 * uFlick;
                 gl_FragColor = vec4(fogMix(lit, vWorld, uFogD), 1.0);
+                ${DITHER}
               }`
 	});
 	spin.add(new T.Mesh(gGeo, groundMat));
@@ -1553,9 +1879,35 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 			leaves.push({ m: lm, x: 0, z: 0, y: -1, vy: 0, ph: rand() * 9, wait: rand() * 14 });
 		}
 	}
-	let flick = 1;
-	return function (t) {
-		flick += (0.82 + Math.sin(t * 11) * 0.08 + Math.sin(t * 5.3) * 0.06 + rand() * 0.1 - flick) * 0.22;
+	let flick = flickAt(0, 0);
+	const flameAY = flameA.position.y, flameBY = flameB.position.y;
+	const sAy = flameAMat.uniforms.uSway.value, sBy = flameBMat.uniforms.uSway.value;
+	// smoke emerges a few seconds after the scene first runs, then climbs slowly
+	const SMOKE_DELAY = 2.5,
+		SMOKE_RISE = 6;
+	let smokeT0 = -1;
+	return function (t, dt) {
+		const fdt = Math.min(dt || 0.016, 0.05);
+		updateWind(t);
+		const gF = gustAt(0, 0, 0.6), brF = breezeAt(0, 0, t);
+		// one smooth flicker (value noise of the clock), eased so no frame jumps more than a few %
+		const fTarget = flickAt(t, gF);
+		flick += Math.max(-0.03, Math.min(0.03, (fTarget - flick) * Math.min(1, fdt * 14)));
+		// flames lean downwind (pivot at the base) and sway harder with the same signal
+		const lean = brF * 0.04 + gF * 0.16;
+		const fl = [flameA, flameB];
+		for (let k = 0; k < 2; k++) {
+			const fm = fl[k], ln = lean * (k ? 0.8 : 1), hh = k ? 0.32 : 0.5;
+			fm.rotation.set(WIND_DIR[1] * ln, 0, -WIND_DIR[0] * ln);
+			fm.position.set(WIND_DIR[0] * Math.sin(ln) * hh, k ? flameBY : flameAY, WIND_DIR[1] * Math.sin(ln) * hh);
+		}
+		flameAMat.uniforms.uSway.value = sAy * (0.85 + (flick - 0.82) * 1.5 + gF * 0.5);
+		flameBMat.uniforms.uSway.value = sBy * (0.85 + (flick - 0.82) * 1.5 + gF * 0.5);
+		// the light centre the fake shadows are cast from rides the flame lean + flicker
+		fireLUni.value.set(WIND_DIR[0] * lean * 0.35, WIND_DIR[1] * lean * 0.35, 0.7 + (flick - 0.82) * 0.8);
+		bounceLight.intensity = (1.2 + 1.45 * flick) * todP.fire;
+		bounceLight2.intensity = (0.55 + 0.65 * flick) * todP.fire;
+		charEndMat.emissiveIntensity = (0.12 + (flick - 0.6) * 0.45) * todP.fire;
 		flameAMat.uniforms.uTime.value = t;
 		flameBMat.uniforms.uTime.value = t * 1.25 + 7.0;
 		const fmul = 0.45 + 0.55 * todP.fire;
@@ -1573,20 +1925,73 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		flickUni.value = (0.7 + flick * 0.5) * todP.fire;
 		grassUni.uFlick.value = (0.7 + flick * 0.5) * todP.fire;
 		smokeMat.uniforms.uTime.value = t;
+		if (smokeT0 < 0) smokeT0 = t;
+		// still mode (reduced motion) renders a single t=0 frame: show the column fully formed
+		const sk =
+			t === 0 && dt === 0 ? 1 : Math.min(1, Math.max(0, (t - smokeT0 - SMOKE_DELAY) / SMOKE_RISE));
+		smokeMat.uniforms.uRise.value = 1 - Math.pow(1 - sk, 2); // eases into its full height
 		coals.forEach(function (co, i) {
-			co.material.opacity = 0.55 + Math.sin(t * 7 + i * 2.1) * 0.35;
+			co.material.opacity = 0.55 + (flick - 0.82) * 0.9 + Math.sin(t * 0.9 + i * 2.1) * 0.05;
 		});
 		const p = (eg.attributes.position as THREE.BufferAttribute).array as Float32Array;
+		const col = (eg.attributes.color as THREE.BufferAttribute).array as Float32Array;
+		let colDirty = false;
 		for (let i = 0; i < en; i++) {
-			p[i * 3 + 1] += ev[i];
-			p[i * 3] += Math.sin(t * 2 + i) * 0.0018;
-			if (p[i * 3 + 1] > 2.0) {
-				p[i * 3 + 1] = 0;
-				p[i * 3] = (rand() - 0.5) * 0.3;
-				p[i * 3 + 2] = (rand() - 0.5) * 0.3;
+			const i3 = i * 3;
+			const wx = WIND_DIR[0] * (breezeAt(p[i3], p[i3 + 2], t) * 0.08 + gustAt(p[i3], p[i3 + 2], 0.4) * 0.5) * fdt;
+			const wz = WIND_DIR[1] * (breezeAt(p[i3], p[i3 + 2], t) * 0.08 + gustAt(p[i3], p[i3 + 2], 0.4) * 0.5) * fdt;
+			if (eSt[i] === 0) {
+				p[i3 + 1] += ev[i];
+				p[i3] += Math.sin(t * 2 + i) * 0.0018 + wx;
+				p[i3 + 2] += wz;
+				if (p[i3 + 1] > 2.0) {
+					p[i3 + 1] = 0;
+					p[i3] = (rand() - 0.5) * 0.3;
+					p[i3 + 2] = (rand() - 0.5) * 0.3;
+					if (Q.landingEmbers && rand() < 0.28) {
+						// a heavier spark: popped out sideways, it arcs back down instead of rising away
+						const a = rand() * Math.PI * 2, sp = 0.35 + rand() * 0.5;
+						eSt[i] = 1;
+						p[i3 + 1] = 0.45 + rand() * 0.3;
+						eVel[i3] = Math.cos(a) * sp;
+						eVel[i3 + 1] = 0.9 + rand() * 0.6;
+						eVel[i3 + 2] = Math.sin(a) * sp;
+					}
+				}
+			} else if (eSt[i] === 1) {
+				eVel[i3 + 1] -= 1.7 * fdt;
+				p[i3] += eVel[i3] * fdt + wx;
+				p[i3 + 1] += eVel[i3 + 1] * fdt;
+				p[i3 + 2] += eVel[i3 + 2] * fdt + wz;
+				const floor = nearLog(p[i3], p[i3 + 2]) ? 0.32 : 0.012;
+				if (eVel[i3 + 1] < 0 && p[i3 + 1] <= floor) {
+					p[i3 + 1] = floor;
+					eSt[i] = 2;
+					eAge[i] = 0;
+					eLife[i] = 2 + rand() * 2;
+				}
+			} else {
+				// smoulder: orange → deep red → dark (additive, so dark = gone), then re-launch as a spark
+				eAge[i] += fdt;
+				const k = Math.min(1, eAge[i] / eLife[i]);
+				const glowK = Math.pow(1 - k, 1.4) * (0.85 + 0.15 * Math.sin(t * 9 + i));
+				col[i3] = eBase[i3] * glowK;
+				col[i3 + 1] = eBase[i3 + 1] * glowK * (1 - k * 0.7);
+				col[i3 + 2] = eBase[i3 + 2] * glowK * (1 - k);
+				colDirty = true;
+				if (k >= 1) {
+					eSt[i] = 0;
+					p[i3] = (rand() - 0.5) * 0.3;
+					p[i3 + 1] = 0;
+					p[i3 + 2] = (rand() - 0.5) * 0.3;
+					col[i3] = eBase[i3];
+					col[i3 + 1] = eBase[i3 + 1];
+					col[i3 + 2] = eBase[i3 + 2];
+				}
 			}
 		}
 		eg.attributes.position.needsUpdate = true;
+		if (colDirty) eg.attributes.color.needsUpdate = true;
 		ffGroups.forEach(function (f, gi) {
 			f.m.opacity = Math.max(0, Math.sin(t * 0.8 + f.ph)) * 0.8 * todP.ff;
 			const fp = (f.g.attributes.position as THREE.BufferAttribute).array as Float32Array;
@@ -1636,6 +2041,8 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 				}
 			} else {
 				lf.y -= lf.vy;
+				lf.x += WIND_DIR[0] * (breezeAt(lf.x, lf.z, t) * 0.15 + gustAt(lf.x, lf.z, 1.0) * 0.9) * fdt;
+				lf.z += WIND_DIR[1] * (breezeAt(lf.x, lf.z, t) * 0.15 + gustAt(lf.x, lf.z, 1.0) * 0.9) * fdt;
 				lf.m.material.opacity = Math.min(0.85, lf.m.material.opacity + 0.02) * Math.min(1, lf.y / 0.4);
 				lf.m.position.set(lf.x + Math.sin(t * 1.3 + lf.ph) * 0.35, lf.y, lf.z);
 				lf.m.rotation.set(Math.sin(t * 2 + lf.ph) * 0.8, t * 0.7 + lf.ph, Math.sin(t * 1.6 + lf.ph) * 0.6);
