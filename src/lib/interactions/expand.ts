@@ -1,7 +1,7 @@
-// Card expand/close. Started as a port of the DC interaction layer (fireRing L3349,
-// burnSibs L3359, burnEmbers L3402, expand()/shut() L3437–3562); re-timed so a card is
-// usable the moment it is clicked and fully open in ~0.42s (the DC took ~1.95s and armed
-// its close controls only at the end).
+// Card expand/close — port of the DC interaction layer (fireRing L3349, burnSibs L3359,
+// burnEmbers L3402, expand()/shut() L3437–3562). The open keeps the DC's deliberate ~2s
+// choreography (siblings burn, fire ring, jar pop / axe chop, then the card grows); the
+// difference is that the card's close controls work from the first frame, and close is fast.
 //
 // Shape of an open card:
 // • A clone sits over the whole board (grid siblings never reflow) and is revealed with a
@@ -13,8 +13,8 @@
 // • The panel is a Svelte component mount()ed into [data-expand] (role=dialog). Its canvases
 //   build only once the card has settled (data-hold-build), so shader compiles never stall
 //   the open.
-// • dataset.open mirrors `ui.openCard`; settle sets `freeze.container = clone` semantics
-//   from the start (the loop updates only canvases inside the clone).
+// • dataset.open mirrors `ui.openCard`; `freeze.container = clone` from the click (the loop
+//   updates only canvases inside the clone).
 // • ✕, Escape, Back (shallow history entry), and clicks outside the panel's controls all
 //   close immediately, at any point in the open.
 
@@ -84,8 +84,21 @@ const PANELS: Record<CardId, PanelSpec> = {
 };
 
 const EASE_OUT = 'cubic-bezier(0.23,1,0.32,1)';
-const EASE_DRAWER = 'cubic-bezier(0.32,0.72,0,1)';
-const OPEN_MS = 420;
+// Open choreography (ms) — the DC timeline: the burn reads first, then the card grows.
+const OPEN = {
+	burnStart: 250, // first sibling catches
+	burnStep: 90, // each further sibling, by distance from the clicked card
+	burnDur: 1050,
+	ringLap: 1050,
+	ringFade: 1350,
+	growAt: 1400,
+	growDur: 460,
+	growEase: 'cubic-bezier(.5,.02,.2,1)',
+	revealAt: 1850, // panel fades in as the grow lands
+	revealStep: 70,
+	popFade: 1050, // the tile's own scene (jar / envelope / axe) fades as the card grows
+	oceanFade: 1100
+} as const;
 const CLOSE_MS = 280;
 const FOCUSABLE =
 	'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])';
@@ -94,16 +107,16 @@ const FOCUSABLE =
 function fireRing(clone: HTMLElement): void {
 	const ring = document.createElement('div');
 	ring.style.cssText =
-		'position:absolute;inset:-1px;z-index:70;pointer-events:none;border-radius:inherit;padding:1.5px;overflow:hidden;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;transition:opacity .2s ease';
+		'position:absolute;inset:-1px;z-index:70;pointer-events:none;border-radius:inherit;padding:1.5px;overflow:hidden;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;transition:opacity .5s ease';
 	const inner = document.createElement('div');
 	inner.style.cssText =
-		'position:absolute;left:50%;top:50%;width:320%;height:320%;background:conic-gradient(transparent 0 72%,rgba(255,125,46,.25) 80%,rgba(255,125,46,.85) 88%,#ffd28a 91%,rgba(255,190,110,.3) 94%,transparent 97%);animation:firering .6s linear infinite';
+		'position:absolute;left:50%;top:50%;width:320%;height:320%;background:conic-gradient(transparent 0 72%,rgba(255,125,46,.25) 80%,rgba(255,125,46,.85) 88%,#ffd28a 91%,rgba(255,190,110,.3) 94%,transparent 97%);animation:firering ' + OPEN.ringLap + 'ms linear infinite';
 	ring.appendChild(inner);
 	clone.appendChild(ring);
 	setTimeout(() => {
 		ring.style.opacity = '0';
 		setTimeout(() => ring.remove(), 220);
-	}, 400);
+	}, OPEN.ringFade);
 }
 
 // ── burnEmbers (DC L3402–3418) ────────────────────────────────────────────────
@@ -125,7 +138,7 @@ function burnEmbers(board: HTMLElement, t: HTMLElement): void {
 			: Math.random() < 0.7
 				? '#ff7d2e'
 				: '#ffca57';
-		const dur = ash ? 0.9 : 0.6;
+		const dur = ash ? 1.3 : 0.8;
 		e.style.cssText =
 			`position:absolute;left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;border-radius:50%;background:${col};` +
 			`z-index:60;pointer-events:none;opacity:${ash ? '.6' : '.9'};` +
@@ -177,13 +190,13 @@ function siblings(board: HTMLElement, tile: HTMLElement): HTMLElement[] {
 		.map((o) => o.t);
 }
 
-// ── burnSibs (DC L3359–3400), compressed to play inside the open ─────────────
+// ── burnSibs (DC L3359–3400): cards catch fire radiating out from the clicked one ──
 function burnSibs(board: HTMLElement, sibs: HTMLElement[]): void {
 	sibs.forEach((t, i) => {
-		const dl = Math.min(0.15, i * 0.03);
+		const dl = (OPEN.burnStart + i * OPEN.burnStep) / 1000;
 		t.classList.add('burn-sib');
 		if (getComputedStyle(t).position === 'static') t.style.position = 'relative';
-		t.style.animation = `cardburn .38s ease-out ${dl.toFixed(2)}s forwards`;
+		t.style.animation = `cardburn ${OPEN.burnDur}ms ease ${dl.toFixed(2)}s forwards`;
 		// traveling burn front: glowing orange edge sweeps across, leaving char behind
 		const fx = document.createElement('div');
 		fx.className = 'burn-fx';
@@ -191,12 +204,12 @@ function burnSibs(board: HTMLElement, sibs: HTMLElement[]): void {
 			'position:absolute;inset:0;z-index:30;pointer-events:none;overflow:hidden;border-radius:inherit';
 		const inner = document.createElement('div');
 		inner.style.cssText =
-			'position:absolute;top:0;bottom:0;left:0;width:300%;background:linear-gradient(100deg,#0f0b08 0%,#0f0b08 38%,#2e1608 43%,#7a2f0d 46%,#ff7d2e 48%,#ffd28a 49.2%,rgba(255,190,110,.3) 51%,transparent 55%);transform:translateX(-66.7%);animation:burnwipe .38s cubic-bezier(0.77,0,0.175,1) ' +
+			'position:absolute;top:0;bottom:0;left:0;width:300%;background:linear-gradient(100deg,#0f0b08 0%,#0f0b08 38%,#2e1608 43%,#7a2f0d 46%,#ff7d2e 48%,#ffd28a 49.2%,rgba(255,190,110,.3) 51%,transparent 55%);transform:translateX(-66.7%);animation:burnwipe ' + OPEN.burnDur + 'ms cubic-bezier(.4,.1,.3,1) ' +
 			dl.toFixed(2) +
 			's forwards';
 		fx.appendChild(inner);
 		t.appendChild(fx);
-		setTimeout(() => burnEmbers(board, t), dl * 1000 + 100);
+		setTimeout(() => burnEmbers(board, t), dl * 1000 + 250);
 	});
 }
 
@@ -329,11 +342,10 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		liveCv.style.pointerEvents = 'none';
 		if (card === 'experience') {
 			// the ocean simply fades with the face — the panel brings its own porthole
-			liveCv.style.transition = 'opacity .2s ease .06s';
+			liveCv.style.transition = `opacity .25s ease ${OPEN.oceanFade}ms`;
 		} else {
 			liveCv.dataset.pop = '1'; // jar cap / envelope / axe chop
-			// fade once the beat has read: the axe needs its strike (~0.5s), the pops are quick
-			liveCv.style.transition = `opacity .25s ease ${card === 'work' ? '.55s' : '.3s'}`;
+			liveCv.style.transition = `opacity .45s ease ${OPEN.popFade}ms`;
 		}
 		clone.appendChild(cvLayer);
 	}
@@ -381,17 +393,17 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	} else {
 		clone.style.clipPath = tileClip;
 		void clone.offsetWidth; // the start clip must land before the transition is armed
-		clone.style.transition = `clip-path ${OPEN_MS}ms ${EASE_DRAWER}`;
+		clone.style.transition = `clip-path ${OPEN.growDur}ms ${OPEN.growEase} ${OPEN.growAt}ms`;
 		clone.style.clipPath = fullClip;
 		close.style.opacity = '1';
-		face.style.transition = `opacity .12s ${EASE_OUT}`;
+		face.style.transition = 'opacity .25s ease'; // the label/text; the tile's scene stays
 		face.style.opacity = '0';
-		ex.style.transition = `opacity .2s ${EASE_OUT} .15s`;
+		ex.style.transition = `opacity .3s ease ${OPEN.revealAt}ms`;
 		ex.style.opacity = '1';
 		if (liveCv) liveCv.style.opacity = '0';
 		kids.forEach((k, i) => {
-			const d = 180 + i * 40;
-			k.style.transition = `opacity .25s ${EASE_OUT} ${d}ms, transform .25s ${EASE_OUT} ${d}ms`;
+			const d = OPEN.revealAt + i * OPEN.revealStep;
+			k.style.transition = `opacity .4s ease ${d}ms, transform .45s ${EASE_OUT} ${d}ms`;
 			k.style.opacity = '1';
 			k.style.transform = 'translateY(0)';
 		});
@@ -404,7 +416,8 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		clone.addEventListener('transitionend', (ev) => {
 			if (ev.target === clone && ev.propertyName === 'clip-path') settle();
 		});
-		later(settle, OPEN_MS + 120); // transitionend can be skipped (hidden tab, starved frames)
+		// transitionend can be skipped (hidden tab, starved frames)
+		later(settle, OPEN.growAt + OPEN.growDur + 120);
 	}
 
 	// Focus moves into the dialog; Tab stays inside it while open.
@@ -547,7 +560,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	});
 	// click-to-exit on the panel itself, except interactive bits (Work keeps its rows;
 	// links/copy stay usable). Work is ✕-only even while its rows sit under the detail overlay.
-	// Armed at settle (~0.42s): the second click of a double-click lands on the clone and must
+	// Armed at settle (~1.9s): the second click of a double-click lands on the clone and must
 	// not close the card it just opened. ✕, Escape and Back work from the first frame.
 	clone.addEventListener('click', (ev) => {
 		if (!settled) return;

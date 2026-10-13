@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { DESKTOP, board, settleIntro, collectErrors } from './helpers';
 
 // Desktop expand flow on the Experience card: click → open (controls live at once) →
-// settled (~0.42s) → close → board restored. Every phase is asserted on its observable
+// settled (~1.9s) → close → board restored. Every phase is asserted on its observable
 // (classes, data-open, element visibility) rather than sleeps.
 
 test('experience: click → open → settle → close → board restored', async ({

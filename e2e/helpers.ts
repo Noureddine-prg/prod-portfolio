@@ -3,7 +3,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 // Shared plumbing for the regression suite. Observable-state contract:
 // - board open flag:   [data-board][data-open="1"]      (mirrors ui.openCard)
 // - expanding clone:   .is-clone                        (appended synchronously on click)
-// - settled state:     .is-clone.is-settled             (~0.42s after click)
+// - settled state:     .is-clone.is-settled             (~1.9s after click)
 // - close button:      button.clone-close               (usable from the first frame)
 // - intro veil:        [data-intro-veil] on document.body
 
@@ -60,7 +60,7 @@ export async function openCard(
 	await expect(b).toHaveAttribute('data-open', '1');
 	const clone = b.locator('.is-clone');
 	await expect(clone).toBeVisible();
-	// settle lands at ~0.42s — the settle class is the observable, not a sleep
+	// settle lands at ~1.9s — the settle class is the observable, not a sleep
 	// (generous timeout: parallel WebGL-heavy workers can stretch wall-clock timers)
 	await expect(b.locator('.is-clone.is-settled')).toBeVisible({ timeout: 12_000 });
 	return clone;
