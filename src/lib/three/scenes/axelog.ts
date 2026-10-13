@@ -81,7 +81,7 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	const rot = new T.Matrix4().makeRotationZ(AXE_RZ0);
 	const tipOff = tipLocal.clone().applyMatrix4(rot);
 	const flareOff = flare.clone().applyMatrix4(rot);
-	const tipWorld = new T.Vector3(-0.05, STUMP_TOP - Math.abs(flareOff.y) - 0.012, 0);
+	const tipWorld = new T.Vector3(0.5, STUMP_TOP - Math.abs(flareOff.y) - 0.012, 0.2); // bites the front-right rim
 	axe.rotation.z = AXE_RZ0;
 	axe.position.copy(tipWorld).sub(tipOff);
 

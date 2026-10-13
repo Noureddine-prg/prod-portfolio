@@ -13,7 +13,7 @@ export const profile = {
 
 export const links = {
 	resume: '/resume.pdf',
-	linkedin: 'https://linkedin.com',
+	linkedin: 'https://www.linkedin.com/in/noureddine-sidi/',
 	github: 'https://github.com/Noureddine-prg'
 } as const;
 
