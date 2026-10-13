@@ -48,9 +48,26 @@ body {
 	cursor: pointer;
 	box-sizing: border-box;
 	transition:
-		transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1),
-		box-shadow 0.3s ease,
+		transform 0.16s cubic-bezier(0.23, 1, 0.32, 1),
+		box-shadow 0.2s ease,
 		opacity 0.3s ease;
+}
+/* only the four clickable cards carry .tile: press feedback, a mouse-only hover lift, and a
+ * visible keyboard focus ring */
+.tile:active {
+	transform: scale(0.985);
+}
+@media (hover: hover) and (pointer: fine) {
+	.tile:hover {
+		box-shadow:
+			0 10px 26px rgba(0, 0, 0, 0.38),
+			0 0 0 1px rgba(226, 149, 79, 0.22);
+	}
+}
+.tile:focus-visible,
+.clone-close:focus-visible {
+	outline: 2px solid #e2954f;
+	outline-offset: 3px;
 }
 
 /* ── Keyframes — the consumed ones only, verbatim from the DC ─────────────────── */

@@ -1,18 +1,25 @@
-// Card expand/close — port of the DC interaction layer, active paths only:
-// fireRing L3349, burnSibs L3359, burnEmbers L3402, expand()/shut() L3437–3562.
-// (expandEmber L3198 and wireDepth L3264 are dead paths — boards carry data-board only.)
+// Card expand/close. Started as a port of the DC interaction layer (fireRing L3349,
+// burnSibs L3359, burnEmbers L3402, expand()/shut() L3437–3562); re-timed so a card is
+// usable the moment it is clicked and fully open in ~0.42s (the DC took ~1.95s and armed
+// its close controls only at the end).
 //
-// Svelte adaptations, kept minimal:
-// • The tile is cloned (DC architecture — grid siblings never reflow, and the original
-//   keeps its canvas contexts), but the expanded panel is a Svelte component mount()ed
-//   into the clone's [data-expand] div: the DC loop re-queried `canvas[data-three]` from
-//   the DOM every frame so cloned canvases just worked, while our loop iterates the
-//   registry's mounted Set — a mounted component registers its canvases naturally and
-//   keeps every scene canvas singular.
-// • dataset.open is mirrored to `ui.openCard`; `.is-clone.is-settled` (the DC freeze
-//   selector, L3058) becomes `freeze.container = clone` — the loop consumes the store.
+// Shape of an open card:
+// • A clone sits over the whole board (grid siblings never reflow) and is revealed with a
+//   clip-path that grows from the tile's rect — the panel is laid out at its final size from
+//   the first frame, so nothing reflows while it opens.
+// • Inside it, a `face` copy of the tile sits exactly over the tile and fades out while the
+//   panel fades in. The tile's live canvas moves into its own layer over the panel so the
+//   jar pop / axe chop still play, then fades.
+// • The panel is a Svelte component mount()ed into [data-expand] (role=dialog). Its canvases
+//   build only once the card has settled (data-hold-build), so shader compiles never stall
+//   the open.
+// • dataset.open mirrors `ui.openCard`; settle sets `freeze.container = clone` semantics
+//   from the start (the loop updates only canvases inside the clone).
+// • ✕, Escape, Back (shallow history entry), and clicks outside the panel's controls all
+//   close immediately, at any point in the open.
 
 import { mount, unmount, type Component } from 'svelte';
+import { pushState } from '$app/navigation';
 import { ui, type CardId } from '$lib/stores/ui.svelte';
 import { freeze } from '$lib/stores/freeze.svelte';
 import ExpandedExperience from '$lib/components/expanded/ExpandedExperience.svelte';
@@ -23,13 +30,14 @@ import ExpandedWork from '$lib/components/expanded/ExpandedWork.svelte';
 interface PanelSpec {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	component: Component<any>;
+	label: string;
 	props: (mobile: boolean) => Record<string, unknown>;
 	/** Inline style of the [data-expand] container — the DC per-card data-expand styles. */
 	style: (mobile: boolean) => string;
 }
 
 const EX_BASE =
-	'display:none;position:absolute;inset:0;z-index:1;flex-direction:column;box-sizing:border-box;';
+	'display:flex;position:absolute;inset:0;z-index:2;flex-direction:column;box-sizing:border-box;outline:none;';
 
 // Per-card expanded containers, carrying the DC [data-expand] container styles:
 // Experience 11a L127 / 11b L462, About 11a L297 / 11b L609, Contact 11a L236
@@ -37,6 +45,7 @@ const EX_BASE =
 const PANELS: Record<CardId, PanelSpec> = {
 	experience: {
 		component: ExpandedExperience,
+		label: 'Experience',
 		props: (mobile) => ({ mobile }),
 		style: (mobile) =>
 			mobile
@@ -46,6 +55,7 @@ const PANELS: Record<CardId, PanelSpec> = {
 	},
 	about: {
 		component: ExpandedAbout,
+		label: 'About',
 		props: (mobile) => ({ mobile }),
 		style: (mobile) =>
 			mobile
@@ -54,6 +64,7 @@ const PANELS: Record<CardId, PanelSpec> = {
 	},
 	contact: {
 		component: ExpandedContact,
+		label: 'Contact',
 		props: (mobile) => ({ mobile }),
 		style: (mobile) =>
 			mobile
@@ -63,6 +74,7 @@ const PANELS: Record<CardId, PanelSpec> = {
 	},
 	work: {
 		component: ExpandedWork,
+		label: 'Work',
 		props: (mobile) => ({ mobile }),
 		style: (mobile) =>
 			mobile
@@ -71,33 +83,41 @@ const PANELS: Record<CardId, PanelSpec> = {
 	}
 };
 
-// ── fireRing (DC L3349–3357) ──────────────────────────────────────────────────
+const EASE_OUT = 'cubic-bezier(0.23,1,0.32,1)';
+const EASE_DRAWER = 'cubic-bezier(0.32,0.72,0,1)';
+const OPEN_MS = 420;
+const CLOSE_MS = 280;
+const FOCUSABLE =
+	'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])';
+
+// ── fireRing (DC L3349–3357): one lap around the opening card ────────────────
 function fireRing(clone: HTMLElement): void {
 	const ring = document.createElement('div');
 	ring.style.cssText =
-		'position:absolute;inset:-1px;z-index:70;pointer-events:none;border-radius:inherit;padding:1.5px;overflow:hidden;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;transition:opacity .5s';
+		'position:absolute;inset:-1px;z-index:70;pointer-events:none;border-radius:inherit;padding:1.5px;overflow:hidden;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;transition:opacity .2s ease';
 	const inner = document.createElement('div');
 	inner.style.cssText =
-		'position:absolute;left:50%;top:50%;width:320%;height:320%;background:conic-gradient(transparent 0 72%,rgba(255,125,46,.25) 80%,rgba(255,125,46,.85) 88%,#ffd28a 91%,rgba(255,190,110,.3) 94%,transparent 97%);animation:firering 1.05s linear infinite';
+		'position:absolute;left:50%;top:50%;width:320%;height:320%;background:conic-gradient(transparent 0 72%,rgba(255,125,46,.25) 80%,rgba(255,125,46,.85) 88%,#ffd28a 91%,rgba(255,190,110,.3) 94%,transparent 97%);animation:firering .6s linear infinite';
 	ring.appendChild(inner);
 	clone.appendChild(ring);
 	setTimeout(() => {
 		ring.style.opacity = '0';
-		setTimeout(() => ring.remove(), 550);
-	}, 1350);
+		setTimeout(() => ring.remove(), 220);
+	}, 400);
 }
 
 // ── burnEmbers (DC L3402–3418) ────────────────────────────────────────────────
 function burnEmbers(board: HTMLElement, t: HTMLElement): void {
-	// ember specks + gray ash flecks rising off a card as it burns
+	// ember specks + gray ash flecks rising off a card as it burns (decorative, never blocks)
 	const br = board.getBoundingClientRect(),
 		tr = t.getBoundingClientRect();
+	const sc = br.width / board.offsetWidth || 1; // board is transform-scaled; work in its space
 	for (let i = 0; i < 11; i++) {
 		const ash = i > 6;
 		const e = document.createElement('span');
 		const sz = ash ? 1.6 + Math.random() * 2 : 1.8 + Math.random() * 2.6;
-		const x = tr.left - br.left + Math.random() * tr.width;
-		const y = tr.top - br.top + Math.random() * tr.height * 0.7;
+		const x = (tr.left - br.left) / sc + (Math.random() * tr.width) / sc;
+		const y = (tr.top - br.top) / sc + (Math.random() * tr.height * 0.7) / sc;
 		const col = ash
 			? Math.random() < 0.5
 				? '#6b5f57'
@@ -105,43 +125,23 @@ function burnEmbers(board: HTMLElement, t: HTMLElement): void {
 			: Math.random() < 0.7
 				? '#ff7d2e'
 				: '#ffca57';
-		const dur = ash ? 1.3 : 0.8;
+		const dur = ash ? 0.9 : 0.6;
 		e.style.cssText =
-			'position:absolute;left:' +
-			x +
-			'px;top:' +
-			y +
-			'px;width:' +
-			sz +
-			'px;height:' +
-			sz +
-			'px;border-radius:50%;background:' +
-			col +
-			';z-index:60;pointer-events:none;opacity:' +
-			(ash ? '.6' : '.9') +
-			';transition:transform ' +
-			dur +
-			's cubic-bezier(.2,.6,.3,1),opacity ' +
-			dur +
-			's ease';
+			`position:absolute;left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;border-radius:50%;background:${col};` +
+			`z-index:60;pointer-events:none;opacity:${ash ? '.6' : '.9'};` +
+			`transition:transform ${dur}s ${EASE_OUT},opacity ${dur}s ease`;
 		board.appendChild(e);
 		requestAnimationFrame(() => {
-			e.style.transform =
-				'translate(' +
-				(Math.random() - 0.5) * (ash ? 40 : 60) +
-				'px,' +
-				(-(ash ? 70 : 40) - Math.random() * 80) +
-				'px)';
+			e.style.transform = `translate(${(Math.random() - 0.5) * (ash ? 40 : 60)}px,${-(ash ? 70 : 40) - Math.random() * 80}px)`;
 			e.style.opacity = '0';
 		});
 		setTimeout(() => e.remove(), dur * 1000 + 80);
 	}
 }
 
-// ── burnSibs (DC L3359–3400) ──────────────────────────────────────────────────
-function burnSibs(board: HTMLElement, tile: HTMLElement): void {
-	// delayed burn so it reads, then cards return once the clone has fully opened
-	// includes non-interactive cards — direct children AND cards inside wrapper rows
+// Everything on the board except the clicked tile — direct tiles, wrapper rows' children,
+// and non-scene strips (mobile footer) — ordered by distance from the clicked tile.
+function siblings(board: HTMLElement, tile: HTMLElement): HTMLElement[] {
 	const sibs = [...board.querySelectorAll<HTMLElement>('[data-tile]')].filter(
 		(t) => t !== tile && !t.classList.contains('is-clone')
 	);
@@ -165,335 +165,399 @@ function burnSibs(board: HTMLElement, tile: HTMLElement): void {
 			sibs.push(el);
 		}
 	});
-	// stagger: cards catch fire radiating outward from the clicked card
 	const trc = tile.getBoundingClientRect();
 	const tcx = trc.left + trc.width / 2,
 		tcy = trc.top + trc.height / 2;
-	sibs
+	return sibs
 		.map((t) => {
 			const r = t.getBoundingClientRect();
 			return { t, d: Math.hypot(r.left + r.width / 2 - tcx, r.top + r.height / 2 - tcy) };
 		})
 		.sort((a, b) => a.d - b.d)
-		.forEach((o, i) => {
-			const dl = 0.25 + i * 0.09;
-			o.t.classList.add('burn-sib');
-			if (getComputedStyle(o.t).position === 'static') o.t.style.position = 'relative';
-			o.t.style.animation = 'cardburn 1.05s ease ' + dl.toFixed(2) + 's forwards';
-			// traveling burn front: glowing orange edge sweeps across, leaving char behind
-			const fx = document.createElement('div');
-			fx.className = 'burn-fx';
-			fx.style.cssText =
-				'position:absolute;inset:0;z-index:30;pointer-events:none;overflow:hidden;border-radius:inherit';
-			const inner = document.createElement('div');
-			inner.style.cssText =
-				'position:absolute;top:0;bottom:0;left:0;width:300%;background:linear-gradient(100deg,#0f0b08 0%,#0f0b08 38%,#2e1608 43%,#7a2f0d 46%,#ff7d2e 48%,#ffd28a 49.2%,rgba(255,190,110,.3) 51%,transparent 55%);transform:translateX(-66.7%);animation:burnwipe 1.05s cubic-bezier(.4,.1,.3,1) ' +
-				dl.toFixed(2) +
-				's forwards';
-			fx.appendChild(inner);
-			o.t.appendChild(fx);
-			setTimeout(() => burnEmbers(board, o.t), dl * 1000 + 250);
-		});
-	setTimeout(() => {
-		sibs.forEach((t) => {
-			if (!board.dataset.open) return;
-			// stay invisible while the card is open — restored by the close handlers
-			t.style.animation = '';
-			t.style.opacity = '0';
-			t.style.filter = '';
-			const f = t.querySelector(':scope > .burn-fx');
-			if (f) f.remove();
-		});
-	}, 2300);
+		.map((o) => o.t);
 }
 
-// ── expand (DC L3437–3562) ────────────────────────────────────────────────────
+// ── burnSibs (DC L3359–3400), compressed to play inside the open ─────────────
+function burnSibs(board: HTMLElement, sibs: HTMLElement[]): void {
+	sibs.forEach((t, i) => {
+		const dl = Math.min(0.15, i * 0.03);
+		t.classList.add('burn-sib');
+		if (getComputedStyle(t).position === 'static') t.style.position = 'relative';
+		t.style.animation = `cardburn .38s ease-out ${dl.toFixed(2)}s forwards`;
+		// traveling burn front: glowing orange edge sweeps across, leaving char behind
+		const fx = document.createElement('div');
+		fx.className = 'burn-fx';
+		fx.style.cssText =
+			'position:absolute;inset:0;z-index:30;pointer-events:none;overflow:hidden;border-radius:inherit';
+		const inner = document.createElement('div');
+		inner.style.cssText =
+			'position:absolute;top:0;bottom:0;left:0;width:300%;background:linear-gradient(100deg,#0f0b08 0%,#0f0b08 38%,#2e1608 43%,#7a2f0d 46%,#ff7d2e 48%,#ffd28a 49.2%,rgba(255,190,110,.3) 51%,transparent 55%);transform:translateX(-66.7%);animation:burnwipe .38s cubic-bezier(0.77,0,0.175,1) ' +
+			dl.toFixed(2) +
+			's forwards';
+		fx.appendChild(inner);
+		t.appendChild(fx);
+		setTimeout(() => burnEmbers(board, t), dl * 1000 + 100);
+	});
+}
+
+// Strip a copied tile of everything that made it interactive.
+function inert(el: HTMLElement): void {
+	el.removeAttribute('role');
+	el.removeAttribute('tabindex');
+	el.removeAttribute('data-card');
+	el.removeAttribute('data-tile');
+	el.classList.remove('tile');
+	el.setAttribute('aria-hidden', 'true');
+}
+
+// ── expand ────────────────────────────────────────────────────────────────────
 export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId): void {
 	if (board.dataset.open) return;
 	board.dataset.open = '1';
 	ui.openCard = card;
+	const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 	const cs = getComputedStyle(board);
 	const pad = parseFloat(cs.paddingTop) || 16; // DC wireBoards L3425
 	const bw = board.clientWidth - pad * 2;
 	const bh = Math.max(board.clientHeight, board.scrollHeight) - pad * 2;
 	const mobile = board.clientWidth < 500;
+	const tileStyle = tile.getAttribute('style') || '';
+	const radius = getComputedStyle(tile).borderTopLeftRadius || '9px';
+	const tl = tile.offsetLeft,
+		tt = tile.offsetTop,
+		tw = tile.offsetWidth,
+		th = tile.offsetHeight;
+	// clip-path inset that shows only the tile's rect of the board-sized clone
+	const tileClip = `inset(${tt - pad}px ${pad + bw - (tl + tw)}px ${pad + bh - (tt + th)}px ${tl - pad}px round ${radius})`;
+	const fullClip = `inset(0px 0px 0px 0px round ${radius})`;
 
-	// clone overlays the board so grid siblings never reflow
-	const clone = tile.cloneNode(true) as HTMLElement;
-	clone.classList.add('is-clone');
-	clone.style.cssText = tile.getAttribute('style') || '';
-	clone.style.position = 'absolute';
-	clone.style.margin = '0';
-	clone.style.left = tile.offsetLeft + 'px';
-	clone.style.top = tile.offsetTop + 'px';
-	clone.style.width = tile.offsetWidth + 'px';
-	clone.style.height = tile.offsetHeight + 'px';
-	clone.style.gridColumn = 'auto';
-	clone.style.gridRow = 'auto';
-	clone.style.zIndex = '40';
-	clone.style.transition =
-		'left .46s cubic-bezier(.5,.02,.2,1) 1.4s,top .46s cubic-bezier(.5,.02,.2,1) 1.4s,width .46s cubic-bezier(.5,.02,.2,1) 1.4s,height .46s cubic-bezier(.5,.02,.2,1) 1.4s,box-shadow .46s ease 1.4s';
-	clone.style.boxShadow = '0 30px 70px rgba(0,0,0,.45)';
+	// clone: board-sized from the first frame, carrying the tile's surface
+	const clone = document.createElement('div');
+	clone.className = 'is-clone';
+	clone.style.cssText = tileStyle;
+	Object.assign(clone.style, {
+		position: 'absolute',
+		margin: '0',
+		left: pad + 'px',
+		top: pad + 'px',
+		width: bw + 'px',
+		height: bh + 'px',
+		gridColumn: 'auto',
+		gridRow: 'auto',
+		flex: 'none',
+		zIndex: '40',
+		overflow: 'hidden',
+		padding: '0'
+	});
+	clone.dataset.holdBuild = '1'; // the loop defers panel canvas builds until settle
 
-	// the expanded panel target — the DC [data-expand] div, created here because the
-	// panel is a component mount rather than cloned markup (see header comment)
+	// face: the tile's collapsed content, sitting exactly over the (now hidden) tile
+	const face = tile.cloneNode(true) as HTMLElement;
+	inert(face);
+	face.querySelectorAll('canvas[data-three]').forEach((c) => c.remove());
+	face.style.cssText = tileStyle;
+	Object.assign(face.style, {
+		position: 'absolute',
+		margin: '0',
+		left: tl - pad + 'px',
+		top: tt - pad + 'px',
+		width: tw + 'px',
+		height: th + 'px',
+		gridColumn: 'auto',
+		gridRow: 'auto',
+		flex: 'none',
+		zIndex: '1'
+	});
+	clone.appendChild(face);
+
+	// the expanded panel — a dialog
 	const spec = PANELS[card];
 	const ex = document.createElement('div');
 	ex.setAttribute('data-expand', '');
+	ex.setAttribute('role', 'dialog');
+	ex.setAttribute('aria-modal', 'true');
+	ex.setAttribute('aria-label', spec.label);
+	ex.tabIndex = -1;
 	ex.style.cssText = spec.style(mobile);
+	ex.style.opacity = '0';
 	const panel = mount(spec.component, { target: ex, props: spec.props(mobile) });
 	clone.appendChild(ex);
 
-	const close = document.createElement('div');
+	const close = document.createElement('button');
+	close.type = 'button';
 	close.className = 'clone-close';
+	close.setAttribute('aria-label', `Close ${spec.label}`);
 	close.textContent = '✕';
-	// (the DC computes a `dark` flag from the tile background here but never uses it)
-	close.style.background = 'rgba(0,0,0,.45)';
-	close.style.color = '#fff';
-	close.style.opacity = '0';
-	close.style.transition = 'opacity .3s ease .15s';
-	close.style.zIndex = '9';
-	clone.appendChild(close);
-	board.appendChild(clone);
-
-	// hide the tile's collapsed face once clicked — icons/3D canvas sit oddly during the
-	// burn + growth; canvases (or wrappers with one) are REMOVED from the clone so the
-	// originals keep their contexts
-	[...clone.children].forEach((kNode) => {
-		const k = kNode as HTMLElement;
-		if (k === ex || k.classList.contains('clone-close')) return;
-		if (k.matches('canvas[data-three]')) {
-			k.remove();
-			return;
-		}
-		if (k.querySelector('canvas[data-three]')) {
-			k.remove();
-			return;
-		}
-		k.style.transition = 'opacity .25s ease';
-		k.style.opacity = '0';
+	Object.assign(close.style, {
+		background: 'rgba(0,0,0,.45)',
+		color: '#fff',
+		border: '0',
+		padding: '0',
+		cursor: 'pointer',
+		zIndex: '9',
+		opacity: '0',
+		transition: `opacity .15s ${EASE_OUT}`
 	});
+	clone.appendChild(close);
 
-	ex.style.opacity = '0';
 	// keep the header row clear of the ✕ in the top-right corner
-	const hdr = [...ex.children].find(
-		(k) => (k as HTMLElement).style.position !== 'absolute'
-	) as HTMLElement | undefined;
+	const hdr = [...ex.children].find((k) => (k as HTMLElement).style.position !== 'absolute') as
+		| HTMLElement
+		| undefined;
 	if (hdr && !hdr.querySelector('canvas')) hdr.style.paddingRight = '44px';
-	// reveal only after the burn plays and the box has grown — showing it early
-	// overflows the small tile (scrollbar)
+	// panel content rises in, staggered (absolute overlays like .proj-detail are excluded)
 	const kids = [...ex.children].filter(
 		(k) =>
 			!(k as HTMLElement).hasAttribute('data-three') &&
 			(k as HTMLElement).style.position !== 'absolute'
 	) as HTMLElement[];
-	kids.forEach((k) => {
-		k.style.opacity = '0';
-		k.style.transform = 'translateY(-10px)';
-	});
-	setTimeout(() => {
-		if (!board.dataset.open) return;
-		ex.style.display = 'flex';
-		requestAnimationFrame(() => {
-			ex.style.transition = 'opacity .3s ease';
-			ex.style.opacity = '1';
-			kids.forEach((k, i) => {
-				k.style.transition =
-					'opacity .4s ease ' + i * 70 + 'ms, transform .45s cubic-bezier(.2,.7,.3,1) ' + i * 70 + 'ms';
-				k.style.opacity = '1';
-				k.style.transform = 'translateY(0)';
-			});
-			// company cards carry their own staggered rise
-			ex.querySelectorAll('[data-exp-card]').forEach((c) => {
-				(c as HTMLElement).style.opacity = '1';
-				(c as HTMLElement).style.transform = 'translateY(0)';
-			});
+	if (!reduced)
+		kids.forEach((k) => {
+			k.style.opacity = '0';
+			k.style.transform = 'translateY(8px)';
 		});
-	}, 1950);
 
-	// recede siblings — burn up like paper catching from the fire, then return once open
-	burnSibs(board, tile);
-	fireRing(clone);
-	tile.style.visibility = 'hidden';
-
-	// Freeze every scene for the whole open animation, not just from settle: the burn +
-	// grow run on the compositor while the GPU would otherwise keep rendering all board
-	// scenes underneath, which reads as open lag on phones. The clone carries no canvases
-	// yet, so nothing inside it is affected; the panel's canvases build after settle,
-	// inside the already-frozen container.
-	freeze.container = clone;
-
-	// About + Experience: the tile's live canvas migrates into the clone — registry
-	// entries are node-keyed, so moving the element keeps its WebGL context rendering.
-	// About: the jar rides to a showcase spot and its cap pops at settle. Experience:
-	// the ocean fills the growing clone (its cloned glass overlay fades with the other
-	// collapsed-face children, so the water + sunset show clean, no wing). Both return
-	// home on close.
-	let jarHome: { parent: HTMLElement; next: Node | null; css: string } | null = null;
-	const jarCv =
-		card === 'about' || card === 'contact' || card === 'work' || card === 'experience'
-			? tile.querySelector<HTMLCanvasElement>('canvas[data-three]')
-			: null;
-	if (jarCv && card === 'experience') {
-		jarHome = {
-			parent: jarCv.parentElement as HTMLElement,
-			next: jarCv.nextSibling,
-			css: jarCv.style.cssText
-		};
-		clone.appendChild(jarCv);
-		jarCv.style.zIndex = '0';
-		jarCv.style.pointerEvents = 'none';
-		// grow on the panel's own background: a dusk gradient blown up to the full board read
-		// as a blurry stretched scene for the whole grow
-		clone.style.background = mobile
-			? '#101b21'
-			: 'radial-gradient(120% 160% at 78% 30%,#101322 0%,#0a0c16 45%,#06070d 100%)';
-		// gone before the clone starts growing at 1.4s: stretched to the full board, the tile's
-		// sun-zoomed render reads as a blurry wash
-		jarCv.style.transition = 'opacity .25s ease 1.1s';
-		void jarCv.offsetWidth;
-		jarCv.style.opacity = '0';
-	} else if (jarCv) {
-		jarHome = {
-			parent: jarCv.parentElement as HTMLElement,
-			next: jarCv.nextSibling,
-			css: jarCv.style.cssText
-		};
-		clone.appendChild(jarCv);
-		jarCv.style.zIndex = '2';
-		jarCv.style.pointerEvents = 'none';
-		jarCv.dataset.pop = '1'; // cap pops the moment the card is clicked
-		jarCv.style.transition = 'opacity .45s ease 1.05s'; // then the jar fades as the card grows
-		void jarCv.offsetWidth;
-		jarCv.style.opacity = '0';
+	// the tile's live scene rides above the panel so the jar pop / axe chop still play
+	const liveCv = tile.querySelector<HTMLCanvasElement>('canvas[data-three]');
+	let cvHome: { parent: HTMLElement; next: Node | null; css: string } | null = null;
+	const cvLayer = document.createElement('div');
+	cvLayer.setAttribute('aria-hidden', 'true');
+	cvLayer.style.cssText = face.style.cssText + ';z-index:3;pointer-events:none;background:none;border-color:transparent;box-shadow:none';
+	if (liveCv && !reduced) {
+		cvHome = { parent: liveCv.parentElement as HTMLElement, next: liveCv.nextSibling, css: liveCv.style.cssText };
+		cvLayer.appendChild(liveCv);
+		liveCv.style.pointerEvents = 'none';
+		if (card === 'experience') {
+			// the ocean simply fades with the face — the panel brings its own porthole
+			liveCv.style.transition = 'opacity .2s ease .06s';
+		} else {
+			liveCv.dataset.pop = '1'; // jar cap / envelope / axe chop
+			// fade once the beat has read: the axe needs its strike (~0.5s), the pops are quick
+			liveCv.style.transition = `opacity .25s ease ${card === 'work' ? '.55s' : '.3s'}`;
+		}
+		clone.appendChild(cvLayer);
 	}
 
-	requestAnimationFrame(() => {
-		clone.style.left = pad + 'px';
-		clone.style.top = pad + 'px';
-		clone.style.width = bw + 'px';
-		clone.style.height = bh + 'px';
-	});
-	let shutDone = false; // double-shut guard (✕ then body click) — the panel unmounts once
+	board.appendChild(clone);
+	tile.style.visibility = 'hidden';
+	// Freeze every board scene for the whole time the card is open — the loop updates
+	// only canvases inside the clone (the migrated tile scene, then the panel's).
+	freeze.container = clone;
 
-	// X only appears once the card has actually expanded. `clone.isConnected` guards a
-	// close→reopen race the DC tolerated (its loop queried the DOM, so a settled class
-	// on a detached clone was inert — our freeze store would not be). The `shutDone`
-	// guard + shut()'s clearTimeout close the 1480–1950ms race where a close during the
-	// grow animation would let this fire afterwards and re-freeze on a detached clone.
-	const settleTimer = setTimeout(() => {
-		if (shutDone) return;
-		if (board.dataset.open && clone.isConnected) {
-			close.style.opacity = '1';
-			clone.classList.add('is-settled');
-			freeze.container = clone; // the loop now updates only canvases inside the clone
-		}
-	}, 1950);
+	const sibs = siblings(board, tile);
+	const timers: ReturnType<typeof setTimeout>[] = [];
+	const later = (fn: () => void, ms: number) => timers.push(setTimeout(fn, ms));
 
-	const shut = (ev: Event) => {
-		ev.stopPropagation();
+	let shutDone = false;
+
+	// ── open ──
+	let settled = false;
+	const settle = () => {
+		if (settled || shutDone) return;
+		settled = true;
+		clone.classList.add('is-settled');
+		delete clone.dataset.holdBuild;
+		sibs.forEach((t) => {
+			t.style.animation = '';
+			t.style.opacity = '0';
+			t.style.filter = '';
+			t.querySelector(':scope > .burn-fx')?.remove();
+		});
+	};
+
+	if (reduced) {
+		clone.style.opacity = '0';
+		ex.style.opacity = '1';
+		face.style.display = 'none';
+		void clone.offsetWidth;
+		clone.style.transition = 'opacity .15s ease';
+		clone.style.opacity = '1';
+		close.style.opacity = '1';
+		sibs.forEach((t) => {
+			t.style.transition = 'opacity .15s ease';
+			t.style.opacity = '0';
+		});
+		later(settle, 160);
+	} else {
+		clone.style.clipPath = tileClip;
+		void clone.offsetWidth; // the start clip must land before the transition is armed
+		clone.style.transition = `clip-path ${OPEN_MS}ms ${EASE_DRAWER}`;
+		clone.style.clipPath = fullClip;
+		close.style.opacity = '1';
+		face.style.transition = `opacity .12s ${EASE_OUT}`;
+		face.style.opacity = '0';
+		ex.style.transition = `opacity .2s ${EASE_OUT} .15s`;
+		ex.style.opacity = '1';
+		if (liveCv) liveCv.style.opacity = '0';
+		kids.forEach((k, i) => {
+			const d = 180 + i * 40;
+			k.style.transition = `opacity .25s ${EASE_OUT} ${d}ms, transform .25s ${EASE_OUT} ${d}ms`;
+			k.style.opacity = '1';
+			k.style.transform = 'translateY(0)';
+		});
+		ex.querySelectorAll<HTMLElement>('[data-exp-card]').forEach((c) => {
+			c.style.opacity = '1';
+			c.style.transform = 'translateY(0)';
+		});
+		burnSibs(board, sibs);
+		fireRing(clone);
+		clone.addEventListener('transitionend', (ev) => {
+			if (ev.target === clone && ev.propertyName === 'clip-path') settle();
+		});
+		later(settle, OPEN_MS + 120); // transitionend can be skipped (hidden tab, starved frames)
+	}
+
+	// Focus moves into the dialog; Tab stays inside it while open.
+	ex.focus({ preventScroll: true });
+
+	// Back closes the card: a shallow history entry for the open state.
+	let pushed = false;
+	try {
+		pushState('', { card });
+		pushed = true;
+	} catch {
+		/* router not ready — the other close paths still work */
+	}
+
+	// ── close ──
+	const shut = (fromHistory = false) => {
 		if (shutDone) return;
 		shutDone = true;
-		clearTimeout(settleTimer);
-		// state flips at the close CLICK — the browser samples bar tints at interaction
+		timers.forEach(clearTimeout);
+		window.removeEventListener('keydown', onKey, true);
+		window.removeEventListener('popstate', onPop);
+		document.removeEventListener('pointerdown', onOutside, true);
+		if (pushed && !fromHistory) history.back();
+		// state flips at the close interaction — the browser samples bar tints at interaction
 		// time, so a late flip leaves the strips stuck on the open-state black
 		ui.openCard = null;
-		close.style.transition = 'opacity .08s ease';
-		close.style.opacity = '0';
-		clone.style.overflow = 'hidden';
 		clone.classList.remove('is-settled');
-		// scenes stay frozen through the shrink (same GPU-contention logic as the open);
-		// the cleanup timeout below unfreezes once the animation is done
-		ex.style.overflow = 'hidden';
-		ex.style.transition = 'opacity .18s ease';
-		ex.style.opacity = '0';
-		setTimeout(() => {
-			ex.style.display = 'none';
-		}, 180);
-		// The open transition carries a 1.4s delay; re-arm an immediate one, flush, then
-		// write the tile rect so the box shrinks home with a fade tail.
-		clone.style.transition =
-			'left .42s cubic-bezier(.6,.05,.3,1), top .42s cubic-bezier(.6,.05,.3,1), ' +
-			'width .42s cubic-bezier(.6,.05,.3,1), height .42s cubic-bezier(.6,.05,.3,1), ' +
-			'box-shadow .42s ease, opacity .22s ease .3s';
-		void clone.offsetWidth; // style flush — the new transition must land before the rect write
-		clone.style.left = tile.offsetLeft + 'px';
-		clone.style.top = tile.offsetTop + 'px';
-		clone.style.width = tile.offsetWidth + 'px';
-		clone.style.height = tile.offsetHeight + 'px';
-		clone.style.boxShadow = '0 0 0 rgba(0,0,0,0)';
-		clone.style.opacity = '0';
-		board.querySelectorAll<HTMLElement>('[data-tile], .burn-sib').forEach((t) => {
-			// matches [data-tile] too; it must keep its shrink transition
-			if (t === clone) return;
+		close.style.transition = 'none';
+		close.style.opacity = '0';
+		ex.style.pointerEvents = 'none';
+		board.querySelectorAll('.burn-fx').forEach((f) => f.remove());
+
+		const done = reduced ? 160 : CLOSE_MS + 40;
+		if (reduced) {
+			clone.style.transition = 'opacity .15s ease';
+			clone.style.opacity = '0';
+		} else {
+			ex.style.transition = `opacity .12s ${EASE_OUT}`;
+			ex.style.opacity = '0';
+			if (liveCv) liveCv.style.transition = 'none';
+			const shrinkFrom = getComputedStyle(clone).clipPath; // retarget from wherever it is
+			clone.style.transition = 'none';
+			clone.style.clipPath = shrinkFrom === 'none' ? fullClip : shrinkFrom;
+			void clone.offsetWidth;
+			clone.style.transition = `clip-path ${CLOSE_MS}ms ${EASE_OUT}, opacity .1s ease 180ms`;
+			clone.style.clipPath = tileClip;
+			clone.style.opacity = '0';
+		}
+
+		// siblings return in the order they burned
+		sibs.forEach((t, i) => {
 			t.style.animation = '';
 			t.style.filter = '';
-			t.style.transform = '';
 			t.classList.remove('burn-sib');
-			// fade the burned siblings back in rather than snapping
 			t.style.transition = 'none';
-			t.style.opacity = '0';
+			t.style.opacity = getComputedStyle(t).opacity;
 			requestAnimationFrame(() => {
-				t.style.transition = 'opacity .55s ease ' + (120 + Math.random() * 260) + 'ms';
+				t.style.transition = `opacity .2s ${EASE_OUT} ${reduced ? 0 : i * 25}ms`;
 				t.style.opacity = '1';
 				setTimeout(() => {
 					t.style.transition = '';
 					t.style.opacity = '';
-				}, 1050);
+				}, 260 + i * 25);
 			});
 		});
-		board.querySelectorAll('.burn-fx').forEach((f) => f.remove());
+
+		// the tile reappears under the fading clone
 		setTimeout(() => {
-			freeze.container = null; // unfreeze — every canvas updates again
-			if (jarCv && jarHome) {
-				delete jarCv.dataset.pop;
-				jarCv.style.cssText = jarHome.css;
-				jarHome.parent.insertBefore(jarCv, jarHome.next);
+			if (liveCv && cvHome) {
+				delete liveCv.dataset.pop;
+				liveCv.style.cssText = cvHome.css;
+				cvHome.parent.insertBefore(liveCv, cvHome.next);
 			}
-			unmount(panel);
-			clone.remove();
-			// fade the tile's own content back in instead of popping
-			// jarCv excluded: owns its visibility via the jarHome restore; fading it clobbers a fast reopen
-			const tkids = [...tile.children].filter(
-				(k) => !(k as HTMLElement).hasAttribute('data-expand') && k !== jarCv
-			) as HTMLElement[];
+			const tkids = [...tile.children] as HTMLElement[];
 			tkids.forEach((k) => {
 				k.style.transition = 'none';
 				k.style.opacity = '0';
 			});
 			tile.style.visibility = '';
 			requestAnimationFrame(() => {
-				tkids.forEach((k, i) => {
-					k.style.transition = 'opacity .45s ease ' + i * 90 + 'ms';
+				tkids.forEach((k) => {
+					k.style.transition = `opacity .15s ${EASE_OUT}`;
 					k.style.opacity = '1';
 				});
-				setTimeout(
-					() =>
-						tkids.forEach((k) => {
-							k.style.transition = '';
-							k.style.opacity = '';
-						}),
-					450 + tkids.length * 90 + 60
-				);
+				setTimeout(() => {
+					tkids.forEach((k) => {
+						k.style.transition = '';
+						k.style.opacity = '';
+					});
+				}, 200);
 			});
+		}, reduced ? 0 : 160);
+
+		setTimeout(() => {
+			freeze.container = null; // unfreeze — every canvas updates again
+			unmount(panel);
+			clone.remove();
 			delete board.dataset.open;
-		}, 560); // after the .42s shrink + fade tail
+			tile.focus({ preventScroll: true });
+		}, done);
 	};
-	close.addEventListener('click', shut);
-	// click-to-exit everywhere except interactive bits (Work keeps its rows; links/copy
-	// stay usable). The DC keys Work off [data-proj-row] presence (L3559); the card check
-	// keeps Work ✕-only even while its rows are hidden under the proj-detail overlay.
-	// Armed only at settle, like the close button: an earlier click would cancel the
-	// open mid-burn.
+
+	const onKey = (ev: KeyboardEvent) => {
+		if (ev.key === 'Escape') {
+			ev.preventDefault();
+			shut();
+			return;
+		}
+		if (ev.key !== 'Tab') return;
+		const items = [...clone.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+			(el) => el.offsetParent !== null && !el.closest('[aria-hidden="true"]')
+		);
+		if (!items.length) return;
+		const first = items[0],
+			last = items[items.length - 1];
+		const active = document.activeElement as HTMLElement | null;
+		if (ev.shiftKey && (active === first || active === ex || !clone.contains(active))) {
+			ev.preventDefault();
+			last.focus();
+		} else if (!ev.shiftKey && (active === last || !clone.contains(active))) {
+			ev.preventDefault();
+			first.focus();
+		}
+	};
+	const onPop = () => shut(true);
+	// a press outside the board's open card (the page margin around the board) closes it
+	const onOutside = (ev: PointerEvent) => {
+		if (!clone.contains(ev.target as Node)) shut();
+	};
+
+	close.addEventListener('click', (ev) => {
+		ev.stopPropagation();
+		shut();
+	});
+	window.addEventListener('keydown', onKey, true);
+	window.addEventListener('popstate', onPop);
+	// armed after this click finishes dispatching, so the opening click can't close it
+	requestAnimationFrame(() => {
+		if (!shutDone) document.addEventListener('pointerdown', onOutside, true);
+	});
+	// click-to-exit on the panel itself, except interactive bits (Work keeps its rows;
+	// links/copy stay usable). Work is ✕-only even while its rows sit under the detail overlay.
+	// Armed at settle (~0.42s): the second click of a double-click lands on the clone and must
+	// not close the card it just opened. ✕, Escape and Back work from the first frame.
 	clone.addEventListener('click', (ev) => {
-		if (!clone.classList.contains('is-settled')) return;
+		if (!settled) return;
 		if (
 			(ev.target as HTMLElement).closest(
-				'a,[data-copy-email],[data-proj-row],.proj-detail,.clone-close'
+				'a,button,[data-copy-email],[data-proj-row],.proj-detail,.clone-close'
 			)
 		)
 			return;
 		if (card === 'work' || clone.querySelector('[data-proj-row]')) return;
-		shut(ev);
+		shut();
 	});
 }

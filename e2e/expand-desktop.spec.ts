@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { DESKTOP, board, settleIntro, collectErrors } from './helpers';
 
-// Desktop expand flow on the Experience card: click → mid-burn → settled → close →
-// board restored. Every phase is asserted on its observable (classes, data-open,
-// element visibility) rather than sleeps.
+// Desktop expand flow on the Experience card: click → open (controls live at once) →
+// settled (~0.42s) → close → board restored. Every phase is asserted on its observable
+// (classes, data-open, element visibility) rather than sleeps.
 
-test('experience: click → burn → settle (✕ + is-settled) → close → board restored', async ({
+test('experience: click → open → settle → close → board restored', async ({
 	page
 }) => {
 	await page.setViewportSize(DESKTOP);
@@ -16,22 +16,22 @@ test('experience: click → burn → settle (✕ + is-settled) → close → boa
 	const b = board(page, 'desktop');
 	await b.locator('[data-card="experience"]').click();
 
-	// Immediately: open flag set (ui.openCard mirror), clone mounted, NOT yet settled.
+	// Immediately: open flag set (ui.openCard mirror), clone mounted, the panel is a
+	// focused dialog, the ✕ is a real button, and siblings carry the burn class.
 	await expect(b).toHaveAttribute('data-open', '1');
 	const clone = b.locator('.is-clone');
 	await expect(clone).toBeVisible();
-	expect(await b.locator('.is-clone.is-settled').count()).toBe(0);
+	const dialog = clone.locator('[data-expand][role="dialog"]');
+	await expect(dialog).toHaveAttribute('aria-modal', 'true');
+	await expect(dialog).toBeFocused();
+	const close = clone.getByRole('button', { name: /close experience/i });
+	await expect(close).toBeVisible();
+	expect(await b.locator('.burn-sib').count()).toBeGreaterThan(0);
 
-	// Mid-burn: ✕ exists but is hidden; siblings carry the burn class + traveling front.
-	const close = clone.locator('.clone-close');
-	await expect(close).toHaveCSS('opacity', '0');
-	await expect(b.locator('.burn-sib').first()).toBeVisible({ timeout: 2_500 });
-	expect(await b.locator('.burn-fx').count()).toBeGreaterThan(0);
-
-	// Settled (~1.95s): settle class on, ✕ faded in, expanded panel mounted + revealed.
+	// Settled: settle class on, ✕ fully shown, expanded panel revealed.
 	await expect(b.locator('.is-clone.is-settled')).toBeVisible({ timeout: 8_000 });
 	await expect(close).toHaveCSS('opacity', '1');
-	await expect(clone.locator('[data-expand]')).toBeVisible();
+	await expect(dialog).toBeVisible();
 	await expect(b).toHaveAttribute('data-open', '1'); // still open across the settle
 
 	// Close via ✕: clone removed, open flag cleared, every tile restored.
@@ -58,23 +58,15 @@ test('rapid double-click never yields two clones (open guard)', async ({ page })
 	const b = board(page, 'desktop');
 	await b.locator('[data-card="experience"]').dblclick();
 
-	// The dataset.open guard in expandCard() must prevent a second clone. (Exactly-one
-	// can't be pinned here: the double-click close bug below tears the clone down after
-	// ~470ms, so under load the single clone may already be gone by the first sample.)
+	// The dataset.open guard in expandCard() must prevent a second clone.
 	for (let i = 0; i < 6; i++) {
 		expect(await b.locator('.is-clone').count()).toBeLessThanOrEqual(1);
 		await page.waitForTimeout(150);
 	}
 });
 
-// BUG (app, UX — do not fix here): the clone's click-to-exit listener is armed
-// immediately in expandCard() (src/lib/interactions/expand.ts, the
-// `clone.addEventListener('click', …)` block at the end of expandCard), while the ✕
-// only activates at settle. The second click of a double-click therefore lands on the
-// freshly-mounted clone and runs shut() mid-burn: the card opens and instantly cancels,
-// never reaching .is-settled. Repro: desktop, dblclick [data-card="experience"] →
-// data-open clears ~470ms later, settle never happens. Expected: a double-clicked card
-// still settles open (body-click close should arm at settle, like the ✕).
+// The second click of a double-click lands on the freshly mounted clone; body-click close
+// is armed only at settle, so the card must still settle open.
 test('double-clicked card still settles open', async ({ page }) => {
 	await page.setViewportSize(DESKTOP);
 	await page.goto('/');
@@ -87,27 +79,55 @@ test('double-clicked card still settles open', async ({ page }) => {
 	await expect(b).toHaveAttribute('data-open', '1');
 });
 
-// Born-red guard — kills the "settle timer 1950 → 500" survivor. The rest of the suite
-// only bounds settle at ≤ 8s, so a settle that fires *too early* (the card snaps open
-// before the burn reads) slipped through. Pin the lower bound: at 1.2s — long after a
-// 500ms early-settle would have latched, comfortably before the real ~1.95s settle — the
-// clone must NOT yet be settled and the ✕ must still be hidden.
-test('settle waits out the burn — not settled at 1.2s, settles only after', async ({ page }) => {
+// Close is usable from the first frame: Escape mid-open closes the card and focus
+// returns to the tile that opened it.
+test('Escape closes mid-open and returns focus to the tile', async ({ page }) => {
 	await page.setViewportSize(DESKTOP);
 	await page.goto('/');
 	await settleIntro(page);
 
 	const b = board(page, 'desktop');
-	await b.locator('[data-card="experience"]').click();
+	const tile = b.locator('[data-card="about"]');
+	await tile.click();
 	await expect(b).toHaveAttribute('data-open', '1');
+	await page.keyboard.press('Escape');
 
-	await page.waitForTimeout(1_200);
-	expect(
-		await b.locator('.is-clone.is-settled').count(),
-		'settle must not fire during the burn — only after ~1.95s'
-	).toBe(0);
-	await expect(b.locator('.clone-close')).toHaveCSS('opacity', '0');
+	await expect(b.locator('.is-clone')).toHaveCount(0, { timeout: 5_000 });
+	await expect(b).not.toHaveAttribute('data-open', '1');
+	await expect(tile).toBeFocused();
+});
 
-	// …but it does settle once the burn completes.
+// Back closes an open card (shallow history entry) without leaving the page.
+test('browser Back closes the open card and stays on the page', async ({ page }) => {
+	await page.setViewportSize(DESKTOP);
+	await page.goto('/');
+	await settleIntro(page);
+	const url = page.url();
+
+	const b = board(page, 'desktop');
+	await b.locator('[data-card="contact"]').click();
 	await expect(b.locator('.is-clone.is-settled')).toBeVisible({ timeout: 8_000 });
+	await page.goBack();
+
+	await expect(b.locator('.is-clone')).toHaveCount(0, { timeout: 5_000 });
+	await expect(b).not.toHaveAttribute('data-open', '1');
+	expect(page.url()).toBe(url);
+});
+
+// Tab stays inside the open dialog.
+test('focus is trapped inside the open card', async ({ page }) => {
+	await page.setViewportSize(DESKTOP);
+	await page.goto('/');
+	await settleIntro(page);
+
+	const b = board(page, 'desktop');
+	await b.locator('[data-card="contact"]').click();
+	await expect(b.locator('.is-clone.is-settled')).toBeVisible({ timeout: 8_000 });
+	for (let i = 0; i < 12; i++) {
+		await page.keyboard.press('Tab');
+		expect(
+			await page.evaluate(() => !!document.activeElement?.closest('.is-clone')),
+			`focus escaped the dialog after ${i + 1} Tab presses`
+		).toBe(true);
+	}
 });

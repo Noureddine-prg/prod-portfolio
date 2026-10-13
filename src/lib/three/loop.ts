@@ -141,7 +141,10 @@ function startLoop(T: typeof THREE): LoopState {
 		// stalled the page for ~1.5s at load. Spread out, each costs a single frame.
 		const pending = cvs.filter((cv) => {
 			const m = getMeta(cv);
-			return !getEntry(cv) && !m.failed && !m.pending && isOn(cv);
+			// [data-hold-build]: an opening card defers its panel's scenes until it settles
+			return (
+				!getEntry(cv) && !m.failed && !m.pending && isOn(cv) && !cv.closest('[data-hold-build]')
+			);
 		});
 		pending.sort((a, b) => +(b.dataset.scene === 'campfire') - +(a.dataset.scene === 'campfire'));
 		for (const cv of pending) {

@@ -5,7 +5,10 @@ declare global {
 		// interface Error {}
 		// interface Locals {}
 		// interface PageData {}
-		// interface PageState {}
+		interface PageState {
+			/** Open expanded card — a shallow history entry so Back closes it. */
+			card?: string;
+		}
 		// interface Platform {}
 	}
 }
