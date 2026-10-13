@@ -27,10 +27,11 @@ const CTX_CAP = 9; // max simultaneously live WebGL contexts
 const MARGIN = '250px'; // IntersectionObserver root margin (matches DC onScreen slack)
 
 // Per-kind auto-spin applied to the inner `spin` group (DC L3092). Our six kinds all sit
-// still (0); the default covers any future kind.
+// still (0); the default covers any future kind. axelog sways inside its builder instead:
+// an unbounded spin turned its chop arc edge-on to the camera depending on click time.
 const SPINS: Record<string, number> = {
 	campfire: 0,
-	axelog: 0.004,
+	axelog: 0,
 	calm: 0,
 	envelope: 0,
 	flame: 0,

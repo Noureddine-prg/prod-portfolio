@@ -1,6 +1,8 @@
-// axelog — splitting stump with axe (DC L2243-2269). Static build: ALL motion is the
-// loop's spins table (auto-spin 0.004 + pointer-tilt 0.8), so this returns null.
+// axelog — splitting stump with axe (DC L2243-2269). The axe rests bit-down in the stump;
+// the view sways gently about the authored angle (no loop spin) and a Work click plays a
+// chop that always reads from that angle.
 
+import type * as THREE from 'three';
 import type { SceneCtx, UpdateFn } from '../types';
 
 export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
@@ -27,8 +29,7 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	ring.position.y = -0.144;
 	spin.add(ring);
 
-	// axe: head at group origin, handle rising from it — group sits above the rim so the
-	// blade visibly bites the edge
+	// axe: head at group origin, handle rising from it, bit at local +x
 	const axe = new T.Group();
 	const handle = new T.Mesh(
 		new T.CylinderGeometry(0.055, 0.078, 1.5, 7),
@@ -47,8 +48,20 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	);
 	head.position.set(0.12, 0, 0);
 	axe.add(head);
+	// bit: a wedge that flares along the handle axis and thins to a cutting edge at +x
+	const BIT_LEN = 0.26;
+	const BIT_X = 0.43; // centre; the cutting edge sits at BIT_X + BIT_LEN / 2
+	const bitGeo = new T.BoxGeometry(BIT_LEN, 0.34, 0.13);
+	const bp = bitGeo.attributes.position as THREE.BufferAttribute;
+	for (let i = 0; i < bp.count; i++) {
+		if (bp.getX(i) > 0) {
+			bp.setY(i, bp.getY(i) * 1.35);
+			bp.setZ(i, bp.getZ(i) * 0.08);
+		}
+	}
+	bitGeo.computeVertexNormals();
 	const edge = new T.Mesh(
-		new T.BoxGeometry(0.2, 0.4, 0.08),
+		bitGeo,
 		new T.MeshStandardMaterial({
 			color: '#e3e6ea',
 			flatShading: true,
@@ -56,12 +69,23 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 			roughness: 0.25
 		})
 	);
-	edge.position.set(0.42, 0, 0);
+	edge.position.set(BIT_X, 0, 0);
 	axe.add(edge);
-	axe.rotation.z = -0.5;
-	axe.position.set(0.42, 0.02, 0);
-	// pendulum pivot at the handle grip: the head hangs below and sweeps a down-arc, blade
-	// edge leading (plus a bite tilt at impact), instead of dropping head-first
+
+	// Rest pose: the bit points down into the stump (handle rising up-right at ~36°) and
+	// the whole cutting edge, flare included, sits just below the top face.
+	const AXE_RZ0 = -0.95;
+	const STUMP_TOP = stump.position.y + 0.95 / 2;
+	const tipLocal = new T.Vector3(BIT_X + BIT_LEN / 2, 0, 0);
+	const flare = new T.Vector3(0, (0.34 * 1.35) / 2, 0); // half the edge line
+	const rot = new T.Matrix4().makeRotationZ(AXE_RZ0);
+	const tipOff = tipLocal.clone().applyMatrix4(rot);
+	const flareOff = flare.clone().applyMatrix4(rot);
+	const tipWorld = new T.Vector3(-0.05, STUMP_TOP - Math.abs(flareOff.y) - 0.012, 0);
+	axe.rotation.z = AXE_RZ0;
+	axe.position.copy(tipWorld).sub(tipOff);
+
+	// swing pivot at the handle grip
 	axe.updateMatrix();
 	const grip = new T.Vector3(0, 1.47, 0).applyMatrix4(axe.matrix);
 	const swingGrp = new T.Group();
@@ -70,7 +94,8 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	swingGrp.add(axe);
 	spin.add(swingGrp);
 
-	spin.rotation.y = 0.5;
+	const VIEW_Y = 0.5;
+	spin.rotation.y = VIEW_Y;
 
 	const key = new T.DirectionalLight(0xffd6a0, 1.2);
 	key.position.set(3, 3, 2);
@@ -80,44 +105,70 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	scene.add(fill);
 	scene.add(new T.AmbientLight(0x2a2020, 0.9));
 
-	// chop-on-pop (data-pop at Work click): the axe cocks up to a horizontal-right windup, then
-	// swings a clockwise quarter-arc down into the log blade-first, and settles to the exact rest.
-	const STUMP_Y0 = -0.62;
-	const AXE_RZ0 = -0.5;
-	const COCK = 1.5; // windup angle (rad) about the grip — head up-and-back, stays in frame
-	const BITE = -0.3; // extra blade-forward tilt at impact so the sharp edge visibly leads in
+	// Chop-on-pop (data-pop at Work click): pull the bit out and raise the head (clockwise
+	// about the grip, plus a lift), hang, then strike counter-clockwise. At rest the head's
+	// path tangent equals the bit direction, so the cutting edge leads into the wood.
+	const STUMP_Y0 = stump.position.y;
+	const GRIP_Y0 = grip.y;
+	const COCK = -0.5; // windup about the grip; keeps the raised head in frame
+	const LIFT = 0.28;
+	const BITE = 0.045; // overshoot past rest at impact, decays back to the rest pose
+	const DUR = 0.85;
+	const SWAY_AMP = 0.3;
+	const SWAY_FREQ = 0.3;
+	const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
 	let popT: number | null = null;
-	let heldSpin = 0;
-	return (t) => {
+	let spinFrom = VIEW_Y;
+	let swayIn = 1; // sway weight; ramps back in after a chop so the view never jumps
+
+	return (t, dt) => {
 		const popped = ctx.canvas.dataset.pop === '1';
 		if (popped && popT == null) {
 			popT = t;
-			heldSpin = spin.rotation.y; // freeze the view for a clean, readable strike
+			spinFrom = spin.rotation.y;
 		}
 		if (!popped && popT != null) {
 			popT = null;
 			swingGrp.rotation.z = 0;
-			axe.rotation.z = AXE_RZ0;
+			swingGrp.position.y = GRIP_Y0;
 			stump.position.y = STUMP_Y0;
+			swayIn = 0;
 		}
-		if (popT == null) return;
-		const k = Math.min(1, (t - popT) / 0.9);
-		const KW = 0.4,
-			KI = 0.82; // windup apex, impact
-		// hang at the cocked apex, then ACCELERATE the head down through the arc into the bite
-		const sw =
-			k < KW
-				? Math.sin((k / KW) * (Math.PI / 2))
-				: k < KI
-					? 1 - Math.pow((k - KW) / (KI - KW), 2)
-					: 0;
-		const u = (k - KI) / (1 - KI);
-		const rec = k >= KI ? Math.sin(u * Math.PI * 3) * (1 - u) : 0; // decaying impact recoil, 0 at k=1
-		// bite tilt peaks as the edge drives in (late downswing / impact), 0 at apex and k=1
-		const bite = k < KW ? 0 : k < KI ? Math.pow((k - KW) / (KI - KW), 2) : 1 - u;
-		swingGrp.rotation.z = sw * COCK + rec * 0.04;
-		axe.rotation.z = AXE_RZ0 + BITE * bite;
-		stump.position.y = STUMP_Y0 + rec * 0.03; // impact shudder, offset from REST y
-		spin.rotation.y = heldSpin; // C: hold the auto-spin steady through the chop
+
+		if (popT == null) {
+			swayIn = Math.min(1, swayIn + dt * 0.8);
+			spin.rotation.y = VIEW_Y + Math.sin(t * SWAY_FREQ) * SWAY_AMP * swayIn;
+			return;
+		}
+
+		const k = Math.min(1, (t - popT) / DUR);
+		const KW = 0.36, // windup done
+			KH = 0.46, // hang ends, strike begins
+			KI = 0.6; // impact
+		let r: number, lift: number, shud = 0;
+		if (k < KW) {
+			const e = easeOut(k / KW);
+			r = COCK * e;
+			lift = LIFT * e;
+		} else if (k < KH) {
+			const h = (k - KW) / (KH - KW);
+			r = COCK * (1 + 0.04 * Math.sin(h * Math.PI));
+			lift = LIFT;
+		} else if (k < KI) {
+			const s = Math.pow((k - KH) / (KI - KH), 3); // accelerate into the strike
+			r = COCK * (1 - s);
+			lift = LIFT * (1 - s);
+		} else {
+			const u = (k - KI) / (1 - KI);
+			shud = Math.sin(u * Math.PI * 3) * (1 - u);
+			r = BITE * Math.pow(1 - u, 2) + shud * 0.02;
+			lift = 0;
+		}
+		const dip = Math.abs(shud) * 0.025; // impact shudder; the axe rides it so the bit stays buried
+		swingGrp.rotation.z = r;
+		swingGrp.position.y = GRIP_Y0 + lift - dip;
+		stump.position.y = STUMP_Y0 - dip;
+		// ease the view to the authored angle during the windup so the arc always reads
+		spin.rotation.y = spinFrom + (VIEW_Y - spinFrom) * easeOut(Math.min(1, k / KW));
 	};
 }
