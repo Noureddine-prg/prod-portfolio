@@ -25,6 +25,19 @@ body {
 	padding: 0;
 }
 
+/* The mobile column has a minimum design height, so on short screens (landscape phones, short
+ * windows) it can be taller than the viewport — let the page scroll there rather than strand the
+ * lower tiles. Where it fits, nothing scrolls. expand.ts locks this while a card is open. */
+@media (max-width: 899px) {
+	html {
+		overflow-x: hidden;
+		overflow-y: auto;
+	}
+	html body {
+		overflow: visible;
+	}
+}
+
 body {
 	overflow: hidden;
 	overscroll-behavior: none;
@@ -182,6 +195,13 @@ body {
 	to {
 		transform: translateX(0);
 	}
+}
+
+/* An expanded panel with more content below fades out at its bottom edge until scrolled to
+ * the end (class toggled by expand.ts). Not while a project detail overlay is open. */
+[data-expand].has-more:not(:has(.proj-detail)) {
+	-webkit-mask-image: linear-gradient(#000 calc(100% - 40px), transparent);
+	mask-image: linear-gradient(#000 calc(100% - 40px), transparent);
 }
 
 /* Card clone close button; bg/color/z-index come inline from expand.ts. */

@@ -22,6 +22,15 @@
 	let shown = $state(false);
 	onMount(() => requestAnimationFrame(() => (shown = true)));
 
+	// Every project opens at its top: the overlay is pinned to the panel's scroll origin, so a
+	// panel scrolled down to reach a row would otherwise hide the detail's header.
+	let root: HTMLDivElement | undefined = $state();
+	$effect(() => {
+		void p;
+		root?.scrollTo({ top: 0 });
+		root?.closest<HTMLElement>('[data-expand]')?.scrollTo({ top: 0 });
+	});
+
 	const ink = '#241d18',
 		mid = '#5e544a',
 		dim = '#8a7d6e';
@@ -49,6 +58,7 @@
 {/snippet}
 
 <div
+	bind:this={root}
 	class="proj-detail"
 	style="position:absolute;inset:0;z-index:3;background:#cbbfa8;padding:{narrow
 		? '20px'
@@ -57,12 +67,13 @@
 		: '14px'};overflow:auto;opacity:{shown ? 1 : 0};transition:opacity .35s ease .1s"
 >
 	<!-- back / counter / prev-next; on narrow the row moves to the bottom of the card,
-	     so the ✕-clearance padding only applies in the desktop top position (DC L3314) -->
+	     so the ✕-clearance padding only applies in the desktop top position (DC L3314); there it
+	     sticks to the bottom edge so back / prev / next stay reachable on short screens -->
 	<div
 		style="display:flex;justify-content:space-between;align-items:center;padding-right:{narrow
 			? 0
 			: 48}px;order:{narrow ? 99 : 0};{narrow
-			? 'margin-top:auto;padding-top:14px;border-top:1px solid rgba(36,29,24,.16)'
+			? 'margin-top:auto;padding:14px 0 20px;margin-bottom:-20px;border-top:1px solid rgba(36,29,24,.16);position:sticky;bottom:-20px;background:#cbbfa8;z-index:1'
 			: ''}"
 	>
 		<span

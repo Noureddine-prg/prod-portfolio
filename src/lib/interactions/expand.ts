@@ -233,6 +233,15 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	const pad = parseFloat(cs.paddingTop) || 16; // DC wireBoards L3425
 	const bw = board.clientWidth - pad * 2;
 	const bh = Math.max(board.clientHeight, board.scrollHeight) - pad * 2;
+	// The card covers the part of the board that is on screen: on short screens the mobile
+	// column is taller than the viewport and the page scrolls (board coords = screen / scale).
+	const scale = board.getBoundingClientRect().width / board.offsetWidth || 1;
+	const visTop = Math.max(0, -board.getBoundingClientRect().top / scale);
+	const ch = Math.min(bh, innerHeight / scale - pad * 2);
+	const ct = Math.min(pad + bh - ch, Math.max(pad, visTop + pad));
+	const rootEl = document.documentElement;
+	const prevOverflow = rootEl.style.overflow;
+	rootEl.style.overflow = 'hidden'; // no page scroll behind an open card
 	const mobile = board.clientWidth < 500;
 	const tileStyle = tile.getAttribute('style') || '';
 	const radius = getComputedStyle(tile).borderTopLeftRadius || '9px';
@@ -241,7 +250,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		tw = tile.offsetWidth,
 		th = tile.offsetHeight;
 	// clip-path inset that shows only the tile's rect of the board-sized clone
-	const tileClip = `inset(${tt - pad}px ${pad + bw - (tl + tw)}px ${pad + bh - (tt + th)}px ${tl - pad}px round ${radius})`;
+	const tileClip = `inset(${tt - ct}px ${pad + bw - (tl + tw)}px ${ct + ch - (tt + th)}px ${tl - pad}px round ${radius})`;
 	const fullClip = `inset(0px 0px 0px 0px round ${radius})`;
 
 	// clone: board-sized from the first frame, carrying the tile's surface
@@ -252,9 +261,9 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		position: 'absolute',
 		margin: '0',
 		left: pad + 'px',
-		top: pad + 'px',
+		top: ct + 'px',
 		width: bw + 'px',
-		height: bh + 'px',
+		height: ch + 'px',
 		gridColumn: 'auto',
 		gridRow: 'auto',
 		flex: 'none',
@@ -273,7 +282,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		position: 'absolute',
 		margin: '0',
 		left: tl - pad + 'px',
-		top: tt - pad + 'px',
+		top: tt - ct + 'px',
 		width: tw + 'px',
 		height: th + 'px',
 		gridColumn: 'auto',
@@ -369,6 +378,11 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		settled = true;
 		clone.classList.add('is-settled');
 		delete clone.dataset.holdBuild;
+		// hint that a scrolling panel has more below; cleared once scrolled to the end
+		const more = () =>
+			ex.classList.toggle('has-more', ex.scrollTop + ex.clientHeight < ex.scrollHeight - 4);
+		ex.addEventListener('scroll', more, { passive: true });
+		more();
 		sibs.forEach((t) => {
 			t.style.animation = '';
 			t.style.opacity = '0';
@@ -516,6 +530,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 			unmount(panel);
 			clone.remove();
 			delete board.dataset.open;
+			rootEl.style.overflow = prevOverflow;
 			tile.focus({ preventScroll: true });
 		}, done);
 	};

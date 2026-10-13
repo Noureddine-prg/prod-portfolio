@@ -16,6 +16,8 @@
 	import { ui } from '$lib/stores/ui.svelte';
 
 	const DESK_H = 620;
+	const DESK_W_MIN = 900; // the DC board width — narrower and the card panels overflow
+	const DESK_H_MAX = 800;
 	const MOB_W = 390;
 
 	// Layout truth for scaling: clientWidth of <main>, bound on mount. innerWidth can
@@ -30,13 +32,19 @@
 	let ready = $state(false);
 	const vhEff = $derived(svh && svh < vh ? svh : vh);
 
-	// The board's design width tracks the viewport aspect (clamped to keep the grid sane
-	// on extreme aspect ratios), so the fr-based grid itself spans edge-to-edge; a uniform
-	// scale then fills the height with no distortion.
-	const deskW = $derived(
-		mw && vhEff ? Math.round(Math.min(1400, Math.max(760, (DESK_H * mw) / vhEff))) : 900
+	// The board's design box tracks the viewport aspect so the fr-based grid spans edge-to-edge
+	// and a uniform scale fills the window with no distortion. Wide windows keep the 620 design
+	// height and widen; squarer ones (4:3, 5:4, small 16:10) grow TALLER rather than narrower
+	// than 900 — a narrow box squeezed the expanded cards' text until it overflowed.
+	const deskH = $derived(
+		mw && vhEff
+			? Math.round(Math.min(DESK_H_MAX, Math.max(DESK_H, (DESK_W_MIN * vhEff) / mw)))
+			: DESK_H
 	);
-	const deskScale = $derived(mw ? Math.max(0.5, Math.min(vhEff / DESK_H, mw / deskW)) : 1);
+	const deskW = $derived(
+		mw && vhEff ? Math.round(Math.min(1400, Math.max(760, (deskH * mw) / vhEff))) : 900
+	);
+	const deskScale = $derived(mw ? Math.max(0.5, Math.min(vhEff / deskH, mw / deskW)) : 1);
 	// Mobile scales by width, capped so tablet widths get a centered column instead of a
 	// blown-up phone layout. Design height tracks the device (clamped so tiles never
 	// compress below usable) and the column form-fits the screen with no scrolling.
@@ -74,10 +82,10 @@
 	<div class="shade" class:on={ui.openCard !== null}></div>
 	<div
 		class="stage stage--desktop"
-		style="width:{deskW * deskScale}px;height:{DESK_H * deskScale}px"
+		style="width:{deskW * deskScale}px;height:{deskH * deskScale}px"
 	>
 		<div class="fit" style="transform:scale({deskScale})">
-			<BoardDesktop designW={deskW} />
+			<BoardDesktop designW={deskW} designH={deskH} />
 		</div>
 	</div>
 	<div class="stage stage--mobile" style="width:{MOB_W * mobScale}px;height:{mobH * mobScale}px">

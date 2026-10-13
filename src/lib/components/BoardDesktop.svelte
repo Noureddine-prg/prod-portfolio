@@ -1,5 +1,6 @@
 <script lang="ts">
 	// Desktop board — DC id="11a", 900×620 grid (1.72fr 1fr 1fr × 4 rows), gap 14, pad 16.
+	// The design box flexes with the window aspect (see +page.svelte); rows share the height.
 	import HeroTile from './tiles/HeroTile.svelte';
 	import ExperienceTile from './tiles/ExperienceTile.svelte';
 	import AboutTile from './tiles/AboutTile.svelte';
@@ -14,8 +15,10 @@
 	interface Props {
 		/** Design-space width; tracks the viewport aspect so the grid spans edge-to-edge. */
 		designW?: number;
+		/** Design-space height; 620 on wide windows, taller on squarer ones. */
+		designH?: number;
 	}
-	let { designW = 900 }: Props = $props();
+	let { designW = 900, designH = 620 }: Props = $props();
 
 	let boardEl: HTMLDivElement;
 	function onopen(card: CardId) {
@@ -28,7 +31,7 @@
 	bind:this={boardEl}
 	class="board"
 	data-board
-	style="position:relative;width:{designW}px;height:620px;background:transparent;padding:16px;grid-template-columns:1.72fr 1fr 1fr;grid-template-rows:repeat(4,minmax(0,1fr));grid-auto-rows:0"
+	style="position:relative;width:{designW}px;height:{designH}px;background:transparent;padding:16px;grid-template-columns:1.72fr 1fr 1fr;grid-template-rows:repeat(4,minmax(0,1fr));grid-auto-rows:0"
 >
 	<AshLayer variant="desktop" />
 
