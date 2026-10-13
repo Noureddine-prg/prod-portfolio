@@ -4,7 +4,7 @@
 :root {
 	--c-text-cream: #efe9e6;
 	--f-body: 'Archivo', system-ui, sans-serif;
-	--c-field: #101a2c; /* root/backing navy — also paints the browser bar strips (mirror app.html theme-color) */
+	--c-field: #100d0c; /* root/backing ember charcoal — also paints the browser bar strips (mirror app.html theme-color) */
 }
 
 * {

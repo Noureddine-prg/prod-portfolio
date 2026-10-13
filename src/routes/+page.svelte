@@ -49,7 +49,7 @@
 		boardScale.value = mw >= 900 ? deskScale : mobScale;
 	});
 
-	// Bar tints: root/body/theme-color stay static navy; the .shade supplies the black while
+	// Bar tints: root/body/theme-color stay static charcoal; the .shade supplies the black while
 	// a card is open and hides INSTANTLY on close (see CSS) so the interaction-time sample on
 	// iOS never catches black. No scroll-jiggle — a programmatic scroll doesn't count as a
 	// resample trigger on that browser.
@@ -107,7 +107,11 @@
 		left: 0;
 		width: 100vw;
 		height: calc(100lvh + 140px); /* overshoot under the bottom toolbar */
-		background: var(--c-field);
+		/* firelight spilling from the hero side, a faint cool night tint opposite */
+		background:
+			radial-gradient(55% 75% at 22% 62%, rgba(214, 110, 52, 0.13), transparent 72%),
+			radial-gradient(80% 60% at 80% 0%, rgba(40, 52, 70, 0.18), transparent 70%),
+			var(--c-field);
 		z-index: 0;
 		pointer-events: none;
 	}
@@ -122,7 +126,7 @@
 		height: calc(100lvh + 140px);
 		background: #060505;
 		opacity: 0;
-		/* CLOSE hides instantly so the first paint after the close click is navy edge-to-edge */
+		/* CLOSE hides instantly so the first paint after the close click is charcoal edge-to-edge */
 		transition: opacity 0s;
 		z-index: 1;
 		pointer-events: none;
@@ -160,6 +164,12 @@
 	@media (max-width: 899px) {
 		main {
 			align-items: flex-start;
+		}
+		/* the hero sits at the top of the mobile column */
+		.field {
+			background:
+				radial-gradient(90% 45% at 50% 18%, rgba(214, 110, 52, 0.13), transparent 72%),
+				var(--c-field);
 		}
 		.stage--desktop {
 			display: none;
