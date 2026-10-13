@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>Noureddine Sidi Abed — Software Engineer</title>
+	<title>Noureddine Sidi Abed — Software Developer</title>
 </svelte:head>
 
 {@render children()}

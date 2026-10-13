@@ -107,7 +107,7 @@ function runIntro(board: HTMLElement, reduced: boolean): void {
 	const title = el(
 		'div',
 		"font:500 clamp(10px,1.05vw,15px)/1 'JetBrains Mono',monospace;letter-spacing:.34em;color:#e9a066;text-transform:uppercase;white-space:nowrap;padding-left:.34em",
-		'Software Engineer'
+		'Software Developer'
 	);
 	nameClip.appendChild(name);
 	titleClip.appendChild(title);

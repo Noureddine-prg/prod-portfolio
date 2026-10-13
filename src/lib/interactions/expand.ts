@@ -343,11 +343,14 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		clone.appendChild(jarCv);
 		jarCv.style.zIndex = '0';
 		jarCv.style.pointerEvents = 'none';
-		// dusk-sky backing under the full-bleed ocean; the ocean fades across the grow
-		// (below) so the gradient reads as sky instead of a stretched scene until settle
-		clone.style.background =
-			'linear-gradient(180deg,#140e12 0%,#241428 40%,#43223a 62%,#7a3b3a 78%,#c8703f 90%,#e2954f 100%)';
-		jarCv.style.transition = 'opacity .5s ease 1.25s';
+		// grow on the panel's own background: a dusk gradient blown up to the full board read
+		// as a blurry stretched scene for the whole grow
+		clone.style.background = mobile
+			? '#101b21'
+			: 'radial-gradient(120% 160% at 78% 30%,#101322 0%,#0a0c16 45%,#06070d 100%)';
+		// gone before the clone starts growing at 1.4s: stretched to the full board, the tile's
+		// sun-zoomed render reads as a blurry wash
+		jarCv.style.transition = 'opacity .25s ease 1.1s';
 		void jarCv.offsetWidth;
 		jarCv.style.opacity = '0';
 	} else if (jarCv) {

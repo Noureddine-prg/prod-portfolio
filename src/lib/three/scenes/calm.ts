@@ -1,8 +1,7 @@
-// Calm/ocean scene — sunset sea + sky + islands, verbatim port of the DC `kind === 'calm'`.
+// Calm/ocean scene — sunset sea + sky, verbatim port of the DC `kind === 'calm'`.
 // Everything parents to `scene`. spins.calm = 0.
 /* eslint-disable prefer-template */
 
-import type * as THREE from 'three';
 import type { SceneCtx, UpdateFn } from '../types';
 
 export function buildCalm(ctx: SceneCtx): UpdateFn {
@@ -231,108 +230,6 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 		cam.position.y += variants.sunzoom ? 1.4 : 0.35;
 		cam.updateProjectionMatrix();
 	}
-	// near islands passing below the plane — flat blobs on the water, fast parallax for height cue
-	const mkIsleTop = function (seed: number) {
-		const icv = document.createElement('canvas');
-		icv.width = icv.height = 128;
-		const g = icv.getContext('2d')!;
-		const rnd = function (n: number) {
-			const v = Math.sin(seed * 12.9898 + n * 78.233) * 43758.5453;
-			return v - Math.floor(v);
-		};
-		const cx = 64,
-			cy = 64;
-		const pts: [number, number][] = [];
-		for (let a = 0; a < 12; a++) {
-			const ang = (a / 12) * Math.PI * 2;
-			const r = 26 + rnd(a) * 26;
-			pts.push([cx + Math.cos(ang) * r * 1.4, cy + Math.sin(ang) * r * 0.8]);
-		}
-		g.beginPath();
-		g.moveTo(pts[0][0], pts[0][1]);
-		for (let a = 1; a <= 12; a++) {
-			const p = pts[a % 12],
-				q = pts[(a + 1) % 12];
-			g.quadraticCurveTo(p[0], p[1], (p[0] + q[0]) / 2, (p[1] + q[1]) / 2);
-		}
-		g.closePath();
-		g.fillStyle = '#b9a077';
-		g.fill(); // sand rim
-		g.save();
-		g.clip();
-		g.translate(cx, cy);
-		g.scale(0.82, 0.78);
-		g.translate(-cx, -cy);
-		g.beginPath();
-		g.moveTo(pts[0][0], pts[0][1]);
-		for (let a = 1; a <= 12; a++) {
-			const p = pts[a % 12],
-				q = pts[(a + 1) % 12];
-			g.quadraticCurveTo(p[0], p[1], (p[0] + q[0]) / 2, (p[1] + q[1]) / 2);
-		}
-		g.closePath();
-		g.fillStyle = '#39412c';
-		g.fill(); // vegetation
-		for (let b = 0; b < 5; b++) {
-			g.fillStyle = b % 2 ? '#2e3524' : '#465033';
-			g.beginPath();
-			g.ellipse(
-				30 + rnd(b + 20) * 68,
-				40 + rnd(b + 30) * 48,
-				7 + rnd(b + 40) * 10,
-				5 + rnd(b + 50) * 7,
-				rnd(b) * 3,
-				0,
-				Math.PI * 2
-			);
-			g.fill();
-		}
-		g.restore();
-		return new T.CanvasTexture(icv);
-	};
-	interface NearIsle {
-		s: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
-		lane: number;
-		far: number;
-		next: number;
-		active: boolean;
-		v: number;
-		preseed?: number | null;
-		born?: number;
-	}
-	const nearIsles: NearIsle[] = [];
-	// 28 islands in fixed depth lanes, biased toward the foreground with a few mid-water
-	for (let i = 0; i < 28; i++) {
-		const m = new T.Mesh(
-			new T.PlaneGeometry(1, 0.7),
-			new T.MeshBasicMaterial({
-				map: mkIsleTop(i * 3 + 1),
-				transparent: true,
-				opacity: 0,
-				depthWrite: false
-			})
-		);
-		m.rotation.x = -Math.PI / 2;
-		m.visible = false;
-		scene.add(m);
-		const lane = -1.4 - Math.pow(i / 27, 1.55) * 6.4 + (rand() - 0.5) * 0.3; // dense near, sparser mid, none at the horizon
-		const far = (-lane - 1.4) / 6.4; // 0 near .. 1 mid
-		nearIsles.push({
-			s: m,
-			lane: lane,
-			far: far,
-			next: rand() * 18,
-			active: false,
-			v: (0.022 - far * 0.014) * (0.85 + rand() * 0.3)
-		});
-	}
-	// seed ~half already mid-scene so the water starts populated
-	nearIsles.forEach(function (o, i) {
-		if (i % 2 === 0) {
-			o.preseed = -10 + rand() * 18;
-		}
-	});
-
 	return function (t: number) {
 		seaMat.uniforms.uTime.value = t;
 		if (t > shoot2.next) {
@@ -355,37 +252,5 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 
 		stM.opacity = 0.45 + Math.sin(t * 0.8) * 0.15;
 		core2.material.opacity = 0.9 + Math.sin(t * 1.3) * 0.08;
-		nearIsles.forEach(function (o) {
-			if (!o.active) {
-				if (t > o.next) {
-					o.active = true;
-					o.s.visible = true;
-					o.born = t;
-					const sx = o.preseed != null ? o.preseed : -10 - rand() * 3;
-					o.preseed = null;
-					o.s.position.set(sx, 0.05, o.lane);
-					const sc = (1.5 - o.far * 1.1) * (0.8 + rand() * 0.5);
-					o.s.scale.set(sc, sc * (0.75 + rand() * 0.4), 1);
-					o.s.material.opacity = 0;
-				}
-				return;
-			}
-			o.s.position.x += o.v;
-			// sit on the curved sea: apply the same earth-curvature drop as the water shader
-			const cf2 = Math.min(1, Math.max(0, (-o.s.position.z + 2) / 13));
-			o.s.position.y = 0.05 - Math.pow(o.s.position.x / 14, 2) * 1.7 * (cf2 * cf2 * (3 - 2 * cf2));
-			const edge2 = Math.min(
-				1,
-				(o.s.position.x + 10) / 2.2,
-				(10 - o.s.position.x) / 2.2,
-				(t - (o.born || 0)) / 2.5
-			);
-			o.s.material.opacity = Math.max(0, Math.min(0.92 - o.far * 0.35, edge2));
-			if (o.s.position.x > 10) {
-				o.active = false;
-				o.s.visible = false;
-				o.next = t + 2 + rand() * 10;
-			}
-		});
 	};
 }

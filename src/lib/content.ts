@@ -5,7 +5,7 @@
 
 export const profile = {
 	name: 'Noureddine Sidi Abed',
-	title: 'SOFTWARE ENGINEER',
+	title: 'SOFTWARE DEVELOPER',
 	location: 'New York, NY',
 	email: 'nour.sidiabed@gmail.com',
 	timezone: 'New York · GMT-5'
@@ -21,7 +21,7 @@ export const links = {
 export const hero = {
 	// name renders across two lines in the DC
 	nameLines: ['Noureddine', 'Sidi Abed'],
-	badge: 'Software engineer'
+	badge: 'Software developer'
 } as const;
 
 // ── Experience ────────────────────────────────────────────────────────────────
