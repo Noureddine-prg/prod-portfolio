@@ -17,14 +17,15 @@
 {#if mobile}
 	<EmberGlass mobile />
 	<!-- portrait hero + lockup — DC L618–626; img is absolute so the ✕-clearance padding
-	     expand.ts adds to the first non-absolute child can't shrink it -->
+	     expand.ts adds to the first non-absolute child can't shrink it. 240px (DC 190) so a
+	     real portrait's face clears the lockup. -->
 	<div
-		style="position:relative;height:190px;flex:none;border-radius:16px;overflow:hidden;border:1px solid #322a3d"
+		style="position:relative;height:240px;flex:none;border-radius:16px;overflow:hidden;border:1px solid #322a3d"
 	>
 		<img
 			src={about.portrait.src}
 			alt={about.portrait.alt}
-			style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"
+			style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 56%;display:block"
 		/>
 		<div
 			style="position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(180deg,transparent,rgba(20,16,28,.94));pointer-events:none"
@@ -111,7 +112,7 @@
 				<img
 					src={about.portrait.src}
 					alt={about.portrait.alt}
-					style="width:100%;height:100%;object-fit:cover;border-radius:12px;display:block"
+					style="width:100%;height:100%;object-fit:cover;object-position:50% 40%;border-radius:12px;display:block"
 				/>
 			</div>
 		</div>

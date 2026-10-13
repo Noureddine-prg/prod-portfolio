@@ -141,9 +141,12 @@
 {/if}
 
 <style>
-	/* desktop ledger row — grid + hover ported from the DC's inline style + style-hover
-	   attribute (L369); hover props live here so the rule can actually win */
+	/* desktop ledger row — grid ported from the DC (L369). Hover is a wash that sweeps through
+	   the row behind the text (in from the left, out to the right) plus a left accent bar —
+	   transform-only, so nothing in the row moves or reflows. */
 	.prow {
+		position: relative;
+		isolation: isolate;
 		display: grid;
 		grid-template-columns: 34px 1fr 160px 118px 44px;
 		gap: 16px;
@@ -152,15 +155,49 @@
 		border-bottom: 1px solid rgba(36, 29, 24, 0.16);
 		border-radius: 4px;
 		cursor: pointer;
-		transition:
-			background 0.3s,
-			padding 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
-			box-shadow 0.35s;
+		outline: none;
 	}
-	.prow:hover {
-		background: rgba(42, 13, 6, 0.12);
-		padding-left: 14px;
-		box-shadow: inset 2px 0 0 #2a0d06;
+	.prow::before,
+	.prow::after {
+		content: '';
+		position: absolute;
+		pointer-events: none;
+		z-index: -1;
+	}
+	.prow::before {
+		inset: 0;
+		border-radius: 4px;
+		background: rgba(42, 13, 6, 0.1);
+		transform: scaleX(0);
+		transform-origin: right;
+		transition: transform 0.32s cubic-bezier(0.23, 1, 0.32, 1);
+	}
+	.prow::after {
+		left: 0;
+		top: 9px;
+		bottom: 9px;
+		width: 2px;
+		border-radius: 1px;
+		background: #2a0d06;
+		transform: scaleY(0);
+		transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.prow:hover::before {
+			transform: scaleX(1);
+			transform-origin: left;
+		}
+		.prow:hover::after {
+			transform: scaleY(1);
+			transition-delay: 0.06s;
+		}
+	}
+	.prow:focus-visible::before {
+		transform: scaleX(1);
+		transform-origin: left;
+	}
+	.prow:focus-visible::after {
+		transform: scaleY(1);
 	}
 	/* mobile row — DC 11b L668 */
 	.prowm {
@@ -169,6 +206,11 @@
 		gap: 3px;
 		padding: 9px 2px;
 		border-bottom: 1px solid rgba(36, 29, 24, 0.16);
+		border-radius: 4px;
 		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+	.prowm:active {
+		background: rgba(42, 13, 6, 0.08);
 	}
 </style>
