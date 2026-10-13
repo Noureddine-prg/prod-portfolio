@@ -1853,6 +1853,38 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		spin.add(ms);
 		mists.push({ s: ms, m: mm, ph: i * 2.4 });
 	}
+	// --- moonlit canopy haze: faint cool layers BETWEEN the tree rows (depth-tested, so nearer
+	// boughs stay dark against them) — separates the upper canopy into depth without lighting it ---
+	const hazeTex = new T.CanvasTexture(
+		mkCanvas(128, 128, function (g, w, h) {
+			const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+			gr.addColorStop(0, 'rgba(255,255,255,1)');
+			gr.addColorStop(0.45, 'rgba(255,255,255,.45)');
+			gr.addColorStop(1, 'rgba(255,255,255,0)');
+			g.fillStyle = gr;
+			g.fillRect(0, 0, w, h);
+		})
+	);
+	const hazeLayers: [number, number, number, number, number, number][] = [
+		// x, y, z, scaleX, scaleY, opacity — nearer layers fainter
+		[-0.9, 3.6, -3.6, 7.5, 3.2, 0.045],
+		[0.6, 4.4, -6.4, 10, 4, 0.06],
+		[-1.8, 5.2, -9.5, 13, 5, 0.07]
+	];
+	(lite ? hazeLayers.slice(1) : hazeLayers).forEach(function (hl) {
+		const hm = new T.SpriteMaterial({
+			map: hazeTex,
+			color: 0x8ea4c6,
+			transparent: true,
+			opacity: hl[5] * (0.45 + todP.moon * 1.3),
+			fog: false,
+			depthWrite: false
+		});
+		const hs = new T.Sprite(hm);
+		hs.position.set(hl[0], hl[1], hl[2]);
+		hs.scale.set(hl[3], hl[4], 1);
+		spin.add(hs);
+	});
 	// --- falling leaves ---
 	const leaves: {
 		m: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
