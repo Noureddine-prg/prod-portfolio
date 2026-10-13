@@ -103,7 +103,7 @@ export const about = {
 		'Forward-deployed engineer — embedded with the teams who have the problem, shipping the tooling that solves it.',
 	body: "I work where engineering meets the people who need it — scoping ambiguous problems alongside research and operations teams, then owning the solution from first spec to production. Lately that means agentic evaluation pipelines on Gemini at Google, Llama training-data systems at Meta, and embedded delivery for the NYC Mayor's Office.",
 	availabilityLine: 'Available for full-time roles · New York or remote',
-	lockup: ['Software', 'Engineer'],
+	lockup: ['Software', 'Developer'],
 	portrait: { src: '/portrait-placeholder.svg', alt: 'Portrait of Noureddine Sidi Abed' },
 	skillGroups: [
 		{
