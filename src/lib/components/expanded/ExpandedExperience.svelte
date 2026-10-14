@@ -89,14 +89,14 @@
 {:else}
 	<SpaceNightBg />
 	<div style="position:relative;display:flex;justify-content:space-between;align-items:center">
-		<span style="display:inline-flex;align-items:center;gap:12px"
-			><span
-				style="font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#efe9e6;text-transform:uppercase"
-				>Experience</span
+		<div style="display:inline-flex;align-items:center;gap:12px"
+			><h2
+				style="margin:0;font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#efe9e6;text-transform:uppercase"
+				>Experience</h2
 			><span
 				style="font:400 var(--t-meta) 'JetBrains Mono',monospace;line-height:1;color:var(--c-meta);align-self:center;margin-top:2px"
 				>&mdash; The journey so far</span
-			></span
+			></div
 		>
 		<ResumeButton />
 	</div>

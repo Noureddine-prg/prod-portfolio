@@ -30,7 +30,7 @@
 </script>
 
 <div
-	style="{placement};position:relative;border-radius:11px;overflow:hidden;background:#0a0c12;border:1px solid #2a2424"
+	style="{placement};position:relative;border-radius:11px;overflow:hidden;background:#0a0c12;border:1px solid #2a2424;container-type:inline-size"
 >
 	<ThreeCanvas kind="campfire" lite={mobile} style="width:100%;height:100%;display:block" />
 
@@ -48,7 +48,8 @@
 			target="_blank"
 			rel="noreferrer"
 			aria-label="Resume (PDF)"
-			style="display:flex;align-items:center;gap:7px;height:{iconSize}px;padding:0 {mobile
+			class="hero-btn hero-resume"
+			style="flex:none;display:flex;align-items:center;justify-content:center;gap:7px;min-width:{iconSize}px;height:{iconSize}px;padding:0 {mobile
 				? 10
 				: 13}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow};font:600 12px 'Archivo',sans-serif;color:#fff"
 		>
@@ -65,14 +66,16 @@
 					points="14 2 14 8 20 8"
 				></polyline><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"
 				></line></svg
-			>Resume
+			><span class="hero-resume-label">Resume</span>
 		</a>
 		<a
 			href={links.linkedin}
 			target="_blank"
 			rel="noreferrer"
 			title="LinkedIn"
-			style="display:flex;align-items:center;justify-content:center;width:{iconSize}px;height:{iconSize}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow}"
+			aria-label="LinkedIn"
+			class="hero-btn"
+			style="flex:none;display:flex;align-items:center;justify-content:center;width:{iconSize}px;height:{iconSize}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow}"
 		>
 			<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"
 				><path
@@ -85,7 +88,9 @@
 			target="_blank"
 			rel="noreferrer"
 			title="GitHub"
-			style="display:flex;align-items:center;justify-content:center;width:{iconSize}px;height:{iconSize}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow}"
+			aria-label="GitHub"
+			class="hero-btn"
+			style="flex:none;display:flex;align-items:center;justify-content:center;width:{iconSize}px;height:{iconSize}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow}"
 		>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"
 				><path
@@ -98,11 +103,35 @@
 	<div
 		style="position:absolute;{nameAnchor};display:flex;justify-content:space-between;align-items:flex-end"
 	>
-		<div
-			style="font:400 {nameFont}px/{nameLH} 'Archivo Black',sans-serif;letter-spacing:-.01em;color:#f2ede2;text-shadow:0 2px 20px rgba(0,0,0,.6),0 0 22px rgba(255,170,90,.22);text-transform:uppercase"
+		<h1
+			style="margin:0;font:400 {nameFont}px/{nameLH} 'Archivo Black',sans-serif;letter-spacing:-.01em;color:#f2ede2;text-shadow:0 2px 20px rgba(0,0,0,.6),0 0 22px rgba(255,170,90,.22);text-transform:uppercase"
 		>
 			{#if mobile}<span style="white-space:nowrap">{hero.nameLines.join(' ')}</span
 				>{:else}{hero.nameLines[0]}<br />{hero.nameLines[1]}{/if}
-		</div>
+		</h1>
 	</div>
 </div>
+
+<style>
+	/* the 28px mobile buttons keep their look but take a 44px-tall touch target (sideways the
+	   hit area only reaches into half the gap, so neighbours never overlap) */
+	.hero-btn {
+		position: relative;
+	}
+	.hero-btn::after {
+		content: '';
+		position: absolute;
+		inset: -8px -3px;
+	}
+	/* squarer windows (4:3, 5:4) narrow the hero below the badge + buttons row: the Resume
+	   button drops to its icon (its accessible name stays "Resume (PDF)") rather than the
+	   icon buttons being crushed */
+	@container (max-width: 416px) {
+		.hero-resume {
+			padding: 0 !important;
+		}
+		.hero-resume-label {
+			display: none;
+		}
+	}
+</style>

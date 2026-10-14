@@ -15,10 +15,9 @@
 	}
 	let { mobile = false, placement = '', onopen = () => {} }: Props = $props();
 
-	const pad = 14;
-	const headFont = $derived(mobile ? 12 : 13);
-	const nameFont = 12;
-	const roleFont = 11;
+	// desktop: the taller middle row gives the role list room to read at body sizes
+	const nameFont = $derived(mobile ? 12 : 13);
+	const roleFont = $derived(mobile ? 11 : 12);
 	// logo chips run a little wider than tall so the NYC wordmark clears the type floor
 	const logoW = $derived(mobile ? 30 : 28);
 	const logoH = $derived(mobile ? 22 : 24);
@@ -37,11 +36,13 @@
 	data-card="experience"
 	role="button"
 	tabindex="0"
+	aria-label={experience.header}
+	aria-haspopup="dialog"
 	onclick={onopen}
 	onkeydown={(e) => activateOnKey(e, onopen)}
 	style="{placement};background:{mobile ? '#0a0c12' : 'rgba(24,19,15,.72)'};border:1px solid {mobile
 		? '#2a2424'
-		: '#2e2520'};border-radius:9px;padding:{pad}px;display:flex;flex-direction:column;justify-content:{mobile ? 'space-between' : 'flex-start'};gap:{mobile ? 6 : 18}px"
+		: '#2e2520'};border-radius:9px;padding:var(--tile-pad);display:flex;flex-direction:column;justify-content:{mobile ? 'space-between' : 'flex-start'};gap:{mobile ? 6 : 18}px"
 >
 	{#if mobile}
 		<ThreeCanvas
@@ -66,7 +67,7 @@
 
 	<div style="position:relative;display:flex;justify-content:space-between;align-items:baseline">
 		<span
-			style="font:400 {headFont}px 'Archivo Black',sans-serif;letter-spacing:.03em;color:#efe9e6;text-transform:uppercase{mobile
+			style="font:400 var(--t-tile-head) 'Archivo Black',sans-serif;letter-spacing:.03em;color:#efe9e6;text-transform:uppercase{mobile
 				? ';text-shadow:0 1px 6px rgba(0,0,0,.45)'
 				: ''}"
 			>{experience.header}</span

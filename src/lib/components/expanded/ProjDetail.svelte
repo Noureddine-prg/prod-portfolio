@@ -21,7 +21,12 @@
 
 	// fade-in .35s ease .1s, as the DC's freshly-appended detail did (L3307–3309)
 	let shown = $state(false);
-	onMount(() => requestAnimationFrame(() => (shown = true)));
+	// focus moves into the detail (the row that opened it is hidden underneath)
+	let backBtn: HTMLButtonElement | undefined = $state();
+	onMount(() => {
+		backBtn?.focus({ preventScroll: true });
+		requestAnimationFrame(() => (shown = true));
+	});
 
 	// Every project opens at its top: the overlay is pinned to the panel's scroll origin, so a
 	// panel scrolled down to reach a row would otherwise hide the detail's header.
@@ -85,44 +90,44 @@
 			? 'margin-top:auto;padding:14px 0 20px;margin-bottom:-20px;border-top:1px solid rgba(220,226,240,0.1);position:sticky;bottom:-20px;background:#0b0d15;z-index:1'
 			: ''}"
 	>
-		<span
+		<button
+			type="button"
+			bind:this={backBtn}
 			data-pd-back
-			role="button"
-			tabindex="0"
+			class="pd-btn"
 			onclick={() => (ui.workDetail = null)}
-			onkeydown={(e) => e.key === 'Enter' && (ui.workDetail = null)}
-			style="cursor:pointer;display:inline-flex;align-items:center;gap:.45em;font:500 {narrow
+			style="gap:.45em;min-height:{narrow ? 44 : 28}px;font:500 {narrow
 				? 12
-				: 11}px 'JetBrains Mono',monospace;color:{ink}"><Icon name="arrow-left" />all builds</span
+				: 11}px 'JetBrains Mono',monospace;color:{ink}"><Icon name="arrow-left" />all builds</button
 		>
 		<span style="display:flex;gap:16px;align-items:center;white-space:nowrap">
 			<span
 				style="font:400 {meta}px 'JetBrains Mono',monospace;color:{dim};font-variant-numeric:tabular-nums"
 				>0{idx + 1} / 0{n}</span
 			>
-			<span
+			<button
+				type="button"
 				data-pd-prev
-				role="button"
-				tabindex="0"
+				class="pd-btn"
 				onclick={() => nav(-1)}
-				onkeydown={(e) => e.key === 'Enter' && nav(-1)}
 				aria-label="Previous project"
-				style="cursor:pointer;display:inline-flex;font-size:{narrow ? 15 : 13}px;color:{ink};padding:{narrow ? '10px 14px' : '4px 6px'}"
-				><Icon name="arrow-left" /></span
+				style="justify-content:center;font-size:{narrow ? 15 : 13}px;color:{ink};min-width:{narrow
+					? 44
+					: 28}px;min-height:{narrow ? 44 : 28}px"><Icon name="arrow-left" /></button
 			>
-			<span
+			<button
+				type="button"
 				data-pd-next
-				role="button"
-				tabindex="0"
+				class="pd-btn"
 				onclick={() => nav(1)}
-				onkeydown={(e) => e.key === 'Enter' && nav(1)}
 				aria-label="Next project"
-				style="cursor:pointer;display:inline-flex;font-size:{narrow ? 15 : 13}px;color:{ink};padding:{narrow ? '10px 14px' : '4px 6px'}"
-				><Icon name="arrow-right" /></span
+				style="justify-content:center;font-size:{narrow ? 15 : 13}px;color:{ink};min-width:{narrow
+					? 44
+					: 28}px;min-height:{narrow ? 44 : 28}px"><Icon name="arrow-right" /></button
 			>
 		</span>
 	</div>
-	<span style="font:500 {narrow ? 19 : 26}px 'Cormorant Garamond',serif;color:{ink}">{p.name}</span>
+	<h3 style="margin:0;font:500 {narrow ? 19 : 26}px 'Cormorant Garamond',serif;color:{ink}">{p.name}</h3>
 	<span style="font:400 {meta}px/1.45 'JetBrains Mono',monospace;color:{mid};margin-top:-6px"
 		>{p.tech} &middot; {p.org} &middot; {p.year}</span
 	>
@@ -151,3 +156,16 @@
 		{@render cs('Outcome', p.outcome)}
 	</div>
 </div>
+
+<style>
+	.pd-btn {
+		display: inline-flex;
+		align-items: center;
+		padding: 0 6px;
+		margin: 0 -6px;
+		background: none;
+		border: 0;
+		border-radius: 6px;
+		cursor: pointer;
+	}
+</style>

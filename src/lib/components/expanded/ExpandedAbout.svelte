@@ -57,9 +57,9 @@
 		<div
 			style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,12,10,.55),transparent 28%,transparent 62%,#18130f);pointer-events:none"
 		></div>
-		<span
-			style="position:absolute;left:20px;top:20px;font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#f1ebe4;text-transform:uppercase"
-			>{about.header}</span
+		<h2
+			style="margin:0;position:absolute;left:20px;top:20px;font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#f1ebe4;text-transform:uppercase"
+			>{about.header}</h2
 		>
 	</div>
 	<div style="position:relative;display:flex;flex-direction:column;gap:16px">
@@ -103,9 +103,9 @@
 	<div
 		style="position:relative;display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"
 	>
-		<span
-			style="font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#efe9e6;text-transform:uppercase"
-			>{about.header}</span
+		<h2
+			style="margin:0;font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#efe9e6;text-transform:uppercase"
+			>{about.header}</h2
 		>
 	</div>
 	<div style="position:relative;flex:1;min-height:0;display:flex;gap:44px">

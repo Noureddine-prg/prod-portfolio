@@ -1,7 +1,9 @@
 <script lang="ts">
 	// Desktop board — DC id="11a" frame (900×620, gap 14, pad 16), rework layout: the hero
 	// column is unchanged, Work runs the full height on the right as a project list, and the
-	// middle column stacks About, Experience (two rows, room for every role), Contact.
+	// middle column stacks About, Experience (two rows, room for every role), Contact. The
+	// outer rows run taller (1.15 : .85) so About and Contact have room for their scenes and
+	// Experience is sized to its role list rather than holding a dead band.
 	// The design box flexes with the window aspect (see +page.svelte); rows share the height.
 	import HeroTile from './tiles/HeroTile.svelte';
 	import ExperienceTile from './tiles/ExperienceTile.svelte';
@@ -38,7 +40,7 @@
 	bind:this={boardEl}
 	class="board"
 	data-board
-	style="position:relative;width:{designW}px;height:{designH}px;background:transparent;padding:16px;grid-template-columns:1.72fr 1fr 1.1fr;grid-template-rows:repeat(4,minmax(0,1fr));grid-auto-rows:0"
+	style="position:relative;width:{designW}px;height:{designH}px;background:transparent;padding:16px;grid-template-columns:1.72fr 1fr 1.1fr;grid-template-rows:1.15fr .85fr .85fr 1.15fr;grid-auto-rows:0"
 >
 	<!-- one sky behind every tile: it shows through the see-through middle column and the
 	     gutters, and the Experience panel draws the same stars (SpaceNightBg) -->

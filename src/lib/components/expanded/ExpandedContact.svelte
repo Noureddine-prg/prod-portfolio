@@ -119,9 +119,12 @@
 		>
 		<div style="display:flex;gap:8px">
 			{#each contact.socialsMobile as s (s)}
-				<span
-					style="flex:1;display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:10px;background:#211b1b;border:1px solid #2a2424;font:500 12px 'JetBrains Mono',monospace;color:#efe9e6"
-					>{s}&nbsp;<span style="display:inline-flex;color:#d86a52"><Icon name="arrow-up-right" /></span></span
+				<a
+					href={s === 'GitHub' ? links.github : links.linkedin}
+					target="_blank"
+					rel="noreferrer"
+					style="flex:1;display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:10px;background:#211b1b;border:1px solid #2a2424;font:500 12px 'JetBrains Mono',monospace;color:#efe9e6;text-decoration:none"
+					>{s}&nbsp;<span style="display:inline-flex;color:#d86a52"><Icon name="arrow-up-right" /></span></a
 				>
 			{/each}
 		</div>

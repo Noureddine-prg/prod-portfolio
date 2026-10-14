@@ -8,7 +8,7 @@ export const profile = {
 	title: 'SOFTWARE DEVELOPER',
 	location: 'New York, NY',
 	email: 'nour.sidiabed@gmail.com',
-	timezone: 'New York · GMT-5'
+	timezone: 'New York · ET'
 } as const;
 
 export const links = {

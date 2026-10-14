@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { activateOnKey } from '$lib/util/a11y';
 	// Work expanded panel — parchment ledger, mounted into the clone by expand.ts. Rows open
 	// the ProjDetail overlay via ui.workDetail; body-click close stays disabled for Work in expand.ts.
 	import { onDestroy } from 'svelte';
@@ -27,9 +28,11 @@
 	}
 
 	let wasOpen = false; // skip the restore branch on first run (reveal owns opacity then)
+	let lastId: string | null = null; // its row gets focus back on "all builds"
 	$effect(() => {
 		if (detailOpen) {
 			wasOpen = true;
+			lastId = ui.workDetail;
 			listEls.forEach((k) => {
 				k.style.transition = 'opacity .3s ease';
 				k.style.opacity = '0';
@@ -44,6 +47,7 @@
 				k.style.visibility = '';
 				requestAnimationFrame(() => (k.style.opacity = '1'));
 			});
+			listEls.find((k) => k.dataset.projRow === lastId)?.focus({ preventScroll: true });
 		}
 	});
 
@@ -58,21 +62,21 @@
 		use:listEl
 		style="display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap;margin-bottom:10px"
 	>
-		<span
-			style="font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
-			>Work &middot; 06 builds</span
+		<h2
+			style="margin:0;font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
+			>Work &middot; 06 builds</h2
 		>
 		<span style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:var(--c-meta)">2024 &mdash; now</span>
 	</div>
 	{#each work.projects as p, i (p.id)}
 		<div
 			class="prowm"
-			data-proj-row
+			data-proj-row={p.id}
 			role="button"
 			tabindex="0"
 			use:listEl
 			onclick={() => (ui.workDetail = p.id)}
-			onkeydown={(e) => e.key === 'Enter' && (ui.workDetail = p.id)}
+			onkeydown={(e) => activateOnKey(e, () => (ui.workDetail = p.id))}
 			style={i === work.projects.length - 1 ? 'border-bottom:none' : ''}
 		>
 			<span style="font:500 var(--t-item) 'Cormorant Garamond',serif;color:#ece5da;font-variant-numeric:lining-nums tabular-nums"
@@ -89,9 +93,9 @@
 		use:listEl
 		style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px"
 	>
-		<span
-			style="font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
-			>Work &middot; 06 builds</span
+		<h2
+			style="margin:0;font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
+			>Work &middot; 06 builds</h2
 		>
 		<span style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:var(--c-meta)">2024 &mdash; now</span>
 	</div>
@@ -106,12 +110,12 @@
 	{#each work.projects as p (p.id)}
 		<div
 			class="prow"
-			data-proj-row
+			data-proj-row={p.id}
 			role="button"
 			tabindex="0"
 			use:listEl
 			onclick={() => (ui.workDetail = p.id)}
-			onkeydown={(e) => e.key === 'Enter' && (ui.workDetail = p.id)}
+			onkeydown={(e) => activateOnKey(e, () => (ui.workDetail = p.id))}
 		>
 			<span style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:#7c8294;font-variant-numeric:lining-nums tabular-nums">{p.number}</span>
 			<span
