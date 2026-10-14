@@ -58,7 +58,7 @@
 			nowing
 			sunzoom
 			lite
-			style="position:absolute;left:0;bottom:0;width:100%;height:24%;display:block;pointer-events:none;filter:brightness(.55) saturate(.7);-webkit-mask-image:linear-gradient(180deg,transparent,#000 55%);mask-image:linear-gradient(180deg,transparent,#000 55%)"
+			style="position:absolute;left:0;bottom:0;width:100%;height:24%;display:block;pointer-events:none;filter:brightness(var(--sea-b,.55)) saturate(var(--sea-s,.7));transition:filter .6s ease;-webkit-mask-image:linear-gradient(180deg,transparent,#000 55%);mask-image:linear-gradient(180deg,transparent,#000 55%)"
 		/>
 	{/if}
 
@@ -109,3 +109,17 @@
 		{/each}
 	</div>
 </div>
+
+<style>
+	/* hover (rework): the dimmed dusk strip warms back toward its sunset */
+	@media (hover: hover) and (pointer: fine) {
+		.tile:hover {
+			--sea-b: 0.85;
+			--sea-s: 1.05;
+		}
+	}
+	.tile:focus-visible {
+		--sea-b: 0.85;
+		--sea-s: 1.05;
+	}
+</style>

@@ -49,10 +49,10 @@ export function buildEnvelope(ctx: SceneCtx): UpdateFn | null {
 	tri([[-W, -H], [W, -H], [0, -0.06]], paper, 0.065);
 	tri([[-W, H], [-W, -H], [-0.10, 0]], paper, 0.055);
 	tri([[W, H], [W, -H], [0.10, 0]], paper, 0.055);
-	const seal = new T.Mesh(
-		new T.CylinderGeometry(0.17, 0.19, 0.07, 9),
-		new T.MeshStandardMaterial({ color: 0xc85a44, roughness: 0.55, flatShading: true })
-	);
+	const sealM = new T.MeshStandardMaterial({ color: 0xc85a44, roughness: 0.55, flatShading: true });
+	const seal = new T.Mesh(new T.CylinderGeometry(0.17, 0.19, 0.07, 9), sealM);
+	sealM.emissive.setHex(0xff6a2a);
+	sealM.emissiveIntensity = 0;
 	seal.rotation.x = Math.PI / 2;
 	seal.position.set(0, 0, 0.15);
 	const sealGrp = new T.Group();
@@ -194,8 +194,13 @@ export function buildEnvelope(ctx: SceneCtx): UpdateFn | null {
 	grp.add(fireP);
 	// seal pop + flap open: expand.ts sets data-pop at click; resets when cleared
 	let popT: number | null = null;
-	return (t) => {
+	// hover (rework, not in the DC): data-hover eases `hv` in/out — the flap lifts a little and
+	// the seal warms. Pop wins: hv eases out while popped, riding on top of the swing.
+	let hv = 0;
+	return (t, dt) => {
 		const popped = ctx.canvas.dataset.pop === '1';
+		const hoverOn = !popped && ctx.canvas.dataset.hover === '1';
+		hv += ((hoverOn ? 1 : 0) - hv) * (1 - Math.exp(-dt / 0.2));
 		if (popped && popT == null) popT = t;
 		if (!popped && popT != null) {
 			popT = null;
@@ -210,8 +215,11 @@ export function buildEnvelope(ctx: SceneCtx): UpdateFn | null {
 			sealGrp.position.z = e * 1.0;
 			sealGrp.position.y = -e * 0.55 + hop;
 			sealGrp.rotation.x = e * 2.4;
-			flapPivot.rotation.x = -e * 2.1;
+			flapPivot.rotation.x = -e * 2.1 - hv * 0.3;
+		} else {
+			flapPivot.rotation.x = -hv * 0.3;
 		}
+		sealM.emissiveIntensity = hv * (0.55 + Math.sin(t * 3.1) * 0.08);
 		grp.position.y = Math.sin(t * 0.5) * 0.09;
 		grp.rotation.y = Math.sin(t * 0.23) * 0.3;
 		grp.rotation.z = Math.sin(t * 0.31) * 0.05;

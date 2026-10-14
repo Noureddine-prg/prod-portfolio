@@ -351,6 +351,8 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	cvLayer.style.cssText = face.style.cssText + ';z-index:3;pointer-events:none;background:none;border-color:transparent;box-shadow:none';
 	if (liveCv && !reduced) {
 		cvHome = { parent: liveCv.parentElement as HTMLElement, next: liveCv.nextSibling, css: liveCv.style.cssText };
+		// pin the hover-warmed filter (ExperienceTile's --sea-* vars stay behind on the tile)
+		liveCv.style.filter = getComputedStyle(liveCv).filter;
 		cvLayer.appendChild(liveCv);
 		liveCv.style.pointerEvents = 'none';
 		if (card === 'experience') {

@@ -132,8 +132,17 @@ export function buildJar(ctx: SceneCtx): UpdateFn | null {
 	// cap pop-off: expand.ts sets data-pop on the canvas at card settle; the lid springs
 	// up with a tilt and drifts aside, and resets when the flag clears (card closed)
 	let popT: number | null = null;
-	return (t) => {
+	// hover (rework, not in the DC): data-hover eases `hv` in/out — the lid lifts a touch and
+	// the flies brighten and quicken. Pop wins: hv eases out while popped, its lift riding on
+	// top of the pop so the hand-off never snaps. `ft` is the flies' clock; equals t at hv=0.
+	let hv = 0;
+	let ft: number | null = null;
+	return (t, dt) => {
 		const popped = ctx.canvas.dataset.pop === '1';
+		const hoverOn = !popped && ctx.canvas.dataset.hover === '1';
+		hv += ((hoverOn ? 1 : 0) - hv) * (1 - Math.exp(-dt / 0.2));
+		ft = ft == null ? t : ft + dt * (1 + 0.6 * hv);
+		const lift = hv * 0.09;
 		if (popped && popT == null) popT = t;
 		if (!popped && popT != null) {
 			popT = null;
@@ -145,21 +154,27 @@ export function buildJar(ctx: SceneCtx): UpdateFn | null {
 			const k = Math.min(1, (t - popT) / 0.8);
 			const e = 1 - Math.pow(1 - k, 3);
 			const hop = Math.sin(Math.min(1, k * 1.15) * Math.PI) * 0.34;
-			lidA.position.y = 21 * V + e * 0.32 + hop;
-			lidB.position.y = 22.5 * V + e * 0.32 + hop;
+			lidA.position.y = 21 * V + e * 0.32 + hop + lift;
+			lidB.position.y = 22.5 * V + e * 0.32 + hop + lift;
 			lidA.position.x = lidB.position.x = e * 0.85;
-			lidA.rotation.z = lidB.rotation.z = -e * 1.1;
+			lidA.rotation.z = lidB.rotation.z = -e * 1.1 - hv * 0.07;
+		} else {
+			lidA.position.y = 21 * V + lift;
+			lidB.position.y = 22.5 * V + lift;
+			lidA.rotation.z = lidB.rotation.z = -hv * 0.07;
 		}
+		jarLight.intensity = 0.5 + hv * 1.1;
+		const ftt = ft;
 		flies.forEach((f) => {
-			const a = t * f.wf[0] * Math.PI * 2 + f.wo[0];
-			const rr = Math.min(f.rr + 0.012 * SF * Math.sin(t * f.wf[2] * Math.PI * 2 + f.wo[2]), 0.043 * SF);
+			const a = ftt * f.wf[0] * Math.PI * 2 + f.wo[0];
+			const rr = Math.min(f.rr + 0.012 * SF * Math.sin(ftt * f.wf[2] * Math.PI * 2 + f.wo[2]), 0.043 * SF);
 			f.m.position.set(
 				Math.cos(a) * rr,
-				f.yc + f.ry * Math.sin(t * f.wf[1] * Math.PI * 2 + f.wo[1]),
+				f.yc + f.ry * Math.sin(ftt * f.wf[1] * Math.PI * 2 + f.wo[1]),
 				Math.sin(a) * rr
 			);
-			f.m.rotation.y = f.rot + t * 0.6;
-			f.mat.emissiveIntensity = 0.3 + flick(f, t) * 4;
+			f.m.rotation.y = f.rot + ftt * 0.6;
+			f.mat.emissiveIntensity = (0.3 + flick(f, ftt) * 4) * (1 + 0.2 * hv) + hv * 0.5;
 		});
 		grp.rotation.x = Math.sin(t * 0.35) * 0.14;
 	};

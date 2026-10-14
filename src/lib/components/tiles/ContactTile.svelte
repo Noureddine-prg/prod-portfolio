@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { activateOnKey } from '$lib/util/a11y';
+	import { sceneHover } from '$lib/interactions/hover';
 	// Contact tile — clean envelope scene + header + open hint; opens via `onopen`.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import TileHint from './TileHint.svelte';
@@ -27,6 +28,7 @@
 	tabindex="0"
 	onclick={onopen}
 	onkeydown={(e) => activateOnKey(e, onopen)}
+	use:sceneHover
 	style="{placement};background:radial-gradient(90% 70% at 62% 118%,rgba(255,140,58,.16),transparent 62%),#18130f;border:1px solid #2e2520;border-radius:9px;padding:{pad}px;display:flex;flex-direction:column"
 >
 	<div style="position:relative;display:flex;justify-content:space-between;align-items:baseline">
