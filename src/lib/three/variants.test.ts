@@ -4,10 +4,10 @@ import { parseVariants } from './variants';
 describe('parseVariants', () => {
 	it('parses all flags from data-* = "1"', () => {
 		const v = parseVariants(
-			{ lite: '1', nowing: '1', sunzoom: '1', clean: '1' },
+			{ lite: '1', nowing: '1', sunzoom: '1', clean: '1', hill: '1' },
 			18.5
 		);
-		expect(v).toEqual({ lite: true, nowing: true, sunzoom: true, clean: true, hour: 18.5 });
+		expect(v).toEqual({ lite: true, nowing: true, sunzoom: true, clean: true, hill: true, hour: 18.5 });
 	});
 
 	it('treats missing / non-"1" values as false', () => {
@@ -16,6 +16,7 @@ describe('parseVariants', () => {
 		expect(v.nowing).toBe(false);
 		expect(v.sunzoom).toBe(false);
 		expect(v.clean).toBe(false);
+		expect(v.hill).toBe(false);
 		expect(v.hour).toBe(3);
 	});
 

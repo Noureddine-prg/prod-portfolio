@@ -13,6 +13,7 @@
 		nowing?: boolean;
 		sunzoom?: boolean;
 		clean?: boolean;
+		hill?: boolean;
 		class?: string;
 		style?: string;
 	}
@@ -23,6 +24,7 @@
 		nowing = false,
 		sunzoom = false,
 		clean = false,
+		hill = false,
 		class: className = '',
 		style = ''
 	}: Props = $props();
@@ -75,6 +77,7 @@
 	data-nowing={nowing ? '1' : undefined}
 	data-sunzoom={sunzoom ? '1' : undefined}
 	data-clean={clean ? '1' : undefined}
+	data-hill={hill ? '1' : undefined}
 	class={className}
 	{style}
 ></canvas>

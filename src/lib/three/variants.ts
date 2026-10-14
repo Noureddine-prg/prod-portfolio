@@ -10,6 +10,7 @@ interface VariantDataset {
 	nowing?: string;
 	sunzoom?: string;
 	clean?: string;
+	hill?: string;
 }
 
 export function parseVariants(dataset: VariantDataset, hour: number): SceneVariants {
@@ -18,6 +19,7 @@ export function parseVariants(dataset: VariantDataset, hour: number): SceneVaria
 		nowing: dataset.nowing === '1',
 		sunzoom: dataset.sunzoom === '1',
 		clean: dataset.clean === '1',
+		hill: dataset.hill === '1',
 		hour
 	};
 }

@@ -124,3 +124,94 @@ export function mkCanvas(
 	draw(cn.getContext('2d') as CanvasRenderingContext2D, w, h);
 	return cn;
 }
+
+// --- night-world primitives shared by the campfire and the axelog hilltop vignette ---
+
+export type TimeOfDay = 'night' | 'dawn' | 'dusk';
+
+/** Time-of-day palette (DC L1415 hour buckets) — fog, sky, light levels, ambient. */
+export function todPalette(hr: number) {
+	const tod: TimeOfDay = hr >= 20 || hr < 6 ? 'night' : hr < 12 ? 'dawn' : 'dusk';
+	const p = {
+		night: { bg: 0x05060a, fog: 0x0b0a0e, fd: 0.115, sky: 0x1c2a44, hemi: 0.26, moon: 0.42, fire: 1.0, ff: 1.0, amb: [0.15, 0.19, 0.27], hor: 0x232a3c, zen: 0x05070d },
+		dawn: { bg: 0x2a2233, fog: 0x2e2436, fd: 0.095, sky: 0x8a6a72, hemi: 0.65, moon: 0.2, fire: 0.6, ff: 0.25, amb: [0.34, 0.28, 0.33], hor: 0x7a5e6a, zen: 0x231c2e },
+		dusk: { bg: 0x33222a, fog: 0x3a262c, fd: 0.095, sky: 0xc8784a, hemi: 0.6, moon: 0.15, fire: 0.8, ff: 0.55, amb: [0.4, 0.29, 0.27], hor: 0x80463a, zen: 0x22161f }
+	}[tod];
+	return { tod, p };
+}
+
+/**
+ * One wind field: steady breeze + travelling gust fronts along DIR. GLSL and JS evaluate the
+ * same math. The gust schedule is a pure function of the accumulated clock, seeded by `rand`
+ * (it draws 144 values), so two scenes seeded alike gust in step.
+ */
+export function mkWind(T: typeof THREE, rand: () => number) {
+	const DIR = [0.97, 0.243];
+	const uni = {
+		uWindDir: { value: new T.Vector2(DIR[0], DIR[1]) },
+		uWindBase: { value: 1 },
+		uGustPos: { value: -50 },
+		uGustAmp: { value: 0 }
+	};
+	const GLSL = `
+              uniform vec2 uWindDir;
+              uniform float uWindBase;
+              uniform float uGustPos;
+              uniform float uGustAmp;
+              // signed distance past the front: short leading edge, long trailing tail
+              float gustAt(vec2 xz, float lag) {
+                float x = dot(xz, uWindDir) - (uGustPos - lag);
+                return uGustAmp * (x > 0.0 ? exp(-x * x * 1.2) : exp(-x * x * 0.12));
+              }
+              float breezeAt(vec2 xz, float t) {
+                return uWindBase * (0.65 + 0.35 * sin(t * 0.37 + dot(xz, uWindDir) * 0.45));
+              }`;
+	const gustAt = function (x: number, z: number, lag: number) {
+		const d = x * DIR[0] + z * DIR[1] - (uni.uGustPos.value - lag);
+		return uni.uGustAmp.value * (d > 0 ? Math.exp(-d * d * 1.2) : Math.exp(-d * d * 0.12));
+	};
+	const breezeAt = function (x: number, z: number, t: number) {
+		return uni.uWindBase.value * (0.65 + 0.35 * Math.sin(t * 0.37 + (x * DIR[0] + z * DIR[1]) * 0.45));
+	};
+	// gust schedule: seeded gaps of 8-20s, cycled
+	const GUSTS: { t0: number; amp: number; v: number }[] = [];
+	let gustPeriod = 0;
+	for (let i = 0; i < 48; i++) {
+		gustPeriod += 8 + rand() * 12;
+		GUSTS.push({ t0: gustPeriod, amp: 0.6 + rand() * 0.4, v: 3 + rand() * 1.2 });
+	}
+	gustPeriod += 10;
+	const GUST_SPAN = 22; // the front runs from s=-11 to s=+11 along DIR
+	const update = function (t: number) {
+		const c = t % gustPeriod;
+		let g = null;
+		for (let i = GUSTS.length - 1; i >= 0; i--)
+			if (GUSTS[i].t0 <= c) {
+				g = GUSTS[i];
+				break;
+			}
+		const el = g ? c - g.t0 : 1e9;
+		const dur = g ? GUST_SPAN / g.v : 0;
+		if (g && el < dur) {
+			uni.uGustPos.value = -GUST_SPAN / 2 + g.v * el;
+			uni.uGustAmp.value = g.amp * Math.pow(Math.sin((Math.PI * el) / dur), 0.5);
+		} else {
+			uni.uGustAmp.value = 0;
+			uni.uGustPos.value = -50;
+		}
+	};
+	return { DIR, uni, GLSL, gustAt, breezeAt, update };
+}
+
+const h1 = function (i: number) {
+	const v = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+	return v - Math.floor(v);
+};
+const vn1 = function (x: number) {
+	const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f);
+	return h1(i) * (1 - u) + h1(i + 1) * u;
+};
+/** The campfire's one flicker signal (value noise of the clock); a pure function of `t`. */
+export function flickAt(t: number, gustFire: number) {
+	return 0.82 + (vn1(t * 6.1) - 0.5) * 0.22 + (vn1(t * 11.3 + 17) - 0.5) * 0.14 + Math.sin(t * 5.3) * 0.03 + gustFire * 0.1;
+}

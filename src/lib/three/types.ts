@@ -19,6 +19,7 @@ export interface SceneVariants {
 	nowing: boolean; // data-nowing — calm: hide the airplane wing group
 	sunzoom: boolean; // data-sunzoom — calm: zoom onto the sun reflection column
 	clean: boolean; // data-clean — envelope: pristine (no char/embers)
+	hill: boolean; // data-hill — axelog: stand the stump on a night hilltop (Work column vignette)
 	hour: number; // resolved local hour (or ?hour= override), 0..23.999
 }
 

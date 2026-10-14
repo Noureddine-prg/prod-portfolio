@@ -4,6 +4,7 @@
 
 import type * as THREE from 'three';
 import type { SceneCtx, UpdateFn } from '../types';
+import { addHilltop } from './hilltop';
 
 export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	const { T, scene, cam, spin } = ctx;
@@ -97,13 +98,17 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	const VIEW_Y = 0.5;
 	spin.rotation.y = VIEW_Y;
 
-	const key = new T.DirectionalLight(0xffd6a0, 1.2);
-	key.position.set(3, 3, 2);
-	scene.add(key);
-	const fill = new T.DirectionalLight(0x6a86ff, 0.5);
-	fill.position.set(-2.5, 0.5, 1.5);
-	scene.add(fill);
-	scene.add(new T.AmbientLight(0x2a2020, 0.9));
+	// data-hill brings its own night lighting + camera (hilltop.ts)
+	const hillUpdate = ctx.variants.hill ? addHilltop(ctx) : null;
+	if (!hillUpdate) {
+		const key = new T.DirectionalLight(0xffd6a0, 1.2);
+		key.position.set(3, 3, 2);
+		scene.add(key);
+		const fill = new T.DirectionalLight(0x6a86ff, 0.5);
+		fill.position.set(-2.5, 0.5, 1.5);
+		scene.add(fill);
+		scene.add(new T.AmbientLight(0x2a2020, 0.9));
+	}
 
 	// Chop-on-pop (data-pop at Work click): pull the bit out and raise the head (clockwise
 	// about the grip, plus a lift), hang, then strike counter-clockwise. At rest the head's
@@ -114,14 +119,16 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	const LIFT = 0.28;
 	const BITE = 0.045; // overshoot past rest at impact, decays back to the rest pose
 	const DUR = 0.85;
-	const SWAY_AMP = 0.3;
-	const SWAY_FREQ = 0.3;
+	// rework: near-locked view — a barely-there sway (DC 0.3 rad read as spinning on the board)
+	const SWAY_AMP = 0.035;
+	const SWAY_FREQ = 0.25;
 	const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
 	let popT: number | null = null;
 	let spinFrom = VIEW_Y;
 	let swayIn = 1; // sway weight; ramps back in after a chop so the view never jumps
 
 	return (t, dt) => {
+		hillUpdate?.(t, dt);
 		const popped = ctx.canvas.dataset.pop === '1';
 		if (popped && popT == null) {
 			popT = t;

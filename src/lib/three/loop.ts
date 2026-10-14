@@ -306,7 +306,8 @@ function startLoop(T: typeof THREE): LoopState {
 				o.pivot.rotation.y = Math.sin(now * freq) * amp;
 				o.pivot.rotation.x = 0;
 			} else {
-				const pf = o.kind === 'campfire' ? 0.16 : 0.8;
+				// axelog is near-locked (rework): a hint of tilt, not the full 0.8
+				const pf = o.kind === 'campfire' ? 0.16 : o.kind === 'axelog' ? 0.06 : 0.8;
 				o.pivot.rotation.y = o.mx * pf;
 				o.pivot.rotation.x = o.my * pf * 0.6;
 			}
