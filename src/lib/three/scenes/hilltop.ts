@@ -28,10 +28,10 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	// the campfire is just off-frame, front-left: its light rakes the near slope and the stump
 	const FIRE = new T.Vector3(-2.6, 0.3, 1.9);
 
-	// level ground like the campfire clearing: flat out to r 2.5, then only a faint fall-off far
-	// back (where the fog already has it) so the horizon is the treeline, not a hill edge
+	// a low knoll in the campfire's clearing: level under the stump, a gentle fall-off around it,
+	// so the stump stands a little proud of the ground without the old dome look
 	const CREST = -1.02;
-	const hillY = (r: number) => CREST - 0.006 * Math.max(0, r - 2.5) ** 2;
+	const hillY = (r: number) => CREST - 0.03 * Math.max(0, r - 1.0) ** 2;
 
 	// --- sky: screen-space quad, night gradient, transparent toward the top edge ---
 	const skyUni = {
@@ -176,6 +176,121 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	const hill = new T.Mesh(hillGeo, new T.MeshLambertMaterial({ color: 0x0c1009 }));
 	spin.add(hill);
 
+	// --- path: a worn dirt trail from the stump, curving off the left edge toward the campfire ---
+	const pathCurve = new T.CatmullRomCurve3(
+		[
+			// local to `spin`, which axelog turns by VIEW_Y (0.5 rad): in view space this runs
+			// from the stump's front toward the camera and bends out the left edge, toward the fire
+			[-0.37, 0.37],
+			[-1.07, 1.01],
+			[-1.89, 1.59],
+			[-2.8, 2.0],
+			[-3.98, 2.27]
+		].map(([x, z]) => new T.Vector3(x, 0, z))
+	);
+	const PATH_N = 64;
+	const pathPts = pathCurve.getSpacedPoints(PATH_N);
+	// half-width grows toward the camera (perspective already narrows it near the stump)
+	const pathHW = (k: number) => 0.2 + k * 0.22;
+	const pPos: number[] = [];
+	const pUv: number[] = [];
+	const pIdx: number[] = [];
+	for (let i = 0; i <= PATH_N; i++) {
+		const k = i / PATH_N;
+		const a = pathPts[Math.max(0, i - 1)];
+		const b = pathPts[Math.min(PATH_N, i + 1)];
+		let nx = -(b.z - a.z),
+			nz = b.x - a.x;
+		const nl = Math.hypot(nx, nz) || 1;
+		nx /= nl;
+		nz /= nl;
+		// a little wander so the edges aren't a ruled ribbon
+		const hw = pathHW(k) * (0.88 + 0.24 * rand());
+		for (const side of [-1, 1]) {
+			const x = pathPts[i].x + nx * hw * side,
+				z = pathPts[i].z + nz * hw * side;
+			// clears the hill's ±0.015 vertex jitter (it hid the trail at +0.006)
+			pPos.push(x, hillY(Math.hypot(x, z)) + 0.022, z);
+			pUv.push(side < 0 ? 0 : 1, k);
+		}
+		if (i < PATH_N) {
+			const v = i * 2;
+			pIdx.push(v, v + 2, v + 1, v + 1, v + 2, v + 3);
+		}
+	}
+	const pathGeo = new T.BufferGeometry();
+	pathGeo.setAttribute('position', new T.Float32BufferAttribute(pPos, 3));
+	pathGeo.setAttribute('uv', new T.Float32BufferAttribute(pUv, 2));
+	pathGeo.setIndex(pIdx);
+	const pathUni = {
+		uFlick: { value: 1 },
+		uAmb: { value: new T.Vector3(todP.amb[0], todP.amb[1], todP.amb[2]) },
+		uFogC: { value: new T.Color(todP.fog) },
+		uFire: { value: new T.Vector2(FIRE.x, FIRE.z) }
+	};
+	const path = new T.Mesh(
+		pathGeo,
+		new T.ShaderMaterial({
+			uniforms: pathUni,
+			transparent: true,
+			depthWrite: false,
+			side: T.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetFactor: -2,
+			polygonOffsetUnits: -2,
+			vertexShader: `
+              varying vec2 vUv;
+              varying vec3 vWorld;
+              void main() {
+                vUv = uv;
+                vec4 w = modelMatrix * vec4(position, 1.0);
+                vWorld = w.xyz;
+                gl_Position = projectionMatrix * viewMatrix * w;
+              }`,
+			fragmentShader: `
+              uniform float uFlick;
+              uniform vec3 uAmb;
+              uniform vec3 uFogC;
+              uniform vec2 uFire;
+              varying vec2 vUv;
+              varying vec3 vWorld;
+              float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+              float vn(vec2 p) {
+                vec2 i = floor(p), f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
+              }
+              void main() {
+                // soft, ragged edges: the trail frays into the grass rather than ending on a line
+                float n = vn(vWorld.xz * 7.0) * 0.6 + vn(vWorld.xz * 19.0) * 0.4;
+                float edge = abs(vUv.x - 0.5) * 2.0;
+                float a = 1.0 - smoothstep(0.45 + n * 0.25, 0.95, edge);
+                // packed earth, a worn lighter centre line, a few pebble flecks
+                vec3 dirt = mix(vec3(0.12, 0.095, 0.075), vec3(0.2, 0.155, 0.115), n);
+                dirt = mix(dirt, dirt * 1.35, (1.0 - edge) * 0.5);
+                dirt += step(0.93, h21(floor(vWorld.xz * 60.0))) * 0.04;
+                float d = distance(vWorld.xz, uFire);
+                float glow = pow(clamp(1.0 - d / 5.4, 0.0, 1.0), 1.7) * uFlick;
+                // moonlit like the clearing floor, warmed where the off-frame fire reaches
+                vec3 lit = dirt * (uAmb * 2.4 + vec3(1.0, 0.52, 0.18) * glow * 2.2);
+                float camD = distance(vWorld, cameraPosition);
+                float fogF = clamp(1.0 - exp(-pow(camD * 0.115, 2.0)), 0.0, 1.0);
+                gl_FragColor = vec4(mix(lit, uFogC, fogF), a);
+              }`
+		})
+	);
+	path.renderOrder = 1;
+	spin.add(path);
+	// grass keeps off the trail's middle (blades on its edges are fine — they fray it)
+	const onPath = (x: number, z: number) => {
+		for (let i = 0; i <= PATH_N; i++) {
+			const q = pathPts[i];
+			const r = pathHW(i / PATH_N) * 0.7;
+			if ((x - q.x) ** 2 + (z - q.z) ** 2 < r * r) return true;
+		}
+		return false;
+	};
+
 	// --- grass: the campfire's alpha-card blades + wind, far fewer of them ---
 	const bladeAlpha = new T.CanvasTexture(
 		mkCanvas(128, 128, function (g, w, h) {
@@ -272,6 +387,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 		const r = 0.84 + Math.pow(rand(), 1.1) * 6.2;
 		const x = Math.cos(a) * r, z = Math.sin(a) * r;
 		if (z < -4.8) continue; // fogged out past here
+		if (onPath(x, z)) continue;
 		const s = 0.55 + rand() * 0.6;
 		dummy.position.set(x, hillY(r) - 0.02, z);
 		dummy.rotation.set(0, rand() * Math.PI, (rand() - 0.5) * 0.14);
@@ -343,6 +459,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 		fireLight.intensity = (1.2 * flick + 0.3) * todP.fire;
 		grassUni.uTime.value = t;
 		grassUni.uFlick.value = (0.7 + flick * 0.5) * todP.fire;
+		pathUni.uFlick.value = grassUni.uFlick.value;
 		skyUni.uTime.value = t;
 		hazeMats[0].opacity = hazes[0][5] * (0.45 + todP.moon * 1.3) * (0.85 + 0.15 * Math.sin(t * 0.22));
 
