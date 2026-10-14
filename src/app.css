@@ -77,6 +77,22 @@ body {
 			0 0 0 1px rgba(226, 149, 79, 0.22);
 	}
 }
+/* the tile's arrow: leans in on hover, pushes on press so a click visibly registers */
+.tile .tile-hint {
+	transition: transform 0.28s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.tile:active .tile-hint {
+	transform: translateX(7px);
+	transition-duration: 0.08s;
+}
+@media (hover: hover) and (pointer: fine) {
+	.tile:hover .tile-hint {
+		transform: translateX(3px);
+	}
+	.tile:active .tile-hint {
+		transform: translateX(7px);
+	}
+}
 .tile:focus-visible,
 .clone-close:focus-visible {
 	outline: 2px solid #e2954f;

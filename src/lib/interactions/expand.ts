@@ -59,8 +59,8 @@ const PANELS: Record<CardId, PanelSpec> = {
 		props: (mobile) => ({ mobile }),
 		style: (mobile) =>
 			mobile
-				? EX_BASE + 'background:radial-gradient(120% 90% at 50% 115%,rgba(200,112,63,.10),transparent 60%),#1d1824;padding:20px;gap:20px;overflow:auto'
-				: EX_BASE + 'background:radial-gradient(120% 90% at 50% 115%,rgba(200,112,63,.10),transparent 60%),#1d1824;padding:26px 30px;gap:0;overflow:auto'
+				? EX_BASE + 'background:radial-gradient(120% 90% at 50% 115%,rgba(200,112,63,.10),transparent 60%),#18130f;padding:20px;gap:20px;overflow:auto'
+				: EX_BASE + 'background:radial-gradient(120% 90% at 50% 115%,rgba(200,112,63,.10),transparent 60%),#18130f;padding:26px 30px;gap:0;overflow:auto'
 	},
 	contact: {
 		component: ExpandedContact,
@@ -78,8 +78,8 @@ const PANELS: Record<CardId, PanelSpec> = {
 		props: (mobile) => ({ mobile }),
 		style: (mobile) =>
 			mobile
-				? EX_BASE + 'background:#cbbfa8;padding:20px;gap:0;overflow:auto'
-				: EX_BASE + 'background:#cbbfa8;padding:26px 30px;gap:0;overflow:auto'
+				? EX_BASE + 'background:radial-gradient(90% 55% at 50% 118%,rgba(255,125,46,.07),transparent 62%),#0b0d15;padding:20px;gap:0;overflow:auto'
+				: EX_BASE + 'background:radial-gradient(90% 55% at 50% 118%,rgba(255,125,46,.07),transparent 62%),#0b0d15;padding:26px 30px;gap:0;overflow:auto'
 	}
 };
 
@@ -94,12 +94,16 @@ const OPEN = {
 	growAt: 1400,
 	growDur: 460,
 	growEase: 'cubic-bezier(.5,.02,.2,1)',
-	revealAt: 1850, // panel fades in as the grow lands
+	revealAt: 1850, // panel content rises as the grow lands
 	revealStep: 70,
-	popFade: 1050, // the tile's own scene (jar / envelope / axe) fades as the card grows
-	oceanFade: 1100
+	// rework: the tile's scene plays its pop in place, then is gone just as the grow gets
+	// going (a fixed-size scene box inside a growing card read as stuck), while the panel
+	// ground (stars / glass / ember layers) fades in during the grow so the card is never an
+	// empty slab (DC faded the ground in only at revealAt)
+	popFade: 1250, // the tile's own scene (jar / envelope / axe)
+	oceanFade: 1250
 } as const;
-const CLOSE_MS = 280;
+const CLOSE_MS = 460; // rework: slower close so the tile's contents can be seen settling back (DC 280)
 const FOCUSABLE =
 	'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])';
 
@@ -351,10 +355,10 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		liveCv.style.pointerEvents = 'none';
 		if (card === 'experience') {
 			// the ocean simply fades with the face — the panel brings its own porthole
-			liveCv.style.transition = `opacity .25s ease ${OPEN.oceanFade}ms`;
+			liveCv.style.transition = `opacity .3s ease ${OPEN.oceanFade}ms`;
 		} else {
 			liveCv.dataset.pop = '1'; // jar cap / envelope / axe chop
-			liveCv.style.transition = `opacity .45s ease ${OPEN.popFade}ms`;
+			liveCv.style.transition = `opacity .3s ease ${OPEN.popFade}ms`;
 		}
 		clone.appendChild(cvLayer);
 	}
@@ -412,7 +416,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		close.style.opacity = '1';
 		face.style.transition = 'opacity .25s ease'; // the label/text; the tile's scene stays
 		face.style.opacity = '0';
-		ex.style.transition = `opacity .3s ease ${OPEN.revealAt}ms`;
+		ex.style.transition = `opacity .4s ease ${OPEN.growAt}ms`;
 		ex.style.opacity = '1';
 		if (liveCv) liveCv.style.opacity = '0';
 		kids.forEach((k, i) => {
@@ -469,14 +473,14 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 			clone.style.transition = 'opacity .15s ease';
 			clone.style.opacity = '0';
 		} else {
-			ex.style.transition = `opacity .12s ${EASE_OUT}`;
+			ex.style.transition = `opacity .18s ${EASE_OUT}`;
 			ex.style.opacity = '0';
 			if (liveCv) liveCv.style.transition = 'none';
 			const shrinkFrom = getComputedStyle(clone).clipPath; // retarget from wherever it is
 			clone.style.transition = 'none';
 			clone.style.clipPath = shrinkFrom === 'none' ? fullClip : shrinkFrom;
 			void clone.offsetWidth;
-			clone.style.transition = `clip-path ${CLOSE_MS}ms ${EASE_OUT}, opacity .1s ease 180ms`;
+			clone.style.transition = `clip-path ${CLOSE_MS}ms ${EASE_OUT}, opacity .16s ease ${CLOSE_MS - 140}ms`;
 			clone.style.clipPath = tileClip;
 			clone.style.opacity = '0';
 		}
@@ -489,12 +493,12 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 			t.style.transition = 'none';
 			t.style.opacity = getComputedStyle(t).opacity;
 			requestAnimationFrame(() => {
-				t.style.transition = `opacity .2s ${EASE_OUT} ${reduced ? 0 : i * 25}ms`;
+				t.style.transition = `opacity .35s ${EASE_OUT} ${reduced ? 0 : 80 + i * 40}ms`;
 				t.style.opacity = '1';
 				setTimeout(() => {
 					t.style.transition = '';
 					t.style.opacity = '';
-				}, 260 + i * 25);
+				}, 460 + i * 40);
 			});
 		});
 
@@ -511,19 +515,23 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 				k.style.opacity = '0';
 			});
 			tile.style.visibility = '';
+			// the tile's own contents (title, list, scene) fade back one after another
 			requestAnimationFrame(() => {
-				tkids.forEach((k) => {
-					k.style.transition = `opacity .15s ${EASE_OUT}`;
+				tkids.forEach((k, i) => {
+					k.style.transition = `opacity .42s ${EASE_OUT} ${reduced ? 0 : i * 60}ms`;
 					k.style.opacity = '1';
 				});
-				setTimeout(() => {
-					tkids.forEach((k) => {
-						k.style.transition = '';
-						k.style.opacity = '';
-					});
-				}, 200);
+				setTimeout(
+					() => {
+						tkids.forEach((k) => {
+							k.style.transition = '';
+							k.style.opacity = '';
+						});
+					},
+					480 + tkids.length * 60
+				);
 			});
-		}, reduced ? 0 : 160);
+		}, reduced ? 0 : 220);
 
 		setTimeout(() => {
 			freeze.container = null; // unfreeze — every canvas updates again
