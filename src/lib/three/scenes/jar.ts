@@ -132,7 +132,7 @@ export function buildJar(ctx: SceneCtx): UpdateFn | null {
 	// cap pop-off: expand.ts sets data-pop on the canvas at card settle; the lid springs
 	// up with a tilt and drifts aside, and resets when the flag clears (card closed)
 	let popT: number | null = null;
-	// hover (rework, not in the DC): data-hover eases `hv` in/out — the lid lifts a touch and
+	// hover (not in the DC): data-hover eases `hv` in/out — the lid lifts a touch and
 	// the flies brighten and quicken. Pop wins: hv eases out while popped, its lift riding on
 	// top of the pop so the hand-off never snaps. `ft` is the flies' clock; equals t at hv=0.
 	let hv = 0;

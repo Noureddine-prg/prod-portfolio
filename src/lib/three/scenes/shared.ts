@@ -215,3 +215,42 @@ const vn1 = function (x: number) {
 export function flickAt(t: number, gustFire: number) {
 	return 0.82 + (vn1(t * 6.1) - 0.5) * 0.22 + (vn1(t * 11.3 + 17) - 0.5) * 0.14 + Math.sin(t * 5.3) * 0.03 + gustFire * 0.1;
 }
+
+// --- shader + texture pieces shared by the campfire and the hilltop vignette ---
+
+/** Value noise (h21 hash, vn smooth 2D noise) for the ground, rock and trail shaders. */
+export const NOISE2_GLSL = `
+              float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+              float vn(vec2 p) {
+                vec2 i = floor(p), f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
+              }`;
+
+/** The grass's squared-exponential fog curve; needs `uniform vec3 uFogC` declared before it. */
+export const FOG_GLSL = `
+              vec3 fogMix(vec3 c, vec3 w, float k) {
+                float camD = distance(w, cameraPosition);
+                return mix(c, uFogC, clamp(1.0 - exp(-pow(camD * k, 2.0)), 0.0, 1.0));
+              }`;
+
+/** Alpha card of nine grass blades (draws 36 values from `rand`, in a fixed order). */
+export function mkBladeAlpha(T: typeof THREE, rand: () => number): THREE.CanvasTexture {
+	return new T.CanvasTexture(
+		mkCanvas(128, 128, function (g, w, h) {
+			g.clearRect(0, 0, w, h);
+			g.fillStyle = '#ffffff';
+			for (let i = 0; i < 9; i++) {
+				const x0 = 10 + rand() * (w - 20);
+				const tipX = x0 + (rand() - 0.5) * 36;
+				const wb = 5 + rand() * 4;
+				g.beginPath();
+				g.moveTo(x0 - wb / 2, h);
+				g.quadraticCurveTo(x0 - wb / 2, h * 0.45, tipX, 6 + rand() * 26);
+				g.quadraticCurveTo(x0 + wb / 2, h * 0.45, x0 + wb / 2, h);
+				g.closePath();
+				g.fill();
+			}
+		})
+	);
+}

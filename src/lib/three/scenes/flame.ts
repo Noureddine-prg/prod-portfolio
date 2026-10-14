@@ -36,12 +36,12 @@ export function buildFlame(ctx: SceneCtx): UpdateFn | null {
 			})
 		)
 	);
-	return (t) => {
+	return (t, dt) => {
 		(fA.material as InstanceType<typeof T.ShaderMaterial>).uniforms.uTime.value = t;
 		(fB.material as InstanceType<typeof T.ShaderMaterial>).uniforms.uTime.value = t * 1.15 + 3;
 		const pa = eAttr.array as Float32Array;
 		for (let i = 0; i < en2; i++) {
-			pa[i * 3 + 1] += ev2[i];
+			pa[i * 3 + 1] += ev2[i] * dt * 60;
 			if (pa[i * 3 + 1] > 1.7) {
 				pa[i * 3 + 1] = 0.1;
 				pa[i * 3] = (rand() - 0.5) * 0.3;

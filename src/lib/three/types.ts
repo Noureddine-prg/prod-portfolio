@@ -1,9 +1,6 @@
-// The scene contract. Each scene implements one builder per kind:
-//
-//     export function build<Kind>(ctx: SceneCtx): UpdateFn | null
-//
-// and register it in scenes/index.ts. Everything a builder needs is on `ctx`; builders
-// never touch the DOM, the rAF loop, `new Date()`, or raw `Math.random()`.
+// The scene contract: each kind exports `build<Kind>(ctx: SceneCtx): UpdateFn | null`, registered
+// in scenes/index.ts. Builders take everything from `ctx` and never touch the DOM, the rAF loop,
+// `new Date()` or raw `Math.random()`.
 
 import type * as THREE from 'three';
 import type { Rand } from '$lib/util/rand';

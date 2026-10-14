@@ -1,11 +1,10 @@
-// Hilltop vignette for the axelog scene (data-hill, the desktop Work column): the stump stands on
-// a grassy crest in the campfire's night world — same palette, wind, flicker and moonlit haze —
-// under a sky that fades to transparent at the top into the tile's own night ground.
-// Not a DC section (owner-approved addition); the DC stump + axe are untouched.
+// Hilltop vignette for the axelog scene (data-hill, desktop Work column): the stump on a grassy crest
+// in the campfire's night world (same palette, wind, flicker, haze) under a sky that fades to
+// transparent into the tile's ground. Not a DC section; the DC stump + axe are untouched.
 
 import type * as THREE from 'three';
 import type { SceneCtx, UpdateFn } from '../types';
-import { mkCanvas, todPalette, mkWind, flickAt } from './shared';
+import { FOG_GLSL, NOISE2_GLSL, flickAt, mkBladeAlpha, mkCanvas, mkWind, todPalette } from './shared';
 import { mulberry32, hashSeed } from '$lib/util/rand';
 
 export function addHilltop(ctx: SceneCtx): UpdateFn {
@@ -20,8 +19,6 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 
 	// eye height and pitch close to the campfire's own camera, so the column reads as the same
 	// clearing seen a few steps over rather than a mound looked down on
-	// (a step closer than the DC framing: the stump kit is scaled down below, and moving the
-	// camera keeps its size in the tile without breaking its scale against the grass and trail)
 	cam.position.set(0, 0.2, 4.5);
 	cam.lookAt(0, -0.78, 0);
 
@@ -30,8 +27,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	// the campfire is just off-frame, front-left: its light rakes the near slope and the stump
 	const FIRE = new T.Vector3(-2.6, 0.3, 1.9);
 
-	// a low knoll in the campfire's clearing: level under the stump, a gentle fall-off around it,
-	// so the stump stands a little proud of the ground without the old dome look
+	// a low knoll: level under the stump, a gentle fall-off around it
 	const CREST = -1.02;
 	const hillY = (r: number) => CREST - 0.03 * Math.max(0, r - 1.0) ** 2;
 
@@ -39,8 +35,8 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	const skyUni = {
 		uZen: { value: new T.Color(todP.zen) },
 		uHor: { value: new T.Color(todP.hor) },
-		// fade band: a cool moonlit mist over the treeline that then dissolves (via alpha) into
-		// the tile's night ground — the haze kept, without the parchment-era warm dusk
+		// fade band: a cool moonlit mist over the treeline that dissolves (via alpha) into the
+		// tile's night ground
 		uDusk: { value: new T.Color(todP.hor).lerp(new T.Color(0x8ea4c6), 0.32) },
 		uTime: { value: 0 },
 		uAspect: { value: ctx.w / ctx.h }
@@ -94,7 +90,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	let rx = -26;
 	while (rx < 26) {
 		// base sits just under the flat ground's horizon, so the pines stand on it as the far
-		// edge of the same forest (the camera is at the campfire's eye height now)
+		// edge of the same forest
 		const base = -2.25 + Math.sin(rx * 0.19) * 0.3 + Math.sin(rx * 0.53) * 0.15;
 		const hgt = 0.7 + rand() * 1.1;
 		const hw = 0.22 + rand() * 0.12;
@@ -272,12 +268,8 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
               uniform vec2 uFire;
               varying vec2 vUv;
               varying vec3 vWorld;
-              float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
-              float vn(vec2 p) {
-                vec2 i = floor(p), f = fract(p);
-                f = f * f * (3.0 - 2.0 * f);
-                return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
-              }
+              ${NOISE2_GLSL}
+              ${FOG_GLSL}
               void main() {
                 // soft, ragged edges: the trail frays into the grass rather than ending on a line
                 float n = vn(vWorld.xz * 7.0) * 0.6 + vn(vWorld.xz * 19.0) * 0.4;
@@ -291,9 +283,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
                 float glow = pow(clamp(1.0 - d / 5.4, 0.0, 1.0), 1.7) * uFlick;
                 // moonlit like the clearing floor, warmed where the off-frame fire reaches
                 vec3 lit = dirt * (uAmb * 2.4 + vec3(1.0, 0.52, 0.18) * glow * 2.2);
-                float camD = distance(vWorld, cameraPosition);
-                float fogF = clamp(1.0 - exp(-pow(camD * 0.115, 2.0)), 0.0, 1.0);
-                gl_FragColor = vec4(mix(lit, uFogC, fogF), a);
+                gl_FragColor = vec4(fogMix(lit, vWorld, 0.115), a);
               }`
 		})
 	);
@@ -324,23 +314,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	};
 
 	// --- grass: the campfire's alpha-card blades + wind, far fewer of them ---
-	const bladeAlpha = new T.CanvasTexture(
-		mkCanvas(128, 128, function (g, w, h) {
-			g.clearRect(0, 0, w, h);
-			g.fillStyle = '#ffffff';
-			for (let i = 0; i < 9; i++) {
-				const x0 = 10 + rand() * (w - 20);
-				const tipX = x0 + (rand() - 0.5) * 36;
-				const wb = 5 + rand() * 4;
-				g.beginPath();
-				g.moveTo(x0 - wb / 2, h);
-				g.quadraticCurveTo(x0 - wb / 2, h * 0.45, tipX, 6 + rand() * 26);
-				g.quadraticCurveTo(x0 + wb / 2, h * 0.45, x0 + wb / 2, h);
-				g.closePath();
-				g.fill();
-			}
-		})
-	);
+	const bladeAlpha = mkBladeAlpha(T, rand);
 	const grassUni = {
 		uTime: { value: 0 },
 		uFlick: { value: 1 },
@@ -392,6 +366,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
               varying vec3 vWorld;
               varying float vGust;
               varying float vRnd;
+              ${FOG_GLSL}
               void main() {
                 float a = texture2D(uAlpha, vUv).a;
                 if (a < 0.4) discard;
@@ -403,9 +378,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
                 float glow = pow(clamp(1.0 - d / 5.4, 0.0, 1.0), 1.7) * uFlick;
                 vec3 lit = col * (uAmb + vec3(1.0, 0.52, 0.18) * glow * 2.8);
                 lit += uAmb * vGust * vUv.y * vUv.y * 0.22;
-                float camD = distance(vWorld, cameraPosition);
-                float fogF = clamp(1.0 - exp(-pow(camD * 0.115, 2.0)), 0.0, 1.0);
-                gl_FragColor = vec4(mix(lit, uFogC, fogF), 1.0);
+                gl_FragColor = vec4(fogMix(lit, vWorld, 0.115), 1.0);
               }`
 	});
 	const bladeGeo = new T.PlaneGeometry(0.3, 0.34, 1, 3);
@@ -506,7 +479,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 			const k = age / eLife[i];
 			const x0 = ep[i3], z0 = ep[i3 + 2];
 			const drift = wind.DIR[0] * (wind.breezeAt(x0, z0, t) * 0.35 + wind.gustAt(x0, z0, 0.4) * 1.2) * step;
-			ep[i3] += drift + Math.sin(t * 1.3 + i) * 0.002;
+			ep[i3] += drift + Math.sin(t * 1.3 + i) * 0.002 * step * 60;
 			ep[i3 + 1] += eRise[i] * step;
 			ep[i3 + 2] += wind.DIR[1] * drift;
 			const glowK = Math.sin(Math.PI * Math.min(1, k)) * (0.7 + 0.3 * Math.sin(t * 7 + i * 1.7)) * todP.ff;

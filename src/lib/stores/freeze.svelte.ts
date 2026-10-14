@@ -12,7 +12,7 @@ export const freeze = {
 	}
 };
 
-/** Pure form of the loop's freeze rule (the loop inlines this); exported for testing. */
+/** The loop's freeze rule: while a container is frozen, only canvases inside it update. */
 export function isInsideFrozen(frozen: HTMLElement | null, node: Node): boolean {
 	return !frozen || frozen.contains(node);
 }

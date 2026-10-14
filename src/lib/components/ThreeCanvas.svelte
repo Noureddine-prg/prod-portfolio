@@ -4,7 +4,7 @@
 	// when it scrolls on-screen), and tears the context down on destroy. Runes only.
 	import { onMount } from 'svelte';
 	import { addCanvas, removeCanvas, getEntry } from '$lib/three/registry';
-	import { ensureLoop } from '$lib/three/loop';
+	import { destroyCanvas, ensureLoop } from '$lib/three/loop';
 	import type { SceneKind } from '$lib/three/types';
 
 	interface Props {
@@ -56,14 +56,7 @@
 		return () => {
 			canvas.removeEventListener('pointermove', onMove);
 			canvas.removeEventListener('pointerleave', onLeave);
-			const o = getEntry(canvas);
-			if (o) {
-				try {
-					o.renderer.dispose();
-				} catch {
-					/* noop */
-				}
-			}
+			destroyCanvas(canvas);
 			removeCanvas(canvas);
 		};
 	});

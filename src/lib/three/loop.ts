@@ -1,10 +1,6 @@
-// The singleton global rAF loop — the ONE driver for every canvas[data-three]. Ports the
-// DC plumbing (L3040-3110): ~15ms throttle, dpr ≤ 2, a live-WebGL-context CAP of 9 with
-// offscreen dispose + WEBGL_lose_context restore, per-canvas accumulated clock, the freeze
-// rule, and the central per-kind spin + pointer-tilt/parallax table. Onscreen tracking is
-// IntersectionObserver-based (250px margin) rather than per-frame getBoundingClientRect.
-//
-// Never add a second loop. HMR-safe: a module singleton on window, cancelled on dispose.
+// The ONE rAF loop for every canvas[data-three] (DC plumbing L3040-3110): ~15ms throttle, a live
+// context CAP with offscreen dispose + WEBGL_lose_context restore, accumulated per-canvas clocks,
+// the freeze rule and the per-kind spin/tilt tables. HMR-safe singleton on globalThis.
 
 import { browser } from '$app/environment';
 import type * as THREE from 'three';
@@ -17,7 +13,7 @@ import {
 	onCanvasRemoved,
 	type SceneEntry
 } from './registry';
-import { freeze } from '$lib/stores/freeze.svelte';
+import { freeze, isInsideFrozen } from '$lib/stores/freeze.svelte';
 import { boardScale } from '$lib/stores/scale.svelte';
 import type { SceneKind } from './types';
 import { initQuality, lowerQuality, quality, type Quality } from './quality';
@@ -38,9 +34,8 @@ const PACE_SLOW_MS: Record<Quality, number> = {
 };
 const PACE_DIRE_MS = 120;
 
-// Per-kind auto-spin applied to the inner `spin` group (DC L3092). Our six kinds all sit
-// still (0); the default covers any future kind. axelog sways inside its builder instead:
-// an unbounded spin turned its chop arc edge-on to the camera depending on click time.
+// Per-kind motion. Auto-spin of the `spin` group, per 60fps frame (DC L3092); axelog sways in
+// its builder instead.
 const SPINS: Record<string, number> = {
 	campfire: 0,
 	axelog: 0,
@@ -52,6 +47,12 @@ const SPINS: Record<string, number> = {
 const DEFAULT_SPIN = 0.0032;
 // Kinds that do NOT also spin on x (DC L3093).
 const NO_X_SPIN = new Set<SceneKind>(['campfire', 'axelog', 'calm', 'flame', 'jar']);
+// Pointer-tilt factor; axelog is near-locked.
+const TILT: Record<string, number> = { campfire: 0.16, axelog: 0.06 };
+const DEFAULT_TILT = 0.8;
+// Lite scenes auto-drift instead of tilting: [amplitude rad, frequency].
+const DRIFT: Record<string, [number, number]> = { campfire: [0.11, 0.09] };
+const DEFAULT_DRIFT: [number, number] = [0.04, 0.12];
 
 interface LoopState {
 	raf: number;
@@ -74,25 +75,52 @@ function dpr(): number {
 // the board's design coordinates is displayed at boardScale× that size, so the backing
 // store multiplies in the scale (capped at 3 to bound GPU cost on large monitors).
 function renderPx(): number {
-	// lighter tiers cap the backing store at 1.5x, but still count dpr (1x on a 3x phone was mush)
+	// lighter tiers cap the backing store at 1.5x, but still count dpr
 	if (quality() !== 'full') return Math.min(1.5, dpr() * boardScale.value);
 	return Math.min(3, dpr() * boardScale.value);
 }
 
-// Free a scene's GPU objects and its renderer but keep the canvas's context (and, with
-// preserveDrawingBuffer, its last frame on screen) so a rebuild at a new tier doesn't flash.
+const isTexture = (v: unknown): v is THREE.Texture => !!v && (v as THREE.Texture).isTexture;
+
+// Free every GPU object a scene holds: geometries, instance buffers, materials, and textures
+// on material slots and in shader uniforms.
+function freeScene(entry: SceneEntry): void {
+	entry.scene.traverse((o) => {
+		const m = o as THREE.Mesh;
+		// every Sprite shares one module-level geometry; disposing it churns all live renderers
+		if (!(o as THREE.Sprite).isSprite) m.geometry?.dispose();
+		(o as THREE.InstancedMesh).dispose?.();
+		for (const mat of ([] as THREE.Material[]).concat(m.material ?? [])) {
+			for (const v of Object.values(mat)) if (isTexture(v)) v.dispose();
+			const uniforms = (mat as THREE.ShaderMaterial).uniforms;
+			if (uniforms)
+				for (const u of Object.values(uniforms)) if (isTexture(u?.value)) u.value.dispose();
+			mat.dispose();
+		}
+	});
+}
+
+// Free a scene and its renderer but keep the canvas's context (and, with preserveDrawingBuffer,
+// its last frame on screen) so a rebuild at a new tier doesn't flash.
 function releaseScene(cv: HTMLCanvasElement, entry: SceneEntry): void {
 	try {
-		entry.scene.traverse((o) => {
-			const m = o as THREE.Mesh;
-			m.geometry?.dispose();
-			for (const mat of ([] as THREE.Material[]).concat(m.material ?? [])) {
-				for (const v of Object.values(mat))
-					if (v && (v as THREE.Texture).isTexture) (v as THREE.Texture).dispose();
-				mat.dispose();
-			}
-		});
+		freeScene(entry);
 		entry.renderer.dispose();
+	} catch {
+		/* noop */
+	}
+	clearEntry(cv);
+}
+
+/** Unmount teardown: free the scene and drop its context now rather than at GC, so panels that
+ *  mount fresh canvases on every open never push the page past the browser's context limit. */
+export function destroyCanvas(cv: HTMLCanvasElement): void {
+	const entry = getEntry(cv);
+	if (!entry) return;
+	try {
+		freeScene(entry);
+		entry.renderer.dispose();
+		entry.renderer.forceContextLoss();
 	} catch {
 		/* noop */
 	}
@@ -140,9 +168,20 @@ function startLoop(T: typeof THREE): LoopState {
 
 	const isOn = (cv: HTMLCanvasElement) => onscreen.has(cv) && cv.clientWidth > 0;
 
-	// prefers-reduced-motion: scenes render one still frame instead of animating
-	// (README mandate; not present in the DC prototype). Read once at loop start.
-	// The `still` quality tier takes the same path.
+	const buildable = (cv: HTMLCanvasElement) => {
+		const m = getMeta(cv);
+		// [data-hold-build]: an opening card defers its panel's scenes until it settles
+		return (
+			!getEntry(cv) &&
+			!m.failed &&
+			!m.pending &&
+			isOn(cv) &&
+			!cv.closest('[data-hold-build]') &&
+			getComputedStyle(cv).visibility !== 'hidden'
+		);
+	};
+
+	// prefers-reduced-motion and the still tier render one frame per canvas
 	const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 	const stilled = new WeakSet<HTMLCanvasElement>();
 	const posed = new WeakSet<SceneEntry>();
@@ -162,12 +201,12 @@ function startLoop(T: typeof THREE): LoopState {
 		for (const cv of liveCanvases()) {
 			const e = getEntry(cv);
 			if (!e) continue;
-			// still: whatever is on screen now becomes the still frame; reduced: rebuild lighter
-			if (to === 'still') {
+			// still keeps the frame on screen, unless it is a transient pose (a card's pop or a
+			// hover): those rebuild and pose at rest. reduced rebuilds lighter.
+			if (to === 'still' && !cv.dataset.pop && !cv.dataset.hover) {
 				stilled.add(cv);
-				posed.add(e); // keep the live pose it was showing
-			}
-			else releaseScene(cv, e);
+				posed.add(e);
+			} else releaseScene(cv, e);
 		}
 	};
 
@@ -201,54 +240,55 @@ function startLoop(T: typeof THREE): LoopState {
 		const now = nowMs * 0.001;
 
 		const frozen = freeze.container;
-		const cvs = [...liveCanvases()];
+		const cvs = liveCanvases();
 
-		// Make sure every mounted canvas is being observed.
+		// Observe every mounted canvas, dispose any live-but-offscreen context, count what's left.
+		let live = 0;
 		for (const cv of cvs) {
 			if (!observed.has(cv)) {
 				observed.add(cv);
 				io.observe(cv);
 			}
+			const e = getEntry(cv);
+			if (!e) continue;
+			if (isOn(cv)) live++;
+			else disposeCanvas(cv, e);
 		}
 
-		// Dispose any live-but-offscreen context, then count what's left live.
-		for (const cv of cvs) {
-			const e = getEntry(cv);
-			if (e && !isOn(cv)) disposeCanvas(cv, e);
-		}
-		let live = cvs.filter((cv) => getEntry(cv)).length;
+		const px = renderPx();
 
 		// Build offscreen→onscreen canvases up to the context cap — ONE per tick, hero first.
 		// Each build compiles shaders on the main thread; building them all in one frame
 		// stalled the page for ~1.5s at load. Spread out, each costs a single frame.
-		const pending = cvs.filter((cv) => {
-			const m = getMeta(cv);
-			// [data-hold-build]: an opening card defers its panel's scenes until it settles
-			return (
-				!getEntry(cv) && !m.failed && !m.pending && isOn(cv) && !cv.closest('[data-hold-build]')
-			);
-		});
-		pending.sort((a, b) => +(b.dataset.scene === 'campfire') - +(a.dataset.scene === 'campfire'));
-		for (const cv of pending) {
-			if (live >= CTX_CAP) break;
-			if (getComputedStyle(cv).visibility === 'hidden') continue;
-			builtAt = nowMs;
-			const e = buildCanvas(T, cv);
-			if (e) {
-				live++;
-				// the hero is up: start judging frame pacing once it has warmed up
-				if (!paceFrom && e.kind === 'campfire') paceFrom = nowMs + PACE_WARMUP_MS;
+		if (live < CTX_CAP) {
+			let next: HTMLCanvasElement | null = null;
+			for (const cv of cvs)
+				if (cv.dataset.scene === 'campfire' && buildable(cv)) {
+					next = cv;
+					break;
+				}
+			if (!next)
+				for (const cv of cvs)
+					if (cv.dataset.scene !== 'campfire' && buildable(cv)) {
+						next = cv;
+						break;
+					}
+			if (next) {
+				builtAt = nowMs;
+				const e = buildCanvas(T, next, px);
+				if (e) {
+					stilled.delete(next); // a rebuilt canvas has a fresh, undrawn buffer
+					// the hero is up: start judging frame pacing once it has warmed up
+					if (!paceFrom && e.kind === 'campfire') paceFrom = nowMs + PACE_WARMUP_MS;
+				}
 			}
-			break;
 		}
 
-		// (DC's `data-hover-only` warm/hover gating, L3068, is unused by boards 11a/11b — skipped.)
-		const px = renderPx();
 		for (const cv of cvs) {
 			const o = getEntry(cv);
 			if (!o || !document.body.contains(cv)) continue;
-			// Freeze rule: when a card is settled-open, only canvases inside it update.
-			if (frozen && !frozen.contains(cv)) continue;
+			// Freeze rule: while a card is open, only canvases inside it update.
+			if (!isInsideFrozen(frozen, cv)) continue;
 
 			// Keep the drawing buffer matched to the CSS box.
 			const w = cv.clientWidth;
@@ -265,8 +305,7 @@ function startLoop(T: typeof THREE): LoopState {
 			// Still mode: one frame at t=0 per canvas (re-render only on resize).
 			if (stillMode) {
 				if (stilled.has(cv) && !resized) continue;
-				// pose once per build: a resize only re-draws the same pose (updates aren't
-				// idempotent — the campfire's embers step on every call, even at dt 0)
+				// pose once per build: a resize only re-draws the same pose (updates aren't idempotent)
 				if (o.update && !posed.has(o)) {
 					posed.add(o);
 					try {
@@ -309,14 +348,12 @@ function startLoop(T: typeof THREE): LoopState {
 			o.mx += (o.tx - o.mx) * ease;
 			o.my += (o.ty - o.my) * ease;
 			if (o.variants.lite) {
-				// campfire gets a wider, slower left-right pan; other lite scenes a subtle sway
-				const amp = o.kind === 'campfire' ? 0.11 : 0.04;
-				const freq = o.kind === 'campfire' ? 0.09 : 0.12;
-				o.pivot.rotation.y = Math.sin(now * freq) * amp;
+				// on the scene's own clock, so a frozen stretch doesn't jump the pan
+				const [amp, freq] = DRIFT[o.kind] ?? DEFAULT_DRIFT;
+				o.pivot.rotation.y = Math.sin((o.clk ?? now) * freq) * amp;
 				o.pivot.rotation.x = 0;
 			} else {
-				// axelog is near-locked (rework): a hint of tilt, not the full 0.8
-				const pf = o.kind === 'campfire' ? 0.16 : o.kind === 'axelog' ? 0.06 : 0.8;
+				const pf = TILT[o.kind] ?? DEFAULT_TILT;
 				o.pivot.rotation.y = o.mx * pf;
 				o.pivot.rotation.x = o.my * pf * 0.6;
 			}
@@ -339,9 +376,9 @@ function startLoop(T: typeof THREE): LoopState {
 		state.raf = requestAnimationFrame(frame);
 	};
 
-	// Watchdog: rAF is throttled/paused in background tabs; nudge the loop if it stalls.
+	// Watchdog: nudge the loop if rAF stalls while visible; hidden tabs don't render.
 	const watchdog = setInterval(() => {
-		if (performance.now() - state.last > 250) tick();
+		if (!document.hidden && performance.now() - state.last > 250) tick();
 	}, 125);
 
 	const state: LoopState = {

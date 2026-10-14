@@ -34,13 +34,15 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 	sky.position.set(0, 12.4, -12);
 	scene.add(sky);
 	// widen the backdrop for wide/short canvases (mobile banner) so the frustum never sees past it
-	// (the DC's `skyClouds` deck rescale is omitted — the deck itself was removed upstream)
+	// (no `skyClouds` deck here, so the DC's deck rescale is omitted)
 	const fitBackdrop = () => {
 		const need = (Math.tan((cam.fov * Math.PI) / 360) / cam.zoom) * cam.aspect * 13 * 2.35;
 		const s = Math.max(1, need / 34);
 		sky.scale.set(s, 1, 1);
 		sea.scale.x = Math.max(1, s * 0.95);
 	};
+	let fitAspect = 0,
+		fitZoom = 0;
 	// stars in the upper sky
 	const stN = 60,
 		stG = new T.BufferGeometry(),
@@ -230,7 +232,7 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 		cam.position.y += variants.sunzoom ? 1.4 : 0.35;
 		cam.updateProjectionMatrix();
 	}
-	return function (t: number) {
+	return function (t: number, dt: number) {
 		seaMat.uniforms.uTime.value = t;
 		if (t > shoot2.next) {
 			const el = shoot2.t0 < 0 ? 0 : t - shoot2.t0;
@@ -240,15 +242,19 @@ export function buildCalm(ctx: SceneCtx): UpdateFn {
 					shoot2.m.position.set(-8 + rand() * 10, 10 + rand() * 7, -11.7);
 				}
 				shoot2.m.material.opacity = Math.sin((el / 1.0) * Math.PI) * 0.8;
-				shoot2.m.position.x += 0.09;
-				shoot2.m.position.y -= 0.02;
+				shoot2.m.position.x += 0.09 * dt * 60;
+				shoot2.m.position.y -= 0.02 * dt * 60;
 			} else {
 				shoot2.m.material.opacity = 0;
 				shoot2.t0 = -1;
 				shoot2.next = t + 18 + rand() * 22;
 			}
 		}
-		fitBackdrop();
+		if (cam.aspect !== fitAspect || cam.zoom !== fitZoom) {
+			fitAspect = cam.aspect;
+			fitZoom = cam.zoom;
+			fitBackdrop();
+		}
 
 		stM.opacity = 0.45 + Math.sin(t * 0.8) * 0.15;
 		core2.material.opacity = 0.9 + Math.sin(t * 1.3) * 0.08;

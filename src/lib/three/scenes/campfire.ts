@@ -1,14 +1,10 @@
-// Campfire hero scene — DC `kind === 'campfire'` ported onto the SceneCtx contract; trees, ground and
-// rocks reworked (owner-approved) into the grass's language: alpha cards / shader-lit, fogged alike.
-// mkFlame/mkCanvas come from ./shared; randomness goes through ctx.rand (seeded), never Math.random.
-//
-// Build ORDER is load-bearing: everything added to `spin` before the freeze traverse gets
-// matrixAutoUpdate=false (flameA/B re-exempted); sky, mists and leaves are added AFTER and stay auto.
-// The sky dome hangs off `scene`, not `spin`, so it never enters the freeze traverse.
+// Campfire hero — DC `kind === 'campfire'`; trees, ground and rocks drawn as shader-lit alpha cards.
+// Build ORDER is load-bearing: what joins `spin` before the freeze traverse gets matrixAutoUpdate=false
+// (flameA/B exempted); sky, mists and leaves join after and stay auto; the sky dome hangs off `scene`.
 
 import type * as THREE from 'three';
 import type { SceneCtx, UpdateFn } from '../types';
-import { mkFlame, mkCanvas, todPalette, mkWind, flickAt } from './shared';
+import { FOG_GLSL, NOISE2_GLSL, flickAt, mkBladeAlpha, mkCanvas, mkFlame, mkWind, todPalette } from './shared';
 import { mulberry32, hashSeed } from '$lib/util/rand';
 
 export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
@@ -42,12 +38,6 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	const flickUni = { value: 1 };
 	const timeUni = { value: 0 };
 	const ambUni = { value: new T.Vector3(todP.amb[0], todP.amb[1], todP.amb[2]) };
-	// grass's fog curve, shared by every custom shader in the scene
-	const FOG_GLSL = `
-              vec3 fogMix(vec3 c, vec3 w, float k) {
-                float camD = distance(w, cameraPosition);
-                return mix(c, uFogC, clamp(1.0 - exp(-pow(camD * k, 2.0)), 0.0, 1.0));
-              }`;
 	// concatenate non-indexed copies of same-layout geometries into one (one draw call)
 	const mergeGeos = function (list: THREE.BufferGeometry[], names: string[]) {
 		const geos = list.map(function (g) {
@@ -97,14 +87,12 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	// ground contact shadows (x, z, radius) — tree bases, seat logs, boulders; read by the ground shader
 	const aoPts: [number, number, number][] = [];
 
-	// quality switches — reduced/still tiers drop the per-pixel shadow loop, the extra ember physics
-	// and the rock chisel; gusts and dither are cheap and carry most of the life, so they stay
+	// reduced/still tiers drop the per-pixel shadow loop, the extra ember physics and the rock
+	// chisel; `thin` (a lighter tier on the mobile framing) also cuts density
 	const full = ctx.quality === 'full';
-	const Q = { gusts: true, shadows: full, landingEmbers: full, dither: true, rockDetail: full };
-	// mobile framing used to thin the scene too; now only a slower device does (any phone that keeps
-	// up on the full tier gets the full forest, grass and sky)
+	const Q = { shadows: full, landingEmbers: full, rockDetail: full };
 	const thin = lite && !full;
-	// second seeded stream for pass-2 additions so ctx.rand (and the grass layout it seeds) is unchanged
+	// a second seeded stream, so ctx.rand (and the grass layout it seeds) is unchanged
 	const rand2 = mulberry32(hashSeed('campfire-pass2'));
 
 	// --- one wind field for grass, boughs, shrubs, flames, smoke, embers and leaves ---
@@ -115,9 +103,6 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	const WIND_GLSL = wind.GLSL;
 	const gustAt = wind.gustAt;
 	const breezeAt = wind.breezeAt;
-	const updateWind = function (t: number) {
-		if (Q.gusts) wind.update(t);
-	};
 
 	// --- one flicker signal (drives flames, lights, ground pool, grass/bough warm terms, coals): flickAt ---
 
@@ -156,17 +141,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
               }`
 			: `
               float fireShadow(vec2 p) { return 0.0; }`;
-	const DITHER = Q.dither
-		? `gl_FragColor.rgb += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;`
-		: '';
-	// value noise shared by the ground and rock shaders
-	const NOISE2_GLSL = `
-              float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
-              float vn(vec2 p) {
-                vec2 i = floor(p), f = fract(p);
-                f = f * f * (3.0 - 2.0 * f);
-                return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
-              }`;
+	const DITHER = `gl_FragColor.rgb += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;`;
 	// seat logs (x, z, yaw) — shared by grass exclusion, AO, casters and ember landing
 	const SEATS = [
 		[0.72, 1.5, 0.35],
@@ -1003,12 +978,12 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		bumpScale: 0.028,
 		color: 0x8a6242,
 		roughness: 1,
-		dithering: Q.dither
+		dithering: true
 	});
-	const endMat = new T.MeshStandardMaterial({ map: ringTex, color: 0xd8b98a, roughness: 1, dithering: Q.dither });
+	const endMat = new T.MeshStandardMaterial({ map: ringTex, color: 0xd8b98a, roughness: 1, dithering: true });
 	// burning logs get charred, ember-lit ends: the old pale cut-wood caps sat a hand's width from the
 	// fire's point light and popped in and out of the flame base every flicker — the "flashing logs"
-	const charEndMat = new T.MeshStandardMaterial({ color: 0x1c120c, roughness: 1, emissive: 0xff5a1a, emissiveIntensity: 0.2, dithering: Q.dither });
+	const charEndMat = new T.MeshStandardMaterial({ color: 0x1c120c, roughness: 1, emissive: 0xff5a1a, emissiveIntensity: 0.2, dithering: true });
 	// teepee-stacked logs leaning into the fire
 	const UP = new T.Vector3(0, 1, 0);
 	for (let i = 0; i < 5; i++) {
@@ -1134,23 +1109,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	}
 
 	// --- fluffy instanced billboard grass (Codrops technique: alpha cards + wind + AO gradient) ---
-	const bladeAlpha = new T.CanvasTexture(
-		mkCanvas(128, 128, function (g, w, h) {
-			g.clearRect(0, 0, w, h);
-			g.fillStyle = '#ffffff';
-			for (let i = 0; i < 9; i++) {
-				const x0 = 10 + rand() * (w - 20);
-				const tipX = x0 + (rand() - 0.5) * 36;
-				const wb = 5 + rand() * 4;
-				g.beginPath();
-				g.moveTo(x0 - wb / 2, h);
-				g.quadraticCurveTo(x0 - wb / 2, h * 0.45, tipX, 6 + rand() * 26);
-				g.quadraticCurveTo(x0 + wb / 2, h * 0.45, x0 + wb / 2, h);
-				g.closePath();
-				g.fill();
-			}
-		})
-	);
+	const bladeAlpha = mkBladeAlpha(T, rand);
 	// only casters near the fire throw a visible shadow; thin keeps the 10 closest
 	const castN = casters
 		.filter(function (c) {
@@ -1222,6 +1181,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
               varying vec2 vLocal;
               varying float vGust;
               varying float vRnd;
+              ${FOG_GLSL}
               void main() {
                 float a = texture2D(uAlpha, vUv).a;
                 if (a < 0.4) discard;
@@ -1235,9 +1195,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
                 vec3 lit = col * (uAmb + vec3(1.0, 0.52, 0.18) * glow * 2.8);
                 // a passing gust flips the blade tips: a faint cool sheen rides the front
                 lit += uAmb * vGust * vUv.y * vUv.y * 0.22;
-                float camD = distance(vWorld, cameraPosition);
-                float fogF = clamp(1.0 - exp(-pow(camD * 0.115, 2.0)), 0.0, 1.0);
-                lit = mix(lit, uFogC, fogF);
+                lit = fogMix(lit, vWorld, 0.115);
                 gl_FragColor = vec4(lit, 1.0);
                 ${DITHER}
               }`
@@ -1362,7 +1320,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		seatGeo.computeVertexNormals();
 	}
 	const seatMat = [
-		new T.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.03, color: 0xc09468, roughness: 1, dithering: Q.dither }),
+		new T.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.03, color: 0xc09468, roughness: 1, dithering: true }),
 		endMat,
 		endMat
 	];
@@ -1406,7 +1364,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	}
 
 	// --- assemble the merged / instanced forest pieces (one draw call each) ---
-	const trunkMat = new T.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.05, roughness: 1, vertexColors: true, dithering: Q.dither });
+	const trunkMat = new T.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.05, roughness: 1, vertexColors: true, dithering: true });
 	// the bark texture is red-brown; pull the trunks toward brown-grey so firelight doesn't paint them red
 	trunkMat.onBeforeCompile = function (sh) {
 		sh.fragmentShader = sh.fragmentShader.replace(
@@ -1863,18 +1821,19 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	const SMOKE_DELAY = 2.5,
 		SMOKE_RISE = 6;
 	let smokeT0 = -1;
+	const flames = [flameA, flameB];
 	return function (t, dt) {
 		const fdt = Math.min(dt || 0.016, 0.05);
-		updateWind(t);
+		const f60 = dt * 60; // per-frame steps below are tuned at 60fps
+		wind.update(t);
 		const gF = gustAt(0, 0, 0.6), brF = breezeAt(0, 0, t);
 		// one smooth flicker (value noise of the clock), eased so no frame jumps more than a few %
 		const fTarget = flickAt(t, gF);
 		flick += Math.max(-0.03, Math.min(0.03, (fTarget - flick) * Math.min(1, fdt * 14)));
 		// flames lean downwind (pivot at the base) and sway harder with the same signal
 		const lean = brF * 0.04 + gF * 0.16;
-		const fl = [flameA, flameB];
 		for (let k = 0; k < 2; k++) {
-			const fm = fl[k], ln = lean * (k ? 0.8 : 1), hh = k ? 0.32 : 0.5;
+			const fm = flames[k], ln = lean * (k ? 0.8 : 1), hh = k ? 0.32 : 0.5;
 			fm.rotation.set(WIND_DIR[1] * ln, 0, -WIND_DIR[0] * ln);
 			fm.position.set(WIND_DIR[0] * Math.sin(ln) * hh, k ? flameBY : flameAY, WIND_DIR[1] * Math.sin(ln) * hh);
 		}
@@ -1900,7 +1859,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		grassUni.uTime.value = t;
 		timeUni.value = t;
 		flickUni.value = (0.7 + flick * 0.5) * todP.fire;
-		grassUni.uFlick.value = (0.7 + flick * 0.5) * todP.fire;
+		grassUni.uFlick.value = flickUni.value;
 		smokeMat.uniforms.uTime.value = t;
 		if (smokeT0 < 0) smokeT0 = t;
 		// still mode (reduced motion) renders a single t=0 frame: show the column fully formed
@@ -1918,8 +1877,8 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 			const wx = WIND_DIR[0] * (breezeAt(p[i3], p[i3 + 2], t) * 0.08 + gustAt(p[i3], p[i3 + 2], 0.4) * 0.5) * fdt;
 			const wz = WIND_DIR[1] * (breezeAt(p[i3], p[i3 + 2], t) * 0.08 + gustAt(p[i3], p[i3 + 2], 0.4) * 0.5) * fdt;
 			if (eSt[i] === 0) {
-				p[i3 + 1] += ev[i];
-				p[i3] += Math.sin(t * 2 + i) * 0.0018 + wx;
+				p[i3 + 1] += ev[i] * f60;
+				p[i3] += Math.sin(t * 2 + i) * 0.0018 * f60 + wx;
 				p[i3 + 2] += wz;
 				if (p[i3 + 1] > 2.0) {
 					p[i3 + 1] = 0;
@@ -1973,8 +1932,8 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 			f.m.opacity = Math.max(0, Math.sin(t * 0.8 + f.ph)) * 0.8 * todP.ff;
 			const fp = (f.g.attributes.position as THREE.BufferAttribute).array as Float32Array;
 			for (let i = 0; i < fp.length; i += 3) {
-				fp[i] += Math.sin(t * 0.5 + i + gi) * 0.0014;
-				fp[i + 1] += Math.cos(t * 0.7 + i * 1.3 + gi) * 0.001;
+				fp[i] += Math.sin(t * 0.5 + i + gi) * 0.0014 * f60;
+				fp[i + 1] += Math.cos(t * 0.7 + i * 1.3 + gi) * 0.001 * f60;
 			}
 			f.g.attributes.position.needsUpdate = true;
 		});
@@ -1982,12 +1941,12 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 			s.m.opacity = starInt * (0.55 + 0.45 * Math.sin(t * (0.6 + i * 0.23) + s.ph));
 		});
 		clouds.forEach(function (c) {
-			c.s.position.x += c.v;
+			c.s.position.x += c.v * f60;
 			if (c.s.position.x > 22) c.s.position.x = -22;
 		});
 		mists.forEach(function (mi) {
 			mi.m.opacity = 0.34 + 0.2 * Math.sin(t * 0.22 + mi.ph);
-			mi.s.position.x += Math.sin(t * 0.1 + mi.ph) * 0.0012;
+			mi.s.position.x += Math.sin(t * 0.1 + mi.ph) * 0.0012 * f60;
 		});
 		if (t > shoot.next) {
 			const el = t - shoot.next;
@@ -1997,8 +1956,8 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 					shoot.m.position.set(-6 + rand() * 12, 9 + rand() * 4.5, -16 - rand() * 6);
 				}
 				shoot.m.material.opacity = Math.sin((el / 1.1) * Math.PI) * 0.75 * Math.max(0.15, starInt);
-				shoot.m.position.x += 0.085;
-				shoot.m.position.y -= 0.026;
+				shoot.m.position.x += 0.085 * f60;
+				shoot.m.position.y -= 0.026 * f60;
 			} else {
 				shoot.m.material.opacity = 0;
 				shoot.t0 = -1;
@@ -2007,7 +1966,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		}
 		leaves.forEach(function (lf) {
 			if (lf.y < 0.02) {
-				lf.wait -= 0.016;
+				lf.wait -= dt;
 				lf.m.material.opacity = 0;
 				if (lf.wait <= 0) {
 					lf.x = (rand() - 0.5) * 6;
@@ -2017,10 +1976,10 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 					lf.wait = 8 + rand() * 16;
 				}
 			} else {
-				lf.y -= lf.vy;
+				lf.y -= lf.vy * f60;
 				lf.x += WIND_DIR[0] * (breezeAt(lf.x, lf.z, t) * 0.15 + gustAt(lf.x, lf.z, 1.0) * 0.9) * fdt;
 				lf.z += WIND_DIR[1] * (breezeAt(lf.x, lf.z, t) * 0.15 + gustAt(lf.x, lf.z, 1.0) * 0.9) * fdt;
-				lf.m.material.opacity = Math.min(0.85, lf.m.material.opacity + 0.02) * Math.min(1, lf.y / 0.4);
+				lf.m.material.opacity = Math.min(0.85, lf.m.material.opacity + 0.02 * f60) * Math.min(1, lf.y / 0.4);
 				lf.m.position.set(lf.x + Math.sin(t * 1.3 + lf.ph) * 0.35, lf.y, lf.z);
 				lf.m.rotation.set(Math.sin(t * 2 + lf.ph) * 0.8, t * 0.7 + lf.ph, Math.sin(t * 1.6 + lf.ph) * 0.6);
 			}

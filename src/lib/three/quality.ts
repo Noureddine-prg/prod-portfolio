@@ -1,13 +1,6 @@
-// Device quality tier — how much the 3D board may spend.
-//
-//   full     every effect, dpr ≤ 2, ~60fps
-//   reduced  campfire extras off (fire shadows, landing embers, rock chisel, part of the grass),
-//            render resolution ~1x, 30fps cap, no backdrop blur
-//   still    each scene renders one frame and stops (software GL, or still too slow on reduced)
-//
-// The starting tier comes from a probe (software renderer / no WebGL → still; weak device hints →
-// reduced). The loop then watches real frame pacing and steps down if the device can't keep up.
-// `?quality=full|reduced|still` pins a tier (and disables the step-down) for testing.
+// Device quality tier: full (every effect, ~60fps), reduced (campfire extras off, ≤1.5x render scale,
+// 30fps, no backdrop blur), still (one frame per scene). A probe picks the start tier; the loop steps
+// down on slow frame pacing. `?quality=full|reduced|still` pins a tier (no step-down) for testing.
 
 import { browser } from '$app/environment';
 

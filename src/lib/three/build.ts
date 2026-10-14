@@ -1,5 +1,4 @@
-// Canvas registration plumbing: renderer/scene/cam/pivot/spin, variant parse, per-kind dispatch,
-// SceneEntry store. Context-loss restore is keyed off the registry's CanvasMeta, not DOM expandos.
+// Builds one canvas's renderer/scene/cam/pivot/spin and dispatches to its builder.
 
 import type * as THREE from 'three';
 import { getMeta, setEntry, type SceneEntry } from './registry';
@@ -10,14 +9,16 @@ import { mulberry32, hashSeed } from '$lib/util/rand';
 import { quality } from './quality';
 import type { SceneCtx, SceneKind } from './types';
 
-const DPR = () => Math.min(window.devicePixelRatio || 1, 2);
-
 /**
  * Build (or rebuild) the scene for a canvas. Returns the entry, or null if we're waiting
  * on a context restore / the build failed. `T` is the three module, injected so this file
  * never statically imports three (keeps it out of the SSR bundle path).
  */
-export function buildCanvas(T: typeof THREE, cv: HTMLCanvasElement): SceneEntry | null {
+export function buildCanvas(
+	T: typeof THREE,
+	cv: HTMLCanvasElement,
+	pixelRatio: number
+): SceneEntry | null {
 	const m = getMeta(cv);
 
 	// Awaiting a context restore from a prior offscreen dispose — kick it and bail; the
@@ -49,7 +50,7 @@ export function buildCanvas(T: typeof THREE, cv: HTMLCanvasElement): SceneEntry 
 		alpha: true,
 		preserveDrawingBuffer: true
 	});
-	renderer.setPixelRatio(DPR());
+	renderer.setPixelRatio(pixelRatio); // the loop's ratio, so its first resize check is a no-op
 	renderer.setSize(w, h, false);
 
 	const scene = new T.Scene();

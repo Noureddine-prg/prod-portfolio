@@ -119,7 +119,7 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	const LIFT = 0.28;
 	const BITE = 0.045; // overshoot past rest at impact, decays back to the rest pose
 	const DUR = 0.85;
-	// rework: near-locked view — a barely-there sway (DC 0.3 rad read as spinning on the board)
+	// near-locked: a barely-there sway
 	const SWAY_AMP = 0.035;
 	const SWAY_FREQ = 0.25;
 	// mobile (no hill): turns out to 30° and back every 6s on an under-damped spring, so each

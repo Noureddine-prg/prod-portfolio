@@ -194,7 +194,7 @@ export function buildEnvelope(ctx: SceneCtx): UpdateFn | null {
 	grp.add(fireP);
 	// seal pop + flap open: expand.ts sets data-pop at click; resets when cleared
 	let popT: number | null = null;
-	// hover (rework, not in the DC): data-hover eases `hv` in/out — the flap lifts a little and
+	// hover (not in the DC): data-hover eases `hv` in/out — the flap lifts a little and
 	// the seal warms. Pop wins: hv eases out while popped, riding on top of the swing.
 	let hv = 0;
 	return (t, dt) => {
