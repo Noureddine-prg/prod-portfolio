@@ -6,16 +6,26 @@
 		size = 9,
 		resumeColor,
 		linkColor,
-		resumeLabel = 'Open resume PDF →'
-	}: { size?: number; resumeColor: string; linkColor: string; resumeLabel?: string } = $props();
+		resumeLabel = 'Open resume PDF →',
+		resume = true
+	}: {
+		size?: number;
+		resumeColor: string;
+		linkColor: string;
+		resumeLabel?: string;
+		/** false where the card already carries its own resume button (Experience) */
+		resume?: boolean;
+	} = $props();
 </script>
 
-<a
-	href={links.resume}
-	target="_blank"
-	style="font:500 {size}px 'JetBrains Mono',monospace;color:{resumeColor};text-decoration:none"
-	>{resumeLabel}</a
->
+{#if resume}
+	<a
+		href={links.resume}
+		target="_blank"
+		style="font:500 {size}px 'JetBrains Mono',monospace;color:{resumeColor};text-decoration:none"
+		>{resumeLabel}</a
+	>
+{/if}
 <a
 	href={links.linkedin}
 	target="_blank"

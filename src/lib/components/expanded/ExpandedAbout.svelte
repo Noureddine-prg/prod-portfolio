@@ -1,8 +1,10 @@
 <script lang="ts">
-	// About expanded panel, mounted into the clone by expand.ts. Portrait column + skill
-	// groups (desktop plain-text, mobile chips) + footer links.
+	// About expanded panel, mounted into the clone by expand.ts. Portrait-led: the photo is the
+	// large stage, and the tile's firefly jar rides along as a small live accent beside the
+	// name; statement, body, availability and skill groups sit beside (desktop) or below (mobile).
 	import EmberGlass from './EmberGlass.svelte';
 	import CardLinks from '../CardLinks.svelte';
+	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { about, profile } from '$lib/content';
 
 	interface Props {
@@ -12,54 +14,70 @@
 
 	const chipGroups = about.skillGroups.filter((g) => g.chips);
 	const ruleDelays = ['.5s', '.7s', '.9s'];
+	const role = about.lockup.join(' ');
 </script>
+
+{#snippet identity(size: number)}
+	<div style="display:flex;align-items:center;gap:10px">
+		<ThreeCanvas
+			kind="jar"
+			lite
+			style="width:{size}px;height:{Math.round(size * 1.15)}px;flex:none;display:block;pointer-events:none"
+		/>
+		<div style="display:flex;flex-direction:column;gap:3px">
+			<span style="font:600 {mobile ? 15 : 16}px 'Archivo',sans-serif;color:#f1ebe4"
+				>{profile.name}</span
+			>
+			<span style="font:400 {mobile ? 11 : 11.5}px 'JetBrains Mono',monospace;color:#b8aca3"
+				>{role} · {profile.location}</span
+			>
+		</div>
+	</div>
+{/snippet}
+
+{#snippet availability()}
+	<span style="display:flex;align-items:center;gap:9px"
+		><span
+			style="width:7px;height:7px;border-radius:50%;background:#e2954f;flex:none;box-shadow:0 0 8px rgba(226,149,79,.7);animation:dcpulse 2.4s ease-in-out infinite"
+		></span><span style="font:400 {mobile ? 11 : 11.5}px 'JetBrains Mono',monospace;color:#e9d9c6"
+			>{about.availabilityLine}</span
+		></span
+	>
+{/snippet}
 
 {#if mobile}
 	<EmberGlass mobile />
-	<!-- portrait hero + lockup — DC L618–626; img is absolute so the ✕-clearance padding
-	     expand.ts adds to the first non-absolute child can't shrink it. 240px (DC 190) so a
-	     real portrait's face clears the lockup. -->
-	<div
-		style="position:relative;height:240px;flex:none;border-radius:16px;overflow:hidden;border:1px solid #322a3d"
-	>
+	<!-- portrait stage — the header rides on it, the ✕ sits in its top-right corner -->
+	<div style="position:relative;flex:none;height:300px;margin:-20px -20px 0;overflow:hidden">
 		<img
 			src={about.portrait.src}
 			alt={about.portrait.alt}
-			style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 56%;display:block"
+			style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 40%;display:block"
 		/>
 		<div
-			style="position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(180deg,transparent,rgba(20,16,28,.94));pointer-events:none"
+			style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,12,10,.55),transparent 28%,transparent 62%,#18130f);pointer-events:none"
 		></div>
-		<div style="position:absolute;left:14px;bottom:12px;display:flex;flex-direction:column">
-			<span
-				style="font:400 20px/1.04 'Archivo Black',sans-serif;letter-spacing:.01em;color:#efe9f2;text-transform:uppercase;text-shadow:0 1px 10px rgba(0,0,0,.55)"
-				>{about.lockup[0]}</span
-			>
-			<span
-				style="font:400 20px/1.04 'Archivo Black',sans-serif;letter-spacing:.02em;color:transparent;text-transform:uppercase;-webkit-text-stroke:1.2px #e2954f;padding-left:22px"
-				>{about.lockup[1]}</span
-			>
-		</div>
 		<span
-			style="position:absolute;right:14px;bottom:14px;font:400 8px 'JetBrains Mono',monospace;color:#cfc4de;text-shadow:0 1px 6px rgba(0,0,0,.6)"
-			>{profile.location}</span
+			style="position:absolute;left:20px;top:20px;font:400 20px 'Archivo Black',sans-serif;letter-spacing:.01em;color:#f1ebe4;text-transform:uppercase"
+			>{about.header}</span
 		>
 	</div>
-	<span style="position:relative;font:400 13.5px/1.8 'Archivo',sans-serif;color:#b3a8c2"
-		>{about.body}</span
-	>
-	<!-- 3 chip groups with dcrule draw-ins — DC L629–650 -->
-	<div
-		style="position:relative;flex:1;display:flex;flex-direction:column;justify-content:space-evenly;gap:16px"
-	>
+	<div style="position:relative;display:flex;flex-direction:column;gap:16px">
+		{@render identity(40)}
+		<span style="font:400 22px/1.3 'Cormorant Garamond',serif;color:#f1ebe4">{about.thesis}</span>
+		<span style="font:400 14px/1.7 'Archivo',sans-serif;color:#d2c7bd">{about.body}</span>
+		{@render availability()}
+	</div>
+	<!-- chip groups with dcrule draw-ins — DC L629–650 -->
+	<div style="position:relative;flex:none;display:flex;flex-direction:column;gap:16px">
 		{#each chipGroups as g, i (g.label)}
 			<div style="display:flex;flex-direction:column;gap:9px">
 				<span style="display:flex;align-items:center;gap:10px"
 					><span
-						style="font:400 8px 'JetBrains Mono',monospace;color:#e2954f;text-transform:uppercase;letter-spacing:.12em;flex:none"
+						style="font:400 10px 'JetBrains Mono',monospace;color:#e2954f;text-transform:uppercase;letter-spacing:.12em;flex:none"
 						>{g.label}</span
 					><span
-						style="flex:1;border-bottom:1px solid #322a3d;transform-origin:left;animation:dcrule .9s cubic-bezier(.2,.7,.3,1) {ruleDelays[
+						style="flex:1;border-bottom:1px solid #3a302a;transform-origin:left;animation:dcrule .9s cubic-bezier(.2,.7,.3,1) {ruleDelays[
 							i
 						]} both"
 					></span></span
@@ -67,7 +85,7 @@
 				<div style="display:flex;flex-wrap:wrap;gap:7px">
 					{#each g.chips ?? [] as chip (chip)}
 						<span
-							style="padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.045);border:1px solid #3b3149;font:400 10.5px 'Archivo',sans-serif;color:#cfc4de"
+							style="padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.045);border:1px solid #43372f;font:400 12px 'Archivo',sans-serif;color:#d9cec4"
 							>{chip}</span
 						>
 					{/each}
@@ -75,78 +93,62 @@
 			</div>
 		{/each}
 	</div>
-	<!-- availability pill — DC L651–654 -->
 	<div
-		style="position:relative;flex:none;display:flex;align-items:center;gap:9px;padding:11px 14px;border-radius:12px;background:rgba(226,149,79,.08);border:1px solid rgba(226,149,79,.22)"
+		style="position:relative;flex:none;display:flex;gap:14px;align-items:baseline;border-top:1px solid #2e2520;padding-top:12px"
 	>
-		<span
-			style="width:7px;height:7px;border-radius:50%;background:#e2954f;flex:none;animation:dcpulse 2.4s ease-in-out infinite"
-		></span>
-		<span style="font:400 9.5px 'JetBrains Mono',monospace;color:#e9d9c6"
-			>{about.availabilityLine}</span
-		>
-	</div>
-	<!-- links footer, matching the other cards' pattern -->
-	<div
-		style="position:relative;flex:none;display:flex;gap:14px;align-items:baseline;border-top:1px solid #2f2939;padding-top:12px"
-	>
-		<CardLinks size={8.5} resumeColor="#e2954f" linkColor="#b3a8c2" />
+		<CardLinks size={11} resumeColor="#e2954f" linkColor="#b8aca3" />
 	</div>
 {:else}
 	<EmberGlass />
 	<div
-		style="position:relative;display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"
+		style="position:relative;display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"
 	>
 		<span
-			style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#9d92ab;text-transform:uppercase"
+			style="font:400 24px 'Archivo Black',sans-serif;letter-spacing:.01em;color:#efe9e6;text-transform:uppercase"
 			>{about.header}</span
 		>
-		<span style="font:400 9px 'JetBrains Mono',monospace;color:#6f6580">{about.location}</span>
 	</div>
-	<div style="position:relative;flex:1;display:flex;gap:36px;padding:10px 12px 0">
-		<!-- portrait column — 206px bordered box, real <img> in the DC's image-slot place -->
-		<div style="width:172px;flex:none;display:flex;flex-direction:column;justify-content:center">
+	<div style="position:relative;flex:1;min-height:0;display:flex;gap:44px">
+		<!-- portrait stage -->
+		<div
+			style="position:relative;flex:0 0 36%;border-radius:16px;overflow:hidden;border:1px solid #3a302a"
+		>
+			<img
+				src={about.portrait.src}
+				alt={about.portrait.alt}
+				style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 35%;display:block"
+			/>
 			<div
-				style="height:206px;position:relative;border:1px solid #322a3d;border-radius:16px;padding:5px;box-sizing:border-box;background:rgba(255,255,255,.02)"
+				style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 120%,rgba(226,149,79,.22),transparent 60%);pointer-events:none"
+			></div>
+		</div>
+		<div
+			style="flex:1;min-width:0;max-width:600px;display:flex;flex-direction:column;justify-content:center;gap:18px"
+		>
+			{@render identity(44)}
+			<span style="font:400 28px/1.25 'Cormorant Garamond',serif;color:#f1ebe4"
+				>{about.thesis}</span
 			>
-				<img
-					src={about.portrait.src}
-					alt={about.portrait.alt}
-					style="width:100%;height:100%;object-fit:cover;object-position:50% 40%;border-radius:12px;display:block"
-				/>
+			<span style="font:400 14px/1.6 'Archivo',sans-serif;color:#d2c7bd;max-width:62ch"
+				>{about.body}</span
+			>
+			{@render availability()}
+			<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 32px">
+				{#each about.skillGroups as g (g.label)}
+					<div style="display:flex;flex-direction:column;gap:5px">
+						<span
+							style="font:400 10px 'JetBrains Mono',monospace;color:#e2954f;text-transform:uppercase;letter-spacing:.1em"
+							>{g.label}</span
+						>
+						<span style="font:400 12.5px/1.55 'Archivo',sans-serif;color:#d9cec4">{g.text}</span>
+					</div>
+				{/each}
 			</div>
-		</div>
-		<div
-			style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px;max-width:520px"
-		>
-			<span style="font:400 22px/1.5 'Cormorant Garamond',serif;color:#efe9f2">{about.intro}</span>
-			<span style="font:400 12px/1.75 'Archivo',sans-serif;color:#b3a8c2">{about.body}</span>
-			<span style="display:flex;align-items:center;gap:8px"
-				><span
-					style="width:7px;height:7px;border-radius:50%;background:#e2954f;box-shadow:0 0 8px rgba(226,149,79,.7)"
-				></span><span style="font:400 9.5px 'JetBrains Mono',monospace;color:#9d92ab"
-					>{about.availabilityLine}</span
-				></span
-			>
-		</div>
-		<!-- right rail — 4 plain-text skill groups (no chips/dcrule on desktop) -->
-		<div
-			style="width:230px;flex:none;display:flex;flex-direction:column;justify-content:center;gap:14px;border-left:1px solid #322a3d;padding-left:26px"
-		>
-			{#each about.skillGroups as g (g.label)}
-				<div style="display:flex;flex-direction:column;gap:5px">
-					<span
-						style="font:400 8.5px 'JetBrains Mono',monospace;color:#e2954f;text-transform:uppercase;letter-spacing:.1em"
-						>{g.label}</span
-					>
-					<span style="font:400 11.5px/1.6 'Archivo',sans-serif;color:#cfc4de">{g.text}</span>
-				</div>
-			{/each}
 		</div>
 	</div>
 	<div
-		style="position:relative;display:flex;gap:18px;align-items:baseline;border-top:1px solid #322a3d;padding-top:12px"
+		style="position:relative;display:flex;gap:18px;align-items:baseline;border-top:1px solid #3a302a;padding-top:12px;margin-top:14px"
 	>
-		<CardLinks resumeColor="#e2954f" linkColor="#9d92ab" />
+		<CardLinks resumeColor="#e2954f" linkColor="#a39689" />
 	</div>
 {/if}

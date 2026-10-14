@@ -6,6 +6,7 @@
 	import MobileOceanStrip from './MobileOceanStrip.svelte';
 	import CompanyIcon from '../CompanyIcon.svelte';
 	import CardLinks from '../CardLinks.svelte';
+	import ResumeButton from './ResumeButton.svelte';
 	import { experience } from '$lib/content';
 
 	interface Props {
@@ -76,17 +77,18 @@
 	</MobileOceanStrip>
 	<!-- education + links footer — DC L532–539 -->
 	<div style="display:flex;flex-direction:column;gap:10px;padding:0 22px 20px;margin-top:18px">
+		<ResumeButton full />
 		<span
 			style="font:400 8px 'JetBrains Mono',monospace;color:#6e6058;border-top:1px solid #2a2424;padding-top:12px"
 			>{experience.education}</span
 		>
 		<div style="display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
-			<CardLinks size={8.5} resumeColor="#c85a44" linkColor="#94867f" />
+			<CardLinks size={8.5} resume={false} resumeColor="#c85a44" linkColor="#94867f" />
 		</div>
 	</div>
 {:else}
 	<SpaceNightBg />
-	<div style="position:relative;display:flex;justify-content:space-between;align-items:baseline">
+	<div style="position:relative;display:flex;justify-content:space-between;align-items:center">
 		<span style="display:inline-flex;align-items:center;gap:12px"
 			><span
 				style="font:400 24px 'Archivo Black',sans-serif;letter-spacing:.01em;color:#efe9e6;text-transform:uppercase"
@@ -96,6 +98,7 @@
 				>&mdash; The journey so far</span
 			></span
 		>
+		<ResumeButton />
 	</div>
 	<div style="position:relative;display:flex;gap:22px;flex:1;min-height:0">
 		<!-- role timeline — DC L147–168 -->
@@ -107,7 +110,7 @@
 						1};padding:2px 12px {last ? 0 : 16}px 0;text-align:right;display:flex;flex-direction:column;gap:3px"
 				>
 					<span style="font:500 9.5px 'JetBrains Mono',monospace;color:#efe9e6">{role.start}</span>
-					<span style="font:400 9px 'JetBrains Mono',monospace;color:#6e6058">{role.end}</span>
+					<span style="font:400 9px 'JetBrains Mono',monospace;color:#9a8c84">{role.end}</span>
 				</div>
 				<div style="grid-column:2;grid-row:{i + 1};position:relative">
 					{#if !last}
@@ -146,9 +149,19 @@
 						<span style="font:600 16px 'Archivo',sans-serif;color:#efe9e6">{role.company}</span>
 						<span style="font:500 9.5px 'JetBrains Mono',monospace;color:#c85a44">{role.title}</span>
 					</div>
-					<span style="font:400 10px/1.55 'JetBrains Mono',monospace;color:#94867f"
-						>{role.blurb}</span
+					<ul
+						style="margin:1px 0 3px;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px"
 					>
+						{#each role.bullets as b (b)}
+							<li
+								style="position:relative;padding-left:14px;font:400 12px/1.45 'Archivo',sans-serif;color:#cdc1b8"
+							>
+								<span
+									style="position:absolute;left:0;top:.62em;width:5px;height:5px;border-radius:1px;background:#5e5048"
+								></span>{b}
+							</li>
+						{/each}
+					</ul>
 					<div style="display:flex;gap:6px;flex-wrap:wrap">
 						{#each role.tech as t (t)}
 							<span
@@ -166,6 +179,9 @@
 	<div
 		style="position:relative;display:flex;justify-content:flex-start;gap:18px;align-items:baseline;border-top:1px solid #2a2424;padding-top:14px"
 	>
-		<CardLinks resumeColor="#c85a44" linkColor="#94867f" />
+		<CardLinks resume={false} resumeColor="#c85a44" linkColor="#94867f" />
+		<span style="margin-left:auto;font:400 10px 'JetBrains Mono',monospace;color:#9a8c84"
+			>{experience.education}</span
+		>
 	</div>
 {/if}

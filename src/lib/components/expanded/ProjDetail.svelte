@@ -31,14 +31,14 @@
 		root?.closest<HTMLElement>('[data-expand]')?.scrollTo({ top: 0 });
 	});
 
-	const ink = '#241d18',
-		mid = '#5e544a',
-		dim = '#8a7d6e';
+	const ink = '#ece5da',
+		mid = '#a8acb8',
+		dim = '#7c8294';
 </script>
 
 {#snippet ph(label: string, h: number)}
 	<div
-		style="border:1px dashed rgba(36,29,24,.34);border-radius:10px;display:flex;align-items:center;justify-content:center;min-height:{h}px;background:rgba(36,29,24,.05)"
+		style="border:1px dashed rgba(220,226,240,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;min-height:{h}px;background:rgba(255,255,255,.025)"
 	>
 		<span
 			style="font:400 8.5px 'JetBrains Mono',monospace;color:{dim};letter-spacing:.08em;text-transform:uppercase"
@@ -53,14 +53,19 @@
 			style="font:500 8px 'JetBrains Mono',monospace;letter-spacing:.14em;color:{dim};text-transform:uppercase"
 			>{h}</span
 		>
-		<span style="font:400 11px/1.65 'Hanken Grotesk',sans-serif;color:{mid}">{b}</span>
+		<!-- desktop reserves 3 lines so the media grid keeps one size across projects -->
+		<span
+			style="font:400 11px/1.65 'Hanken Grotesk',sans-serif;color:{mid};min-height:{narrow
+				? 0
+				: 'calc(1.65em * 3)'}">{b}</span
+		>
 	</div>
 {/snippet}
 
 <div
 	bind:this={root}
 	class="proj-detail"
-	style="position:absolute;inset:0;z-index:3;background:#cbbfa8;padding:{narrow
+	style="position:absolute;inset:0;z-index:3;background:#0b0d15;padding:{narrow
 		? '20px'
 		: '26px 30px'};display:flex;flex-direction:column;gap:{narrow
 		? '10px'
@@ -73,7 +78,7 @@
 		style="display:flex;justify-content:space-between;align-items:center;padding-right:{narrow
 			? 0
 			: 48}px;order:{narrow ? 99 : 0};{narrow
-			? 'margin-top:auto;padding:14px 0 20px;margin-bottom:-20px;border-top:1px solid rgba(36,29,24,.16);position:sticky;bottom:-20px;background:#cbbfa8;z-index:1'
+			? 'margin-top:auto;padding:14px 0 20px;margin-bottom:-20px;border-top:1px solid rgba(220,226,240,0.1);position:sticky;bottom:-20px;background:#0b0d15;z-index:1'
 			: ''}"
 	>
 		<span
@@ -131,7 +136,7 @@
 	<div
 		style="display:grid;grid-template-columns:{narrow ? '1fr' : 'repeat(3,1fr)'};gap:{narrow
 			? '10px'
-			: '16px'};border-top:1px solid rgba(36,29,24,.24);padding-top:12px"
+			: '16px'};border-top:1px solid rgba(220,226,240,0.14);padding-top:12px"
 	>
 		{@render cs('Problem', p.problem)}
 		{@render cs('Approach', p.approach)}

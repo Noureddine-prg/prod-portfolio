@@ -59,10 +59,10 @@
 		style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"
 	>
 		<span
-			style="font:400 12px 'Archivo Black',sans-serif;letter-spacing:.02em;color:#241d18;text-transform:uppercase"
+			style="font:400 12px 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
 			>Work &middot; 06 builds</span
 		>
-		<span style="font:400 8.5px 'JetBrains Mono',monospace;color:#8a7d6e">2024 &mdash; now</span>
+		<span style="font:400 8.5px 'JetBrains Mono',monospace;color:#7c8294">2024 &mdash; now</span>
 	</div>
 	{#each work.projects as p, i (p.id)}
 		<div
@@ -75,11 +75,11 @@
 			onkeydown={(e) => e.key === 'Enter' && (ui.workDetail = p.id)}
 			style={i === work.projects.length - 1 ? 'border-bottom:none' : ''}
 		>
-			<span style="font:500 13px 'Cormorant Garamond',serif;color:#241d18"
+			<span style="font:500 13px 'Cormorant Garamond',serif;color:#ece5da"
 				>{p.number} &middot; {p.name}</span
 			>
-			<span style="font:400 10.5px/1.5 'Archivo',sans-serif;color:#5e544a">{p.descShort}</span>
-			<span style="font:400 7.5px 'JetBrains Mono',monospace;color:#8a7d6e"
+			<span style="font:400 10.5px/1.5 'Archivo',sans-serif;color:#a8acb8">{p.descShort}</span>
+			<span style="font:400 7.5px 'JetBrains Mono',monospace;color:#7c8294"
 				>{p.tech} &middot; {p.org} &middot; {p.year}</span
 			>
 		</div>
@@ -90,14 +90,14 @@
 		style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px"
 	>
 		<span
-			style="font:400 14px 'Archivo Black',sans-serif;letter-spacing:.02em;color:#241d18;text-transform:uppercase"
+			style="font:400 14px 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
 			>Work &middot; 06 builds</span
 		>
-		<span style="font:400 9px 'JetBrains Mono',monospace;color:#8a7d6e">2024 &mdash; now</span>
+		<span style="font:400 9px 'JetBrains Mono',monospace;color:#7c8294">2024 &mdash; now</span>
 	</div>
 	<div
 		use:listEl
-		style="display:grid;grid-template-columns:34px 1fr 160px 118px 44px;gap:16px;padding:0 6px 10px;border-bottom:1px solid rgba(36,29,24,.28);font:400 8.5px 'Archivo Black',sans-serif;letter-spacing:.14em;color:#8a7d6e;text-transform:uppercase"
+		style="display:grid;grid-template-columns:34px 1fr 160px 118px 44px;gap:16px;padding:0 6px 10px;border-bottom:1px solid rgba(220,226,240,0.17);font:400 8.5px 'Archivo Black',sans-serif;letter-spacing:.14em;color:#7c8294;text-transform:uppercase"
 	>
 		<span>#</span><span>Project</span><span>Tech</span><span>Company</span><span
 			style="text-align:right">Year</span
@@ -113,16 +113,16 @@
 			onclick={() => (ui.workDetail = p.id)}
 			onkeydown={(e) => e.key === 'Enter' && (ui.workDetail = p.id)}
 		>
-			<span style="font:400 12px 'Cormorant Garamond',serif;color:#8a7d6e">{p.number}</span>
+			<span style="font:400 12px 'Cormorant Garamond',serif;color:#7c8294">{p.number}</span>
 			<span
-				><span style="font:500 16px 'Cormorant Garamond',serif;color:#241d18">{p.name}</span><span
-					style="display:block;font:400 11px/1.5 'Archivo',sans-serif;color:#5e544a;margin-top:3px"
+				><span style="font:500 16px 'Cormorant Garamond',serif;color:#ece5da">{p.name}</span><span
+					style="display:block;font:400 11px/1.5 'Archivo',sans-serif;color:#a8acb8;margin-top:3px"
 					>{p.desc}</span
 				></span
 			>
-			<span style="font:400 8.5px 'JetBrains Mono',monospace;color:#4b423a">{p.tech}</span>
-			<span style="font:400 9px 'JetBrains Mono',monospace;color:#5e544a">{p.org}</span>
-			<span style="font:400 8.5px 'JetBrains Mono',monospace;color:#5e544a;text-align:right"
+			<span style="font:400 8.5px 'JetBrains Mono',monospace;color:#b7bbc6">{p.tech}</span>
+			<span style="font:400 9px 'JetBrains Mono',monospace;color:#a8acb8">{p.org}</span>
+			<span style="font:400 8.5px 'JetBrains Mono',monospace;color:#a8acb8;text-align:right"
 				>{p.year}</span
 			>
 		</div>
@@ -130,9 +130,9 @@
 	<div use:listEl style="flex:1"></div>
 	<div
 		use:listEl
-		style="display:flex;gap:18px;align-items:baseline;border-top:1px solid rgba(36,29,24,.28);padding-top:12px;margin-top:12px"
+		style="display:flex;gap:18px;align-items:baseline;border-top:1px solid rgba(220,226,240,0.17);padding-top:12px;margin-top:12px"
 	>
-		<CardLinks resumeColor="#241d18" linkColor="#5e544a" />
+		<CardLinks resumeColor="#e2954f" linkColor="#a8acb8" />
 	</div>
 {/if}
 
@@ -152,7 +152,7 @@
 		gap: 16px;
 		align-items: baseline;
 		padding: 12px 6px;
-		border-bottom: 1px solid rgba(36, 29, 24, 0.16);
+		border-bottom: 1px solid rgba(220, 226, 240, 0.1);
 		border-radius: 4px;
 		cursor: pointer;
 		outline: none;
@@ -167,7 +167,7 @@
 	.prow::before {
 		inset: 0;
 		border-radius: 4px;
-		background: rgba(42, 13, 6, 0.1);
+		background: rgba(226, 149, 79, 0.07);
 		transform: scaleX(0);
 		transform-origin: right;
 		transition: transform 0.32s cubic-bezier(0.23, 1, 0.32, 1);
@@ -178,7 +178,7 @@
 		bottom: 9px;
 		width: 2px;
 		border-radius: 1px;
-		background: #2a0d06;
+		background: #e2954f;
 		transform: scaleY(0);
 		transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
 	}
@@ -205,12 +205,12 @@
 		flex-direction: column;
 		gap: 3px;
 		padding: 9px 2px;
-		border-bottom: 1px solid rgba(36, 29, 24, 0.16);
+		border-bottom: 1px solid rgba(220, 226, 240, 0.1);
 		border-radius: 4px;
 		cursor: pointer;
 		transition: background 0.15s ease;
 	}
 	.prowm:active {
-		background: rgba(42, 13, 6, 0.08);
+		background: rgba(226, 149, 79, 0.08);
 	}
 </style>
