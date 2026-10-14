@@ -20,8 +20,10 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 
 	// eye height and pitch close to the campfire's own camera, so the column reads as the same
 	// clearing seen a few steps over rather than a mound looked down on
-	cam.position.set(0, 0.42, 5.6);
-	cam.lookAt(0, -0.66, 0);
+	// (a step closer than the DC framing: the stump kit is scaled down below, and moving the
+	// camera keeps its size in the tile without breaking its scale against the grass and trail)
+	cam.position.set(0, 0.2, 4.5);
+	cam.lookAt(0, -0.78, 0);
 
 	// seeded like the campfire's wind, so both scenes gust on the same schedule
 	const wind = mkWind(T, mulberry32(hashSeed('campfire-pass2')));
@@ -164,6 +166,17 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	fireLight.position.copy(FIRE);
 	scene.add(fireLight);
 
+	// --- scale: the DC stump + axe are sized to fill a small tile on their own; in this landscape
+	// (grass blades, a person-width trail) they read as giant, so the kit shrinks onto the knoll.
+	// The chop animation moves stump/grip in their own units, so it scales with them.
+	const KIT = 0.62;
+	const kit = new T.Group();
+	[...spin.children].forEach((c) => kit.add(c));
+	kit.scale.setScalar(KIT);
+	// stump base (local y -1.095) set a little into the crest
+	kit.position.y = CREST - 0.05 + 1.095 * KIT;
+	spin.add(kit);
+
 	// --- hill ---
 	const hillGeo = new T.RingGeometry(0.001, 8, 56, 28);
 	hillGeo.rotateX(-Math.PI / 2);
@@ -178,20 +191,20 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 
 	// --- path: a worn trail over the crest, around the stump, and down out the left edge toward
 	// the campfire. Plotted in view space (x right, z toward the camera) and turned into `spin`'s
-	// frame, since axelog has already rotated spin to its viewing angle. The stump's base radius
-	// is 0.88, so the trail keeps ≥1.2 from its centre.
+	// frame, since axelog has already rotated spin to its viewing angle. The scaled stump's base
+	// radius is ~0.55, so the trail keeps ≥0.85 from its centre.
 	const rotY = spin.rotation.y;
 	const toLocal = ([vx, vz]: number[]) =>
 		new T.Vector3(vx * Math.cos(rotY) - vz * Math.sin(rotY), 0, vx * Math.sin(rotY) + vz * Math.cos(rotY));
 	const pathCurve = new T.CatmullRomCurve3(
 		[
-			[1.5, -3.2],
-			[1.35, -1.6],
-			[1.25, -0.4],
-			[0.95, 0.75],
-			[0.15, 1.35],
-			[-0.75, 1.85],
-			[-1.6, 2.6],
+			[1.3, -3.2],
+			[1.0, -1.6],
+			[0.88, -0.4],
+			[0.72, 0.5],
+			[0.1, 0.95],
+			[-0.65, 1.5],
+			[-1.5, 2.4],
 			[-2.6, 3.4]
 		].map(toLocal)
 	);
@@ -391,7 +404,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	let gi = 0;
 	while (gi < GRASS_N) {
 		const a = rand() * Math.PI * 2;
-		const r = 0.84 + Math.pow(rand(), 1.1) * 6.2;
+		const r = 0.6 + Math.pow(rand(), 1.1) * 6.4; // up to the scaled stump's foot
 		const x = Math.cos(a) * r, z = Math.sin(a) * r;
 		if (z < -4.8) continue; // fogged out past here
 		if (onPath(x, z)) continue;
