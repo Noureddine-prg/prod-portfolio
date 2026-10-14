@@ -40,7 +40,7 @@
 	bind:this={boardEl}
 	class="board"
 	data-board
-	style="position:relative;width:{designW}px;height:{designH}px;background:transparent;padding:16px;grid-template-columns:1.72fr 1fr 1.1fr;grid-template-rows:1.15fr .85fr .85fr 1.15fr;grid-auto-rows:0"
+	style="position:relative;width:{designW}px;height:{designH}px;background:transparent;padding:16px;grid-template-columns:1.72fr 1.05fr 1.05fr;grid-template-rows:1.15fr .85fr .85fr 1.15fr;grid-auto-rows:0"
 >
 	<!-- one sky behind every tile: it shows through the see-through middle column and the
 	     gutters, and the Experience panel draws the same stars (SpaceNightBg) -->

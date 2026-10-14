@@ -18,17 +18,20 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	renderer.outputEncoding = T.sRGBEncoding;
 	scene.fog = new T.FogExp2(todP.fog, todP.fd);
 
-	cam.position.set(0, 0.75, 5.6);
-	cam.lookAt(0, -0.72, 0);
+	// eye height and pitch close to the campfire's own camera, so the column reads as the same
+	// clearing seen a few steps over rather than a mound looked down on
+	cam.position.set(0, 0.42, 5.6);
+	cam.lookAt(0, -0.66, 0);
 
 	// seeded like the campfire's wind, so both scenes gust on the same schedule
 	const wind = mkWind(T, mulberry32(hashSeed('campfire-pass2')));
 	// the campfire is just off-frame, front-left: its light rakes the near slope and the stump
 	const FIRE = new T.Vector3(-2.6, 0.3, 1.9);
 
-	// a gentle, nearly flat rise: level under the stump, easing away so the far ground sinks into the fog
+	// level ground like the campfire clearing: flat out to r 2.5, then only a faint fall-off far
+	// back (where the fog already has it) so the horizon is the treeline, not a hill edge
 	const CREST = -1.02;
-	const hillY = (r: number) => CREST - 0.035 * Math.max(0, r - 0.75) ** 2;
+	const hillY = (r: number) => CREST - 0.006 * Math.max(0, r - 2.5) ** 2;
 
 	// --- sky: screen-space quad, night gradient, transparent toward the top edge ---
 	const skyUni = {
@@ -88,8 +91,10 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	ridge.moveTo(-26, -9);
 	let rx = -26;
 	while (rx < 26) {
-		const base = -3.0 + Math.sin(rx * 0.19) * 0.45 + Math.sin(rx * 0.53) * 0.2;
-		const hgt = 0.5 + rand() * 1.0;
+		// base sits just under the flat ground's horizon, so the pines stand on it as the far
+		// edge of the same forest (the camera is at the campfire's eye height now)
+		const base = -2.25 + Math.sin(rx * 0.19) * 0.3 + Math.sin(rx * 0.53) * 0.15;
+		const hgt = 0.7 + rand() * 1.1;
 		const hw = 0.22 + rand() * 0.12;
 		ridge.lineTo(rx, base);
 		ridge.lineTo(rx + hw * 0.55, base + hgt * 0.45);
@@ -258,15 +263,15 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	});
 	const bladeGeo = new T.PlaneGeometry(0.3, 0.34, 1, 3);
 	bladeGeo.translate(0, 0.17, 0);
-	const GRASS_N = 1400;
+	const GRASS_N = 2600;
 	const grass = new T.InstancedMesh(bladeGeo, grassMat, GRASS_N);
 	const dummy = new T.Object3D();
 	let gi = 0;
 	while (gi < GRASS_N) {
 		const a = rand() * Math.PI * 2;
-		const r = 0.84 + Math.pow(rand(), 1.2) * 4.8;
+		const r = 0.84 + Math.pow(rand(), 1.1) * 6.2;
 		const x = Math.cos(a) * r, z = Math.sin(a) * r;
-		if (z < -3.6) continue; // fogged out past here
+		if (z < -4.8) continue; // fogged out past here
 		const s = 0.55 + rand() * 0.6;
 		dummy.position.set(x, hillY(r) - 0.02, z);
 		dummy.rotation.set(0, rand() * Math.PI, (rand() - 0.5) * 0.14);
