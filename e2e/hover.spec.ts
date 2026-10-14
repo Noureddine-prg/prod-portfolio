@@ -121,8 +121,8 @@ test.describe('Work tile row shortcut', () => {
 
 		const b = board(page, 'desktop');
 		const tile = b.locator('[data-card="work"]');
-		// the header title row sits in the tile's top padding band, above the first .wrow
-		await tile.click({ position: { x: 30, y: 8 } });
+		// the header title sits above the first .wrow; it is not a row shortcut
+		await tile.getByText(work.header, { exact: true }).click();
 
 		await expect(b).toHaveAttribute('data-open', '1');
 		const clone = b.locator('.is-clone');
@@ -146,7 +146,7 @@ test.describe('Work tile row shortcut', () => {
 		await expect(b.locator('.is-clone')).toHaveCount(0, { timeout: 8_000 });
 		await expect(b).not.toHaveAttribute('data-open', '1');
 
-		await b.locator('[data-card="work"]').click({ position: { x: 30, y: 8 } });
+		await b.locator('[data-card="work"]').getByText(work.header, { exact: true }).click();
 		await expect(b.locator('.is-clone.is-settled')).toBeVisible({ timeout: 12_000 });
 		await expect(b.locator('.is-clone .proj-detail')).toHaveCount(0);
 		await expect(b.locator('.is-clone [data-proj-row]')).toHaveCount(work.projects.length);

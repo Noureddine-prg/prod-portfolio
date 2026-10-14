@@ -61,3 +61,34 @@ test('ledger row → detail 03/06, prev/next wrap 01↔06, back restores rows', 
 	// Detail clicks must never close the card (✕-only even inside the overlay).
 	await expect(page.locator('.stage--desktop [data-board]')).toHaveAttribute('data-open', '1');
 });
+
+test('project detail: three media boxes enter, and the entrance replays on prev/next', async ({
+	page
+}) => {
+	await page.setViewportSize(DESKTOP);
+	await page.goto('/');
+	await settleIntro(page);
+
+	const clone = await openCard(page, 'desktop', 'work');
+	await clone.locator('[data-proj-row]').nth(0).click();
+	const detail = clone.locator('.proj-detail');
+	const imgs = detail.locator('.pd-img');
+	await expect(imgs).toHaveCount(3);
+
+	const stamp = () => imgs.evaluateAll((els) => els.forEach((e) => ((e as HTMLElement).dataset.seen = '1')));
+	const state = () =>
+		imgs.evaluateAll((els) =>
+			els.map((e) => ({
+				seen: (e as HTMLElement).dataset.seen === '1',
+				anim: /pd-img$/.test(getComputedStyle(e).animationName)
+			}))
+		);
+	expect(await state()).toEqual(Array(3).fill({ seen: false, anim: true }));
+
+	for (const btn of ['[data-pd-next]', '[data-pd-prev]']) {
+		await stamp();
+		await detail.locator(btn).click();
+		// {#key} remounts the boxes: fresh elements (no stamp) running the entrance again
+		await expect.poll(state).toEqual(Array(3).fill({ seen: false, anim: true }));
+	}
+});

@@ -50,32 +50,20 @@ test('experience: click → open → settle → close → board restored', async
 	expect(errors, `console errors:\n${errors.join('\n')}`).toEqual([]);
 });
 
-test('rapid double-click never yields two clones (open guard)', async ({ page }) => {
+// The second click of a double-click lands on the freshly mounted clone; the open guard in
+// expandCard() must not yield a second clone, and body-click close is armed only at settle,
+// so the card still settles open.
+test('rapid double-click: one clone, and the card still settles open', async ({ page }) => {
 	await page.setViewportSize(DESKTOP);
 	await page.goto('/');
 	await settleIntro(page);
 
 	const b = board(page, 'desktop');
 	await b.locator('[data-card="experience"]').dblclick();
-
-	// The dataset.open guard in expandCard() must prevent a second clone.
-	for (let i = 0; i < 6; i++) {
-		expect(await b.locator('.is-clone').count()).toBeLessThanOrEqual(1);
-		await page.waitForTimeout(150);
-	}
-});
-
-// The second click of a double-click lands on the freshly mounted clone; body-click close
-// is armed only at settle, so the card must still settle open.
-test('double-clicked card still settles open', async ({ page }) => {
-	await page.setViewportSize(DESKTOP);
-	await page.goto('/');
-	await settleIntro(page);
-
-	const b = board(page, 'desktop');
-	await b.locator('[data-card="experience"]').dblclick();
+	expect(await b.locator('.is-clone').count()).toBeLessThanOrEqual(1);
 
 	await expect(b.locator('.is-clone.is-settled')).toBeVisible({ timeout: 8_000 });
+	await expect(b.locator('.is-clone')).toHaveCount(1);
 	await expect(b).toHaveAttribute('data-open', '1');
 });
 
