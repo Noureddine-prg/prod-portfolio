@@ -47,8 +47,12 @@
 			href={links.resume}
 			target="_blank"
 			rel="noreferrer"
-			title="Resume PDF"
-			style="display:flex;align-items:center;justify-content:center;width:{iconSize}px;height:{iconSize}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow}"
+			aria-label="Resume (PDF)"
+			style="display:flex;align-items:center;gap:7px;height:{iconSize}px;padding:0 {mobile
+				? 10
+				: 13}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow};font:600 {mobile
+				? 11
+				: 12}px 'Archivo',sans-serif;color:#fff"
 		>
 			<svg
 				width="14"
@@ -63,7 +67,7 @@
 					points="14 2 14 8 20 8"
 				></polyline><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"
 				></line></svg
-			>
+			>Resume
 		</a>
 		<a
 			href={links.linkedin}

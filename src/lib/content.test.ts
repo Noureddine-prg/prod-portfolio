@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { profile, hero, experience, about, health, contact, work, links, wildcard } from './content';
+import { profile, hero, experience, about, contact, work, links } from './content';
 
 // Shape guards for the content module — the E2E suite and the expanded views both key
 // off these invariants (6 projects, 3 roles, the copy-email labels, the mailto target).
@@ -85,13 +85,13 @@ describe('contact', () => {
 		expect(contact.copiedLabel).toBe('✦ signal sent');
 	});
 
-	it('has headline, teaser and mobile socials', () => {
+	it('has headline and mobile socials', () => {
 		expect(contact.headline).toHaveLength(2);
 		expect(contact.socialsMobile.length).toBeGreaterThanOrEqual(2);
 	});
 });
 
-describe('about / health / wildcard / links', () => {
+describe('about / links', () => {
 	it('about has intro, body, and ≥4 populated skill groups', () => {
 		expect(about.intro.length).toBeGreaterThan(0);
 		expect(about.body.length).toBeGreaterThan(0);
@@ -106,13 +106,17 @@ describe('about / health / wildcard / links', () => {
 		}
 	});
 
-	it('health ring percentage is a sane 0–100 number', () => {
-		expect(health.ringPct).toBeGreaterThanOrEqual(0);
-		expect(health.ringPct).toBeLessThanOrEqual(100);
+	it('about has the one-line board summary', () => {
+		expect(about.thesis.length).toBeGreaterThan(0);
 	});
 
-	it('wildcard (desktop-only tile) has copy', () => {
-		expect(wildcard.body.length).toBeGreaterThan(0);
+	it('every featured Work project exists and leads with a metric', () => {
+		expect(work.featured.length).toBeGreaterThanOrEqual(2);
+		expect(work.featured.length).toBeLessThanOrEqual(3);
+		for (const f of work.featured) {
+			expect(work.projects.some((p) => p.id === f.id)).toBe(true);
+			expect(f.metric.length).toBeGreaterThan(0);
+		}
 	});
 
 	it('external links are defined (resume path + http socials)', () => {

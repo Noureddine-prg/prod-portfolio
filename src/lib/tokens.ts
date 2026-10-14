@@ -15,9 +15,6 @@ export const color = {
 	aboutBorder: '#2f2939',
 	contactBg: '#1c1512',
 	contactBorder: '#322619',
-	healthBg: '#161a17',
-	healthBorder: '#263028',
-	wildcardBorder: '#453a36',
 
 	// experience sea-glass overlay
 	glassSea: 'rgba(22,38,46,.34)',
@@ -50,8 +47,7 @@ export const color = {
 	ash2: '#5d534c',
 
 	// misc
-	flapBand: '#8f352c',
-	healthRing: '#e0654c'
+	flapBand: '#8f352c'
 } as const;
 
 export const radius = {

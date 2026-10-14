@@ -11,6 +11,9 @@ export const profile = {
 	timezone: 'New York · GMT-5'
 } as const;
 
+// The one "this card opens" hint every clickable board tile carries.
+export const tileHint = '→';
+
 export const links = {
 	resume: '/resume.pdf',
 	linkedin: 'https://www.linkedin.com/in/noureddine-sidi/',
@@ -103,6 +106,8 @@ export const about = {
 		'Forward-deployed engineer — embedded with the teams who have the problem, shipping the tooling that solves it.',
 	body: "I work where engineering meets the people who need it — scoping ambiguous problems alongside research and operations teams, then owning the solution from first spec to production. Lately that means agentic evaluation pipelines on Gemini at Google, Llama training-data systems at Meta, and embedded delivery for the NYC Mayor's Office.",
 	availabilityLine: 'Available for full-time roles · New York or remote',
+	// board-tile summary line (placeholder until the Phase 5 copy rewrite)
+	thesis: 'Embedded with the teams who have the problem, shipping the tooling that solves it.',
 	lockup: ['Software', 'Developer'],
 	portrait: { src: '/portrait.jpg', alt: 'Portrait of Noureddine Sidi Abed' },
 	skillGroups: [
@@ -128,22 +133,9 @@ export const about = {
 	] satisfies readonly SkillGroup[]
 } as const;
 
-// ── Health (display-only) ─────────────────────────────────────────────────────
-export const health = {
-	header: 'Health',
-	updated: '2h ago',
-	ringPct: 84,
-	steps: '8,412',
-	moveMin: 42,
-	bpm: 62,
-	weight: '172.4 lb',
-	weightShort: '172 lb'
-} as const;
-
 // ── Contact ───────────────────────────────────────────────────────────────────
 export const contact = {
 	header: 'Contact',
-	teaser: 'say hi →',
 	headline: ['Available', 'for work'],
 	// copy-email row (DC L266–268 / wireExtras L3123–3136); label normalized to
 	// 'tap to copy' on both breakpoints
@@ -152,13 +144,6 @@ export const contact = {
 	writeMe: 'write me →',
 	resumeLabel: 'Open resume PDF →',
 	socialsMobile: ['GitHub', 'LinkedIn']
-} as const;
-
-// ── Wildcard (display-only, desktop) ──────────────────────────────────────────
-export const wildcard = {
-	header: 'Wildcard',
-	body: 'Whatever this week wants — a book, a playlist, a hot take.',
-	note: 'rotates · desktop only'
 } as const;
 
 // ── Work ──────────────────────────────────────────────────────────────────────
@@ -180,7 +165,12 @@ export interface Project {
 
 export const work = {
 	header: 'Work',
-	count: '06 builds →',
+	// the projects the board tile shows, with the one metric each leads with
+	featured: [
+		{ id: 'agentic-image-eval', metric: '1,000+ outputs scored per cycle' },
+		{ id: 'vendor-reporting', metric: 'Reporting time down 70%' },
+		{ id: 'qa-tooling', metric: '10,000+ data points reviewed' }
+	],
 	projects: [
 		{
 			id: 'agentic-image-eval',

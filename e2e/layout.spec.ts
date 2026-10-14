@@ -3,7 +3,7 @@ import { DESKTOP, MOBILE, board, settleIntro } from './helpers';
 import { profile } from '../src/lib/content';
 
 // Both-breakpoint layout guards: the fixed 900×620 desktop grid at 1280w, and the
-// mobile stacking order (hero → about → [contact+health] → experience → work → footer)
+// mobile stacking order (hero → experience → work → [about+contact] → footer)
 // at 390w. Exactly one board is visible per viewport.
 
 test('desktop 1280w: 900×620 grid board, mobile stage hidden', async ({ page }) => {
@@ -32,7 +32,7 @@ test('desktop 1280w: 900×620 grid board, mobile stage hidden', async ({ page })
 	expect(box.height).toBeGreaterThanOrEqual(800 - 4);
 	expect(box.height).toBeLessThanOrEqual(800 + 1);
 
-	// It's a real 3-column grid (1.72fr 1fr 1fr resolves to 3 pixel tracks).
+	// It's a real 3-column grid (1.72fr 1fr 1.1fr resolves to 3 pixel tracks).
 	const grid = await b.evaluate((el) => {
 		const cs = getComputedStyle(el);
 		return { display: cs.display, cols: cs.gridTemplateColumns.split(' ').length };
@@ -40,16 +40,26 @@ test('desktop 1280w: 900×620 grid board, mobile stage hidden', async ({ page })
 	expect(grid.display).toBe('grid');
 	expect(grid.cols).toBe(3);
 
-	// All four interactive tiles plus the display-only ones are present.
+	// Exactly the four interactive tiles — no display-only tiles remain.
 	await expect(b.locator('[data-tile]')).toHaveCount(4);
 	for (const card of ['experience', 'about', 'contact', 'work'] as const) {
 		await expect(b.locator(`[data-card="${card}"]`)).toBeVisible();
 	}
-	await expect(b.getByText('Health', { exact: true })).toBeVisible();
-	await expect(b.getByText('Wildcard', { exact: true })).toBeVisible();
+
+	// Work runs the full board height in the right column.
+	const work = (await b.locator('[data-card="work"]').boundingBox())!;
+	// middle column, top to bottom: About, Experience, Contact
+	const about = (await b.locator('[data-card="about"]').boundingBox())!;
+	const exp = (await b.locator('[data-card="experience"]').boundingBox())!;
+	const contact = (await b.locator('[data-card="contact"]').boundingBox())!;
+	expect(about.y).toBeLessThan(exp.y);
+	expect(exp.y).toBeLessThan(contact.y);
+	expect(work.x).toBeGreaterThan(about.x);
+	expect(Math.abs(work.y - about.y)).toBeLessThan(2);
+	expect(Math.abs(work.y + work.height - (contact.y + contact.height))).toBeLessThan(2);
 });
 
-test('mobile 390w: order hero → about → [contact+health] → experience → work → footer', async ({
+test('mobile 390w: order hero → experience → work → [about+contact] → footer', async ({
 	page
 }) => {
 	await page.setViewportSize(MOBILE);
@@ -71,19 +81,17 @@ test('mobile 390w: order hero → about → [contact+health] → experience → 
 	const hero = await y(b.locator('canvas[data-scene="campfire"]'));
 	const exp = await y(b.locator('[data-card="experience"]'));
 	const contact = await y(b.locator('[data-card="contact"]'));
-	const health = await y(b.getByText('Health', { exact: true }).first());
 	const about = await y(b.locator('[data-card="about"]'));
 	const work = await y(b.locator('[data-card="work"]'));
 	// Footer strip: the only element whose full text is the complete name.
 	const footer = await y(b.getByText(profile.name, { exact: true }).last());
 
-	expect(hero).toBeLessThan(about);
-	expect(about).toBeLessThan(contact);
-	// contact and health share one row — their tops are within the tile's header inset
-	expect(Math.abs(contact - health)).toBeLessThan(40);
-	expect(contact).toBeLessThan(exp);
+	expect(hero).toBeLessThan(exp);
 	expect(exp).toBeLessThan(work);
-	expect(work).toBeLessThan(footer);
+	expect(work).toBeLessThan(about);
+	// about and contact share one row
+	expect(Math.abs(about - contact)).toBeLessThan(2);
+	expect(about).toBeLessThan(footer);
 });
 
 // Born-red guard — kills the "mobScale clamp 1.25 → 5" survivor. At 390w the clamp never

@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { activateOnKey } from '$lib/util/a11y';
-	// Contact tile — clean envelope scene + header + teaser; opens via `onopen`.
+	// Contact tile — clean envelope scene + header + open hint; opens via `onopen`.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
-	import { contact } from '$lib/content';
+	import TileHint from './TileHint.svelte';
+	import { contact, profile } from '$lib/content';
 
 	interface Props {
 		mobile?: boolean;
@@ -13,10 +14,9 @@
 
 	const pad = $derived(mobile ? 12 : 16);
 	const headFont = $derived(mobile ? 12 : 15);
-	const envW = $derived(mobile ? 84 : 104);
-	const envH = $derived(mobile ? 96 : 118);
+	const envW = $derived(mobile ? 84 : 90);
+	const envH = $derived(mobile ? 96 : 102);
 	const envRight = $derived(mobile ? 4 : 6);
-	const teaserFont = $derived(mobile ? 8.5 : 9.5);
 </script>
 
 <div
@@ -27,18 +27,25 @@
 	tabindex="0"
 	onclick={onopen}
 	onkeydown={(e) => activateOnKey(e, onopen)}
-	style="{placement};background:radial-gradient(90% 70% at 62% 118%,rgba(255,140,58,.16),transparent 62%),#1c1512;border:1px solid #322619;border-radius:9px;padding:{pad}px;display:flex;flex-direction:column;justify-content:space-between"
+	style="{placement};background:radial-gradient(90% 70% at 62% 118%,rgba(255,140,58,.16),transparent 62%),#18130f;border:1px solid #2e2520;border-radius:9px;padding:{pad}px;display:flex;flex-direction:column"
 >
-	<span
-		style="position:relative;font:400 {headFont}px 'Archivo Black',sans-serif;color:#efe9e6;text-transform:uppercase;letter-spacing:.01em">{contact.header}</span
-	>
+	<div style="position:relative;display:flex;justify-content:space-between;align-items:baseline">
+		<span
+			style="font:400 {headFont}px 'Archivo Black',sans-serif;color:#efe9e6;text-transform:uppercase;letter-spacing:.01em"
+			>{contact.header}</span
+		>
+		<TileHint {mobile} color="#e9b49a" />
+	</div>
 	<ThreeCanvas
 		kind="envelope"
 		lite
 		clean
-		style="position:absolute;right:{envRight}px;top:50%;transform:translateY(-50%);width:{envW}px;height:{envH}px;pointer-events:none"
+		style="position:absolute;right:{envRight}px;top:58%;transform:translateY(-50%);width:{envW}px;height:{envH}px;pointer-events:none"
 	/>
-	<span style="position:relative;font:400 {teaserFont}px 'JetBrains Mono',monospace;color:#c85a44"
-		>{contact.teaser}</span
-	>
+	{#if !mobile}
+		<span
+			style="position:relative;margin-top:auto;font:500 11px 'Archivo',sans-serif;color:#d9c3b4"
+			>{profile.email}</span
+		>
+	{/if}
 </div>
