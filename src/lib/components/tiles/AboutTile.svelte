@@ -33,7 +33,7 @@
 	onclick={onopen}
 	onkeydown={(e) => activateOnKey(e, onopen)}
 	use:sceneHover
-	style="{placement};background:radial-gradient(120% 90% at 50% 115%,rgba(200,112,63,.10),transparent 60%),#18130f;border:1px solid #2e2520;border-radius:9px;padding:{pad};display:flex;flex-direction:column;justify-content:space-between"
+	style="{placement};background:radial-gradient(120% 90% at 50% 115%,rgba(200,112,63,.10),transparent 60%),rgba(24,19,15,.72);border:1px solid #2e2520;border-radius:9px;padding:{pad};display:flex;flex-direction:column;justify-content:space-between"
 >
 	<div style="position:absolute;inset:0;pointer-events:none">
 		<span

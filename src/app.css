@@ -96,6 +96,14 @@ body {
 			0 0 0 1px rgba(226, 149, 79, 0.22);
 	}
 }
+/* the shared night sky: full strength while a card grows (the stars hold still across
+ * the open), then it recedes behind the settled panel so no star sits on a letter */
+[data-sky] {
+	transition: opacity 1.2s ease;
+}
+.is-clone.is-settled [data-expand] [data-sky] {
+	opacity: 0.3;
+}
 /* the tile's arrow: leans in on hover, pushes on press so a click visibly registers */
 .tile .tile-hint {
 	transition: transform 0.28s cubic-bezier(0.23, 1, 0.32, 1);

@@ -39,7 +39,7 @@
 	tabindex="0"
 	onclick={onopen}
 	onkeydown={(e) => activateOnKey(e, onopen)}
-	style="{placement};background:{mobile ? '#0a0c12' : '#18130f'};border:1px solid {mobile
+	style="{placement};background:{mobile ? '#0a0c12' : 'rgba(24,19,15,.72)'};border:1px solid {mobile
 		? '#2a2424'
 		: '#2e2520'};border-radius:9px;padding:{pad}px;display:flex;flex-direction:column;justify-content:{mobile ? 'space-between' : 'flex-start'};gap:{mobile ? 6 : 18}px"
 >

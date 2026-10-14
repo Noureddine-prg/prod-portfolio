@@ -9,6 +9,7 @@
 	import ContactTile from './tiles/ContactTile.svelte';
 	import WorkTile from './tiles/WorkTile.svelte';
 	import AshLayer from './AshLayer.svelte';
+	import NightSky from './NightSky.svelte';
 	import { expandCard } from '$lib/interactions/expand';
 	import { ui, type CardId } from '$lib/stores/ui.svelte';
 
@@ -39,6 +40,9 @@
 	data-board
 	style="position:relative;width:{designW}px;height:{designH}px;background:transparent;padding:16px;grid-template-columns:1.72fr 1fr 1.1fr;grid-template-rows:repeat(4,minmax(0,1fr));grid-auto-rows:0"
 >
+	<!-- one sky behind every tile: it shows through the see-through middle column and the
+	     gutters, and the Experience panel draws the same stars (SpaceNightBg) -->
+	<NightSky />
 	<AshLayer variant="desktop" />
 
 	<HeroTile placement="grid-column:1/2;grid-row:1/5" />
