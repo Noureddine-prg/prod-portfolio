@@ -215,8 +215,23 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font: 400 18px 'JetBrains Mono', monospace;
+	font:
+		400 18px 'JetBrains Mono',
+		monospace;
 	z-index: 5;
+}
+
+/* Quality tiers (data-quality on <html>, set by three/quality.ts). Backdrop blur re-samples the
+ * live scene behind it every frame, so the lighter tiers drop it; the tinted glass stays. The
+ * still tier also drops the drifting blurred embers — on software compositing they cost more
+ * than the scenes they decorate. */
+:root[data-quality='reduced'] [style*='backdrop-filter'],
+:root[data-quality='still'] [style*='backdrop-filter'] {
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+}
+:root[data-quality='still'] [style*='animation:ashrise'] {
+	display: none;
 }
 
 /* Reduced motion (README mandate): quiet the ambient CSS animations. The intro

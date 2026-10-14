@@ -49,7 +49,9 @@ test('settled card: outside canvas gets zero draw calls while inside keeps rende
 		};
 	});
 
-	await page.goto('/');
+	// headless Chromium renders WebGL in software, which the app would put on the still tier
+	// (one frame, no animation); pin a live tier so there is a loop to freeze
+	await page.goto('/?quality=reduced');
 	await settleIntro(page);
 	await page.waitForTimeout(600); // let on-screen scenes build + warm up
 
@@ -87,7 +89,9 @@ test('settled card: outside canvas gets zero draw calls while inside keeps rende
 
 	// Close → outside canvas thaws (draw calls resume).
 	await clone.locator('.clone-close').click();
-	await expect(page.locator('.stage--desktop .is-clone')).toHaveCount(0, { timeout: 5_000 });
+	await expect(page.locator('.stage--desktop .is-clone')).toHaveCount(0, {
+		timeout: 5_000
+	});
 	const thaw1 = await count(OUT);
 	await page.waitForTimeout(800);
 	const thaw2 = await count(OUT);

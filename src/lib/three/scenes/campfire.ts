@@ -102,8 +102,10 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	// ground contact shadows (x, z, radius) — tree bases, seat logs, boulders; read by the ground shader
 	const aoPts: [number, number, number][] = [];
 
-	// quality switches — a device tier can flip any of these off without touching the rest
-	const Q = { gusts: true, shadows: true, landingEmbers: true, dither: true, rockDetail: true };
+	// quality switches — reduced/still tiers drop the per-pixel shadow loop, the extra ember physics
+	// and the rock chisel; gusts and dither are cheap and carry most of the life, so they stay
+	const full = ctx.quality === 'full';
+	const Q = { gusts: true, shadows: full, landingEmbers: full, dither: true, rockDetail: full };
 	// second seeded stream for pass-2 additions so ctx.rand (and the grass layout it seeds) is unchanged
 	const rand2 = mulberry32(hashSeed('campfire-pass2'));
 
@@ -1353,6 +1355,8 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		}
 	}
 	grass.instanceMatrix.needsUpdate = true;
+	// bands are interleaved, so drawing a prefix thins the field evenly (the layout is unchanged)
+	if (!full) grass.count = Math.round(GRASS_N * 0.7);
 	spin.add(grass);
 	// anchor points for dedicated grass clumps (bushes push theirs below)
 	const clumpPts: [number, number, number][] = [];

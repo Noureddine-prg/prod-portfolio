@@ -20,11 +20,23 @@ import {
 import { freeze } from '$lib/stores/freeze.svelte';
 import { boardScale } from '$lib/stores/scale.svelte';
 import type { SceneKind } from './types';
+import { initQuality, lowerQuality, quality, type Quality } from './quality';
 
 const FRAME_MS = 15; // ~60fps ceiling; skip frames on high-refresh displays
+const FRAME_MS_REDUCED = 30; // ~30fps (a 60Hz rAF passes every other frame)
 const DT_CAP = 0.06; // clamp huge deltas (tab-return) so scenes never jump
 const CTX_CAP = 9; // max simultaneously live WebGL contexts
 const MARGIN = '250px'; // IntersectionObserver root margin (matches DC onScreen slack)
+// Frame-pacing monitor: after a warm-up, judge rAF gaps over ~2s windows. Two slow windows in a
+// row step down one tier; one very slow window goes straight to still.
+const PACE_WARMUP_MS = 1500;
+const PACE_WINDOW_MS = 2000;
+const PACE_SLOW_MS: Record<Quality, number> = {
+	full: 40,
+	reduced: 55,
+	still: Infinity
+};
+const PACE_DIRE_MS = 120;
 
 // Per-kind auto-spin applied to the inner `spin` group (DC L3092). Our six kinds all sit
 // still (0); the default covers any future kind. axelog sways inside its builder instead:
@@ -62,7 +74,28 @@ function dpr(): number {
 // the board's design coordinates is displayed at boardScale× that size, so the backing
 // store multiplies in the scale (capped at 3 to bound GPU cost on large monitors).
 function renderPx(): number {
+	if (quality() !== 'full') return Math.min(1.5, boardScale.value);
 	return Math.min(3, dpr() * boardScale.value);
+}
+
+// Free a scene's GPU objects and its renderer but keep the canvas's context (and, with
+// preserveDrawingBuffer, its last frame on screen) so a rebuild at a new tier doesn't flash.
+function releaseScene(cv: HTMLCanvasElement, entry: SceneEntry): void {
+	try {
+		entry.scene.traverse((o) => {
+			const m = o as THREE.Mesh;
+			m.geometry?.dispose();
+			for (const mat of ([] as THREE.Material[]).concat(m.material ?? [])) {
+				for (const v of Object.values(mat))
+					if (v && (v as THREE.Texture).isTexture) (v as THREE.Texture).dispose();
+				mat.dispose();
+			}
+		});
+		entry.renderer.dispose();
+	} catch {
+		/* noop */
+	}
+	clearEntry(cv);
 }
 
 // Tear down one canvas's live context but keep it eligible for rebuild when it returns
@@ -108,12 +141,56 @@ function startLoop(T: typeof THREE): LoopState {
 
 	// prefers-reduced-motion: scenes render one still frame instead of animating
 	// (README mandate; not present in the DC prototype). Read once at loop start.
-	const stillMode = matchMedia('(prefers-reduced-motion: reduce)').matches;
+	// The `still` quality tier takes the same path.
+	const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 	const stilled = new WeakSet<HTMLCanvasElement>();
+
+	// pacing monitor state (see PACE_*); `builtAt` marks frames that compiled a scene
+	let paceFrom = 0;
+	let paceGaps: number[] = [];
+	let paceSlow = 0;
+	let builtAt = -1;
+	let prevRaf = 0;
+
+	const stepDown = (to: Quality) => {
+		if (!lowerQuality(to)) return;
+		paceGaps = [];
+		paceSlow = 0;
+		paceFrom = performance.now() + PACE_WARMUP_MS;
+		for (const cv of liveCanvases()) {
+			const e = getEntry(cv);
+			if (!e) continue;
+			// still: whatever is on screen now becomes the still frame; reduced: rebuild lighter
+			if (to === 'still') stilled.add(cv);
+			else releaseScene(cv, e);
+		}
+	};
+
+	const pace = (nowMs: number) => {
+		const gap = nowMs - prevRaf;
+		prevRaf = nowMs;
+		const q = quality();
+		if (q === 'still' || reducedMotion || document.hidden) return;
+		if (!paceFrom || nowMs < paceFrom) return;
+		// skip the frames around a scene build (shader compiles) and background-tab gaps
+		if (builtAt >= 0 && nowMs - builtAt < 200) return;
+		if (gap > 1000) return;
+		paceGaps.push(gap);
+		if (nowMs - paceFrom < PACE_WINDOW_MS || paceGaps.length < 4) return;
+		const sorted = paceGaps.sort((a, b) => a - b);
+		const median = sorted[sorted.length >> 1];
+		paceGaps = [];
+		paceFrom = nowMs;
+		if (median > PACE_DIRE_MS) return stepDown('still');
+		paceSlow = median > PACE_SLOW_MS[q] ? paceSlow + 1 : 0;
+		if (paceSlow >= 2) stepDown(q === 'full' ? 'reduced' : 'still');
+	};
 
 	const tick = () => {
 		const nowMs = performance.now();
-		if (nowMs - state.last < FRAME_MS) return;
+		const tier = quality();
+		if (nowMs - state.last < (tier === 'full' ? FRAME_MS : FRAME_MS_REDUCED)) return;
+		const stillMode = reducedMotion || tier === 'still';
 		const dt = Math.min(DT_CAP, (nowMs - (state.last || nowMs)) * 0.001);
 		state.last = nowMs;
 		const now = nowMs * 0.001;
@@ -150,7 +227,13 @@ function startLoop(T: typeof THREE): LoopState {
 		for (const cv of pending) {
 			if (live >= CTX_CAP) break;
 			if (getComputedStyle(cv).visibility === 'hidden') continue;
-			if (buildCanvas(T, cv)) live++;
+			builtAt = nowMs;
+			const e = buildCanvas(T, cv);
+			if (e) {
+				live++;
+				// the hero is up: start judging frame pacing once it has warmed up
+				if (!paceFrom && e.kind === 'campfire') paceFrom = nowMs + PACE_WARMUP_MS;
+			}
 			break;
 		}
 
@@ -206,14 +289,16 @@ function startLoop(T: typeof THREE): LoopState {
 				}
 			}
 
-			// Per-kind auto-spin.
-			const sp = SPINS[o.kind] ?? DEFAULT_SPIN;
+			// Per-kind auto-spin (rates are per 60fps frame; scaled by dt so a 30fps cap keeps speed).
+			const f60 = dt * 60;
+			const sp = (SPINS[o.kind] ?? DEFAULT_SPIN) * f60;
 			o.spin.rotation.y += sp;
 			if (!NO_X_SPIN.has(o.kind)) o.spin.rotation.x += sp * 0.6;
 
-			// Pointer-tilt / parallax (eased). Lite scenes auto-drift instead.
-			o.mx += (o.tx - o.mx) * 0.06;
-			o.my += (o.ty - o.my) * 0.06;
+			// Pointer-tilt / parallax (eased, frame-rate independent). Lite scenes auto-drift instead.
+			const ease = 1 - Math.pow(0.94, f60);
+			o.mx += (o.tx - o.mx) * ease;
+			o.my += (o.ty - o.my) * ease;
 			if (o.variants.lite) {
 				// campfire gets a wider, slower left-right pan; other lite scenes a subtle sway
 				const amp = o.kind === 'campfire' ? 0.11 : 0.04;
@@ -238,6 +323,7 @@ function startLoop(T: typeof THREE): LoopState {
 	};
 
 	const frame = () => {
+		pace(performance.now());
 		tick();
 		state.raf = requestAnimationFrame(frame);
 	};
@@ -272,6 +358,7 @@ export function ensureLoop(): void {
 		last: 0,
 		stop() {}
 	};
+	initQuality();
 	import('three').then((mod) => {
 		const T = mod as unknown as typeof THREE;
 		globalThis.__cozyLoop = startLoop(T);

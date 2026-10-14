@@ -7,6 +7,7 @@ import { resolveBuilder } from './scenes';
 import { parseVariants } from './variants';
 import { currentHour } from '$lib/util/time';
 import { mulberry32, hashSeed } from '$lib/util/rand';
+import { quality } from './quality';
 import type { SceneCtx, SceneKind } from './types';
 
 const DPR = () => Math.min(window.devicePixelRatio || 1, 2);
@@ -41,9 +42,10 @@ export function buildCanvas(T: typeof THREE, cv: HTMLCanvasElement): SceneEntry 
 	const w = cv.clientWidth || 400;
 	const h = cv.clientHeight || 300;
 
+	const q = quality();
 	const renderer = new T.WebGLRenderer({
 		canvas: cv,
-		antialias: true,
+		antialias: q === 'full',
 		alpha: true,
 		preserveDrawingBuffer: true
 	});
@@ -63,7 +65,20 @@ export function buildCanvas(T: typeof THREE, cv: HTMLCanvasElement): SceneEntry 
 	const variants = parseVariants(cv.dataset, currentHour());
 	const rand = mulberry32(hashSeed(kind || 'scene'));
 
-	const ctx: SceneCtx = { T, scene, cam, pivot, spin, renderer, canvas: cv, variants, w, h, rand };
+	const ctx: SceneCtx = {
+		T,
+		scene,
+		cam,
+		pivot,
+		spin,
+		renderer,
+		canvas: cv,
+		variants,
+		w,
+		h,
+		rand,
+		quality: q
+	};
 
 	let update = null;
 	try {

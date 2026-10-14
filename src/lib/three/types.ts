@@ -7,6 +7,7 @@
 
 import type * as THREE from 'three';
 import type { Rand } from '$lib/util/rand';
+import type { Quality } from './quality';
 
 // The six procedural scene kinds. porthole-wing is not its own kind — it lives inside
 // the `calm` builder (gated by the `nowing`/`sunzoom` variants).
@@ -38,6 +39,8 @@ export interface SceneCtx {
 	h: number;
 	/** Seeded PRNG — deterministic per scene kind. */
 	rand: Rand;
+	/** Device tier at build time (see quality.ts). Independent of `variants.lite`, which is framing. */
+	quality: Quality;
 }
 
 // The loop calls this every frame with the canvas's accumulated clock (seconds) and the
