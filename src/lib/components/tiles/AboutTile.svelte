@@ -13,12 +13,12 @@
 	}
 	let { mobile = false, placement = '', onopen = () => {} }: Props = $props();
 
-	// jar sits middle-left (rework; DC had it hard right); explicit width/height — a canvas
+	// jar sits centred, matching Contact's envelope (DC had it hard right); explicit width/height — a canvas
 	// sized only by left/right falls back to its backing-store width and jumps once built
 	const jarStyle = $derived(
 		mobile
-			? 'left:38%;top:58%;transform:translate(-50%,-50%);width:78px;height:90px'
-			: 'left:36%;top:56%;transform:translate(-50%,-50%);width:96px;height:108px'
+			? 'left:50%;top:60%;transform:translate(-50%,-50%);width:74px;height:84px'
+			: 'left:50%;top:55%;transform:translate(-50%,-50%);width:96px;height:108px'
 	);
 </script>
 

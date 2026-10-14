@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Mobile board — DC id="11b" frame (390w flex column, gap 10, pad 12), rework order:
-	// hero → Experience → Work → (About + Contact) → footer.
+	// name strip → Experience → Work → (About + Contact) → hero.
 	// Height form-fits the device (designH from the page scaler); the hero flexes to
 	// absorb the difference between phone aspect ratios.
 	import HeroTile from './tiles/HeroTile.svelte';
@@ -11,7 +11,7 @@
 	import AshLayer from './AshLayer.svelte';
 	import { expandCard } from '$lib/interactions/expand';
 	import { profile } from '$lib/content';
-	import { ui, type CardId } from '$lib/stores/ui.svelte';
+	import type { CardId } from '$lib/stores/ui.svelte';
 
 	interface Props {
 		/** Design-space height; tracks the device viewport so the column fits exactly. */
@@ -24,12 +24,6 @@
 		const tile = boardEl?.querySelector<HTMLElement>(`[data-card="${card}"]`);
 		if (tile) expandCard(boardEl, tile, card);
 	}
-	// a Work tile project row: the card opens straight onto that project
-	function openProject(id: string) {
-		if (boardEl?.dataset.open) return;
-		ui.workDetail = id;
-		onopen('work');
-	}
 </script>
 
 <div
@@ -40,7 +34,14 @@
 >
 	<AshLayer variant="mobile" />
 
-	<HeroTile mobile placement="flex:1 1 auto;min-height:170px" />
+	<!-- Name / location strip — small addition beyond the DC board, heading the column. -->
+	<div
+		style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:2px 6px 2px;font:400 var(--t-meta) 'JetBrains Mono',monospace;letter-spacing:.06em;color:var(--c-meta);text-transform:uppercase"
+	>
+		<span>{profile.name}</span>
+		<span>{profile.location}</span>
+	</div>
+
 	<ExperienceTile
 		mobile
 		placement="flex:0 1 132px;min-height:118px"
@@ -48,21 +49,14 @@
 	/>
 	<WorkTile
 		mobile
-		placement="flex:0 1 184px;min-height:180px"
+		placement="flex:0 1 164px;min-height:156px"
 		onopen={() => onopen('work')}
-		onproject={(id) => openProject(id)}
 	/>
 
-	<div style="display:flex;gap:10px;flex:0 1 150px;min-height:124px">
+	<div style="display:flex;gap:10px;flex:0 1 118px;min-height:108px">
 		<AboutTile mobile placement="flex:1;height:100%" onopen={() => onopen('about')} />
 		<ContactTile mobile placement="flex:1;height:100%" onopen={() => onopen('contact')} />
 	</div>
 
-	<!-- Footer strip — small addition beyond the DC board (see report). -->
-	<div
-		style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:2px 6px 2px;font:400 var(--t-meta) 'JetBrains Mono',monospace;letter-spacing:.06em;color:var(--c-meta);text-transform:uppercase"
-	>
-		<span>{profile.name}</span>
-		<span>{profile.location}</span>
-	</div>
+	<HeroTile mobile placement="flex:1 1 auto;min-height:170px" />
 </div>

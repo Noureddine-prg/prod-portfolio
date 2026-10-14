@@ -122,6 +122,20 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 	// rework: near-locked view — a barely-there sway (DC 0.3 rad read as spinning on the board)
 	const SWAY_AMP = 0.035;
 	const SWAY_FREQ = 0.25;
+	// mobile (no hill): turns out to 30° and back every 6s on an under-damped spring, so each
+	// stop overshoots slightly and settles (ω 1.5 rad/s, ζ 0.65 → ~7% overshoot, ~2s to peak)
+	const TURN = Math.PI / 6;
+	const TURN_HALF = 6;
+	const SPRING_W = 1.5;
+	const SPRING_Z = 0.65;
+	let turn = 0,
+		turnV = 0;
+	const turnStep = (t: number, dt: number) => {
+		const target = Math.floor(t / TURN_HALF) % 2 ? TURN : 0;
+		turnV += (SPRING_W * SPRING_W * (target - turn) - 2 * SPRING_Z * SPRING_W * turnV) * dt;
+		turn += turnV * dt;
+		return turn;
+	};
 	const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
 	let popT: number | null = null;
 	let spinFrom = VIEW_Y;
@@ -144,7 +158,8 @@ export function buildAxelog(ctx: SceneCtx): UpdateFn | null {
 
 		if (popT == null) {
 			swayIn = Math.min(1, swayIn + dt * 0.8);
-			spin.rotation.y = VIEW_Y + Math.sin(t * SWAY_FREQ) * SWAY_AMP * swayIn;
+			const off = hillUpdate ? Math.sin(t * SWAY_FREQ) * SWAY_AMP : turnStep(t, dt);
+			spin.rotation.y = VIEW_Y + off * swayIn;
 			return;
 		}
 

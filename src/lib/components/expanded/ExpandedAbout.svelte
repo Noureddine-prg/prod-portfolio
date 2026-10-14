@@ -109,9 +109,9 @@
 		>
 	</div>
 	<div style="position:relative;flex:1;min-height:0;display:flex;gap:44px">
-		<!-- portrait stage -->
+		<!-- portrait stage — sized near the 640px source so it never upscales into softness -->
 		<div
-			style="position:relative;flex:0 0 36%;border-radius:16px;overflow:hidden;border:1px solid #3a302a"
+			style="position:relative;flex:0 0 auto;width:min(30%,340px);aspect-ratio:4/5;align-self:center;border-radius:16px;overflow:hidden;border:1px solid #3a302a"
 		>
 			<img
 				src={about.portrait.src}

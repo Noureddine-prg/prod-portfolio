@@ -59,7 +59,7 @@ test('desktop 1280w: 900×620 grid board, mobile stage hidden', async ({ page })
 	expect(Math.abs(work.y + work.height - (contact.y + contact.height))).toBeLessThan(2);
 });
 
-test('mobile 390w: order hero → experience → work → [about+contact] → footer', async ({
+test('mobile 390w: order name strip → experience → work → [about+contact] → hero', async ({
 	page
 }) => {
 	await page.setViewportSize(MOBILE);
@@ -83,15 +83,15 @@ test('mobile 390w: order hero → experience → work → [about+contact] → fo
 	const contact = await y(b.locator('[data-card="contact"]'));
 	const about = await y(b.locator('[data-card="about"]'));
 	const work = await y(b.locator('[data-card="work"]'));
-	// Footer strip: the only element whose full text is the complete name.
-	const footer = await y(b.getByText(profile.name, { exact: true }).last());
+	// Name strip: heads the column (the hero h1 further down carries the name too).
+	const strip = await y(b.getByText(profile.name, { exact: true }).first());
 
-	expect(hero).toBeLessThan(exp);
+	expect(strip).toBeLessThan(exp);
 	expect(exp).toBeLessThan(work);
 	expect(work).toBeLessThan(about);
 	// about and contact share one row
 	expect(Math.abs(about - contact)).toBeLessThan(2);
-	expect(about).toBeLessThan(footer);
+	expect(about).toBeLessThan(hero);
 });
 
 // Born-red guard — kills the "mobScale clamp 1.25 → 5" survivor. At 390w the clamp never

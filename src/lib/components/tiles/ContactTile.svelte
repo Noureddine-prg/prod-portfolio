@@ -13,9 +13,8 @@
 	}
 	let { mobile = false, placement = '', onopen = () => {} }: Props = $props();
 
-	const envW = $derived(mobile ? 84 : 90);
-	const envH = $derived(mobile ? 96 : 102);
-	const envRight = $derived(mobile ? 4 : 6);
+	const envW = $derived(mobile ? 74 : 96);
+	const envH = $derived(mobile ? 84 : 108);
 </script>
 
 <div
@@ -42,7 +41,7 @@
 		kind="envelope"
 		lite
 		clean
-		style="position:absolute;right:{envRight}px;top:58%;transform:translateY(-50%);width:{envW}px;height:{envH}px;pointer-events:none"
+		style="position:absolute;left:50%;top:{mobile ? 60 : 55}%;transform:translate(-50%,-50%);width:{envW}px;height:{envH}px;pointer-events:none"
 	/>
 	{#if !mobile}
 		<span

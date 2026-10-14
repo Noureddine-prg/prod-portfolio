@@ -18,14 +18,15 @@
 	// desktop: the taller middle row gives the role list room to read at body sizes
 	const nameFont = $derived(mobile ? 12 : 13);
 	const roleFont = $derived(mobile ? 11 : 12);
-	// logo chips run a little wider than tall so the NYC wordmark clears the type floor
-	const logoW = $derived(mobile ? 30 : 28);
-	const logoH = $derived(mobile ? 22 : 24);
+	// mobile: sea-glass chips a little wider than tall (the NYC wordmark clears the type floor);
+	// desktop: round ember-lit coins that sit on the warm ground rather than grey boxes on it
+	const logoW = $derived(mobile ? 30 : 32);
+	const logoH = $derived(mobile ? 22 : 32);
 	const logoBox = $derived(
-		`border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;${
+		`flex:none;display:flex;align-items:center;justify-content:center;${
 			mobile
-				? 'background:rgba(16,27,33,.5);border:1px solid rgba(180,220,230,.16)'
-				: 'background:rgba(255,255,255,.04);border:1px solid #3a302a'
+				? 'border-radius:6px;background:rgba(16,27,33,.5);border:1px solid rgba(180,220,230,.16)'
+				: 'border-radius:50%;background:radial-gradient(circle at 50% 30%,#2f241d,#1c1612 70%);border:1px solid rgba(226,149,79,.22);box-shadow:inset 0 1px 0 rgba(255,235,210,.06)'
 		}`
 	);
 </script>
@@ -84,11 +85,11 @@
 			>
 				<span style="width:{logoW}px;height:{logoH}px;{logoBox}">
 					{#if r.company === 'Google'}
-						<CompanyIcon company="Google" w={11} h={11} />
+						<CompanyIcon company="Google" w={mobile ? 11 : 14} h={mobile ? 11 : 14} />
 					{:else if r.company === 'Meta'}
-						<CompanyIcon company="Meta" w={13} h={9} />
+						<CompanyIcon company="Meta" w={mobile ? 13 : 17} h={mobile ? 9 : 12} />
 					{:else}
-						<span style="font:700 {mobile ? 12 : 10}px 'Archivo',sans-serif;letter-spacing:-.02em;color:#efe9e6">NYC</span>
+						<span style="font:700 {mobile ? 12 : 10}px 'Archivo',sans-serif;letter-spacing:-.02em;color:{mobile ? '#efe9e6' : '#f0c9a0'}">NYC</span>
 					{/if}
 				</span>
 				{#if mobile}

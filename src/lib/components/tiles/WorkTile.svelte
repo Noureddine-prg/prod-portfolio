@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { activateOnKey } from '$lib/util/a11y';
 	// Work tile — night ground + axe-in-log scene + the featured projects (name + lead
-	// metric) so the board shows proof before a click. The card opens on the ledger; a
-	// project row opens straight to that project (pointer shortcut — keyboard users reach the
-	// same projects through the ledger, so the tile stays one control, no nested buttons).
+	// metric) so the board shows proof before a click. The card opens on the ledger; on desktop
+	// a project row opens straight to that project (pointer shortcut — keyboard users reach the
+	// same projects through the ledger, so the tile stays one control, no nested buttons). On
+	// mobile the rows are names only and the whole card is one target: the ledger.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import TileHint from './TileHint.svelte';
 	import Icon from '../Icon.svelte';
@@ -23,18 +24,19 @@
 	}));
 
 	function pick(e: MouseEvent, id: string) {
+		if (mobile) return; // the tap falls through to the card
 		e.stopPropagation();
 		onproject(id);
 	}
 
 	const nameFont = $derived(mobile ? 15 : 19);
-	const metricFont = $derived(mobile ? 12 : 11);
+	const metricFont = 11;
 	// desktop: the lower part of the column is the campfire's night (data-hill); its sky fades
 	// to transparent at the top into the tile's own night ground (the night zenith color), so
 	// there is no seam; mobile: the plain axe right of the list
 	const axeStyle = $derived(
 		mobile
-			? 'right:0;top:0;height:100%;width:118px'
+			? 'right:6px;top:50%;transform:translateY(-50%);height:82%;width:98px'
 			: 'left:-1px;bottom:-1px;width:calc(100% + 2px);height:58%'
 	);
 </script>
@@ -60,7 +62,12 @@
 			style="font:400 var(--t-tile-head) 'Archivo Black',sans-serif;color:#efe9e6;text-transform:uppercase;letter-spacing:.03em"
 			>{work.header}</span
 		>
-		<span class="head-hint"><TileHint {mobile} color="#c9cdd8" /></span>
+		<span class="head-hint"
+			>{#if !mobile}<span class="head-label" aria-hidden="true">all builds</span>{/if}<TileHint
+				{mobile}
+				color="#c9cdd8"
+			/></span
+		>
 	</div>
 
 	<div
@@ -68,11 +75,12 @@
 			? 'padding-right:112px'
 			: ''}"
 	>
+		<span class="feat-label">Featured</span>
 		{#each featured as f (f.id)}
 			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 			<div
 				class="wrow"
-				style="padding:{mobile ? '5px 4px' : '12px 6px'};margin:0 {mobile ? -4 : -6}px"
+				style="padding:{mobile ? '7px 4px' : '12px 6px'};margin:0 {mobile ? -4 : -6}px"
 				onclick={(e) => pick(e, f.id)}>
 				<span style="display:flex;flex-direction:column;gap:{mobile ? 1 : 3}px;min-width:0">
 					<span
@@ -80,11 +88,13 @@
 							? 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
 							: ''}">{f.name}</span
 					>
-					<span style="font:400 {metricFont}px/1.3 'Archivo',sans-serif;color:#a8acb8"
-						>{f.metric}</span
-					>
+					{#if !mobile}
+						<span style="font:400 {metricFont}px/1.3 'Archivo',sans-serif;color:#a8acb8"
+							>{f.metric}</span
+						>
+					{/if}
 				</span>
-				<span class="row-hint" aria-hidden="true"><Icon name="arrow-right" /></span>
+				{#if !mobile}<span class="row-hint" aria-hidden="true"><Icon name="arrow-right" /></span>{/if}
 			</div>
 		{/each}
 	</div>
@@ -100,8 +110,15 @@
 		border-radius: 4px;
 		isolation: isolate;
 	}
-	.wrow:first-child {
+	.feat-label + .wrow {
 		border-top-color: transparent;
+	}
+	.feat-label {
+		font: 500 10px/1 'JetBrains Mono', monospace;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: #e2954f;
+		margin-bottom: 2px;
 	}
 	.wrow::before,
 	.wrow::after {
@@ -143,10 +160,28 @@
 			transform 0.26s cubic-bezier(0.23, 1, 0.32, 1);
 	}
 	.head-hint {
+		position: relative;
 		display: inline-flex;
 		align-self: center; /* like TileHint on the other tiles — keeps WORK on their baseline */
 		transition: opacity 0.15s ease;
 	}
+	/* card hover (desktop): names where the arrow goes; out of flow so nothing shifts */
+	.head-label {
+		position: absolute;
+		right: calc(100% + 8px);
+		top: 50%;
+		white-space: nowrap;
+		font: 500 11px/1 'JetBrains Mono', monospace;
+		letter-spacing: 0.04em;
+		color: #c9cdd8;
+		opacity: 0;
+		transform: translate(6px, -50%);
+		transition:
+			opacity 0.18s ease,
+			transform 0.26s cubic-bezier(0.23, 1, 0.32, 1);
+		pointer-events: none;
+	}
+
 	@media (hover: hover) and (pointer: fine) {
 		.wrow:hover::before {
 			transform: scaleX(1);
@@ -159,6 +194,10 @@
 		.wrow:hover .row-hint {
 			opacity: 1;
 			transform: none;
+		}
+		.work-tile:hover .head-label {
+			opacity: 1;
+			transform: translate(0, -50%);
 		}
 		.work-tile:has(.wrow:hover) .head-hint {
 			opacity: 0;
