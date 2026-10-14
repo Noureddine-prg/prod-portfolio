@@ -14,19 +14,38 @@
 	}
 	let { mobile = false }: Props = $props();
 
-	let copied = $state(false);
+	// idle → done | failed → idle. The label flips only once the clipboard write has
+	// actually landed, and the same text goes to a polite live region for screen readers.
+	let copyState = $state<'idle' | 'done' | 'failed'>('idle');
 	let revert: ReturnType<typeof setTimeout> | undefined;
-	onDestroy(() => clearTimeout(revert)); // closing mid-"✦ signal sent" must not fire on an unmounted component
-
-	function copyEmail() {
-		try {
-			navigator.clipboard.writeText(profile.email);
-		} catch {
-			/* clipboard unavailable — feedback still plays, as in the DC */
-		}
-		copied = true;
+	let destroyed = false;
+	onDestroy(() => {
+		destroyed = true; // closing mid-write or mid-"Copied" must not touch an unmounted component
 		clearTimeout(revert);
-		revert = setTimeout(() => (copied = false), 2200);
+	});
+
+	const touch = typeof matchMedia !== 'undefined' && matchMedia('(hover: none)').matches;
+	const idleLabel = touch ? contact.copyLabelTouch : contact.copyLabel;
+	const copied = $derived(copyState === 'done');
+	const label = $derived(
+		copyState === 'done'
+			? contact.copiedLabel
+			: copyState === 'failed'
+				? contact.copyFailedLabel
+				: idleLabel
+	);
+
+	async function copyEmail() {
+		let ok = true;
+		try {
+			await navigator.clipboard.writeText(profile.email);
+		} catch {
+			ok = false; // no clipboard access (insecure context, denied permission)
+		}
+		if (destroyed) return;
+		copyState = ok ? 'done' : 'failed';
+		clearTimeout(revert);
+		revert = setTimeout(() => (copyState = 'idle'), 2200);
 	}
 </script>
 
@@ -87,10 +106,10 @@
 			<span style="font:500 12px 'JetBrains Mono',monospace;color:#efe9e6">{profile.email}</span>
 			<span
 				data-copy-label
-				style="font:400 12px 'JetBrains Mono',monospace;color:{copied
+				style="display:inline-flex;align-items:center;gap:.35em;font:400 12px 'JetBrains Mono',monospace;color:{copied
 					? '#d86a52'
 					: '#958479'};text-transform:uppercase;letter-spacing:.06em;flex:none"
-				>{copied ? contact.copiedLabel : contact.copyLabel}</span
+				>{#if copied}<Icon name="check" />{/if}{label}</span
 			>
 		</span>
 		<a
@@ -208,11 +227,17 @@
 			>
 				<span style="font:500 13px 'JetBrains Mono',monospace;color:#efe9e6">{profile.email}</span>
 				<span
-					data-copy-label
-					style="font:400 10px 'JetBrains Mono',monospace;color:{copied
+					style="display:inline-grid;font:400 10px 'JetBrains Mono',monospace;color:{copied
 						? '#d86a52'
 						: '#958479'};text-transform:uppercase;letter-spacing:.08em"
-					>{copied ? contact.copiedLabel : contact.copyLabel}</span
+					><!-- the idle label reserves the width, so the row never resizes as it flips --><span
+						aria-hidden="true"
+						style="grid-area:1/1;visibility:hidden">{idleLabel}</span
+					><span
+						data-copy-label
+						style="grid-area:1/1;display:inline-flex;align-items:center;gap:.35em"
+						>{#if copied}<Icon name="check" />{/if}{label}</span
+					></span
 				>
 			</span>
 			<a
@@ -228,3 +253,10 @@
 		<CardLinks resumeColor="#d86a52" linkColor="#94867f" resumeLabel={contact.resumeLabel} />
 	</div>
 {/if}
+
+<!-- announces the copy result; visually hidden, outside both layouts -->
+<span
+	aria-live="polite"
+	style="position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"
+	>{copyState === 'idle' ? '' : label}</span
+>

@@ -34,7 +34,9 @@ export function veilCount(page: Page): Promise<number> {
 export async function settleIntro(page: Page): Promise<void> {
 	// Generous first poll: cold-dev-server hydration can lag the intro several seconds.
 	await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBeGreaterThan(0);
-	await expect.poll(() => veilCount(page), { timeout: 10_000 }).toBe(0);
+	// (15s: headless software GL compiles scene shaders on the main thread, and under parallel
+	// workers those long tasks hold back the intro's removal timer)
+	await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBe(0);
 }
 
 // WORKAROUND (Playwright 1.62.1): test.use({ reducedMotion }) is ignored for the fixture

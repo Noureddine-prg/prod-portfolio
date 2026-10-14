@@ -6,7 +6,8 @@ export const ICONS = {
 	'arrow-right': 'M5 12h14M13 6l6 6-6 6',
 	'arrow-left': 'M19 12H5M11 6l-6 6 6 6',
 	'arrow-up-right': 'M7 17 17 7M8 7h9v9',
-	close: 'M6 6l12 12M18 6 6 18'
+	close: 'M6 6l12 12M18 6 6 18',
+	check: 'M5 12.5l4.5 4.5L19 7'
 } as const;
 
 export type IconName = keyof typeof ICONS;

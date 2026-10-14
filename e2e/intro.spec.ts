@@ -19,8 +19,10 @@ test('a click skips the intro', async ({ page }) => {
 	await page.goto('/');
 	await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBeGreaterThan(0);
 	await page.mouse.click(10, 10);
-	// generous: headless SwiftShader starves the main thread, delaying timers
-	await expect.poll(() => veilCount(page), { timeout: 5_000 }).toBe(0);
+	// generous: headless SwiftShader compiles each scene's shaders on the main thread, and
+	// under parallel workers those multi-second tasks delay the removal timer (same budget as
+	// the natural-exit test above)
+	await expect.poll(() => veilCount(page), { timeout: 10_000 }).toBe(0);
 });
 
 test('intro does not replay on a reload in the same session', async ({ page }) => {

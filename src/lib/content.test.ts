@@ -81,8 +81,9 @@ describe('work', () => {
 
 describe('contact', () => {
 	it('carries the exact copy-email labels the flip animation asserts on', () => {
-		expect(contact.copyLabel).toBe('tap to copy');
-		expect(contact.copiedLabel).toBe('✦ signal sent');
+		expect(contact.copyLabel).toBe('click to copy');
+		expect(contact.copyLabelTouch).toBe('tap to copy');
+		expect(contact.copiedLabel).toBe('Copied');
 	});
 
 	it('has headline and mobile socials', () => {

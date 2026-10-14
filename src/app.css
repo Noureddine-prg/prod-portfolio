@@ -284,3 +284,12 @@ body {
 		animation-iteration-count: 1 !important;
 	}
 }
+
+/* Experience porthole: the window paints its dusk gradient first; the sea scene (built after
+ * the card settles) fades in over it once its first frame is up (loop.ts sets data-live). */
+.porthole-sea {
+	transition: opacity 0.6s ease;
+}
+.porthole-sea:not([data-live]) {
+	opacity: 0;
+}

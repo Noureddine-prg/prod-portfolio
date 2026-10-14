@@ -8,29 +8,51 @@ import { veilCount, reducedMotionPage } from './helpers';
 // NOTE: contexts are built manually via reducedMotionPage() — on Playwright 1.62.1,
 // test.use({ reducedMotion: 'reduce' }) is silently ignored (see helpers.ts).
 
-test('scenes are still: campfire canvas pixel-identical across 1.2s', async ({
+test('scenes are still: the campfire draws once, then never again', async ({
 	browser
 }, testInfo) => {
 	const { ctx, page } = await reducedMotionPage(browser, testInfo.project.use.baseURL);
+	// Count WebGL draw calls on the campfire canvas. The contract is "no further renders";
+	// a pixel compare of the canvas box was flaky — compositing under parallel load could
+	// shift a few overlay pixels between two shots of the same still frame.
+	await ctx.addInitScript(() => {
+		const w = window as unknown as { __draws: number };
+		w.__draws = 0;
+		const orig = HTMLCanvasElement.prototype.getContext;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(HTMLCanvasElement.prototype as any).getContext = function (type: string, ...args: unknown[]) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const gl = (orig as any).call(this, type, ...args);
+			const cv = this as HTMLCanvasElement;
+			if (gl && /webgl/.test(type) && cv.dataset.scene === 'campfire' && !gl.__qaWrapped) {
+				gl.__qaWrapped = true;
+				for (const fn of ['drawArrays', 'drawElements'] as const) {
+					const o = gl[fn].bind(gl);
+					gl[fn] = (...a: unknown[]) => {
+						if (cv.closest('.stage--desktop')) w.__draws++;
+						return o(...a);
+					};
+				}
+			}
+			return gl;
+		};
+	});
+	const draws = () => page.evaluate(() => (window as unknown as { __draws: number }).__draws);
 	try {
 		await page.goto('/');
-
-		// The reduced intro is a static fade; wait it out, then let the loop paint still frames.
+		// Wait for the veil to appear first — on a slow load "no veil yet" passes instantly.
+		await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBeGreaterThan(0);
 		await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBe(0);
-		await page.waitForTimeout(1_800);
-		// Belt & braces: freeze CSS-driven repaints so only canvas painting could differ.
-		await page.addStyleTag({
-			content:
-				'*, *::before, *::after { animation-play-state: paused !important; transition: none !important; }'
-		});
 
+		// the loop flags a canvas once its first frame is drawn (a software-GL build can be slow)
 		const campfire = page.locator('.stage--desktop canvas[data-scene="campfire"]');
-		await expect(campfire).toBeVisible();
+		await expect(campfire).toHaveAttribute('data-live', '1', { timeout: 20_000 });
 
-		const a = await campfire.screenshot();
-		await page.waitForTimeout(1_200);
-		const b = await campfire.screenshot();
-		expect(Buffer.compare(a, b), 'campfire must be a single still frame').toBe(0);
+		await page.waitForTimeout(800); // a late layout resize may legitimately re-draw once
+		const first = await draws();
+		expect(first, 'campfire drew its still frame').toBeGreaterThan(0);
+		await page.waitForTimeout(1_500);
+		expect(await draws(), 'campfire must not render again').toBe(first);
 	} finally {
 		await ctx.close();
 	}

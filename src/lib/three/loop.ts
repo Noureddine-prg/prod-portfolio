@@ -144,6 +144,7 @@ function startLoop(T: typeof THREE): LoopState {
 	// The `still` quality tier takes the same path.
 	const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 	const stilled = new WeakSet<HTMLCanvasElement>();
+	const posed = new WeakSet<SceneEntry>();
 
 	// pacing monitor state (see PACE_*); `builtAt` marks frames that compiled a scene
 	let paceFrom = 0;
@@ -161,7 +162,10 @@ function startLoop(T: typeof THREE): LoopState {
 			const e = getEntry(cv);
 			if (!e) continue;
 			// still: whatever is on screen now becomes the still frame; reduced: rebuild lighter
-			if (to === 'still') stilled.add(cv);
+			if (to === 'still') {
+				stilled.add(cv);
+				posed.add(e); // keep the live pose it was showing
+			}
 			else releaseScene(cv, e);
 		}
 	};
@@ -260,7 +264,10 @@ function startLoop(T: typeof THREE): LoopState {
 			// Still mode: one frame at t=0 per canvas (re-render only on resize).
 			if (stillMode) {
 				if (stilled.has(cv) && !resized) continue;
-				if (o.update) {
+				// pose once per build: a resize only re-draws the same pose (updates aren't
+				// idempotent — the campfire's embers step on every call, even at dt 0)
+				if (o.update && !posed.has(o)) {
+					posed.add(o);
 					try {
 						o.update(0, 0);
 					} catch {
@@ -270,6 +277,7 @@ function startLoop(T: typeof THREE): LoopState {
 				try {
 					o.renderer.render(o.scene, o.cam);
 					stilled.add(cv);
+					if (!cv.dataset.live) cv.dataset.live = '1';
 				} catch {
 					disposeCanvas(cv, o);
 					getMeta(cv).failed = true;
@@ -314,6 +322,7 @@ function startLoop(T: typeof THREE): LoopState {
 
 			try {
 				o.renderer.render(o.scene, o.cam);
+				if (!cv.dataset.live) cv.dataset.live = '1'; // first frame is up (CSS can fade it in)
 			} catch (e) {
 				// eslint-disable-next-line no-console
 				console.error(`three render failed [${o.kind}]:`, e instanceof Error ? e.message : e);

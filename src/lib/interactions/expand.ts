@@ -102,7 +102,8 @@ const OPEN = {
 	// ground (stars / glass / ember layers) fades in during the grow so the card is never an
 	// empty slab (DC faded the ground in only at revealAt)
 	popFade: 1250, // the tile's own scene (jar / envelope / axe)
-	oceanFade: 1250
+	oceanWarm: 1250, // Experience: the strip brightens toward the porthole's sunset…
+	oceanFade: 1800 // …and fades out across the porthole's rise (revealAt), so the two overlap
 } as const;
 const CLOSE_MS = 460; // rework: slower close so the tile's contents can be seen settling back (DC 280)
 const FOCUSABLE =
@@ -357,8 +358,9 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		cvLayer.appendChild(liveCv);
 		liveCv.style.pointerEvents = 'none';
 		if (card === 'experience') {
-			// the ocean simply fades with the face — the panel brings its own porthole
-			liveCv.style.transition = `opacity .3s ease ${OPEN.oceanFade}ms`;
+			// hand-off: the dusk strip warms toward the porthole's sunset while the card grows,
+			// then fades as the porthole rises in at reveal (the two overlap, so no gap)
+			liveCv.style.transition = `filter ${OPEN.growDur}ms ${OPEN.growEase} ${OPEN.oceanWarm}ms, opacity .5s ease ${OPEN.oceanFade}ms`;
 		} else {
 			liveCv.dataset.pop = '1'; // jar cap / envelope / axe chop
 			liveCv.style.transition = `opacity .3s ease ${OPEN.popFade}ms`;
@@ -386,8 +388,14 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		clone.classList.add('is-settled');
 		delete clone.dataset.holdBuild;
 		// hint that a scrolling panel has more below; cleared once scrolled to the end
+		// (only for panels that actually scroll: the fade masks to transparent, so on an
+		// overflow:hidden panel it just let the hero behind the clone show through the bottom)
+		const scrolls = /(auto|scroll)/.test(getComputedStyle(ex).overflowY);
 		const more = () =>
-			ex.classList.toggle('has-more', ex.scrollTop + ex.clientHeight < ex.scrollHeight - 4);
+			ex.classList.toggle(
+				'has-more',
+				scrolls && ex.scrollTop + ex.clientHeight < ex.scrollHeight - 4
+			);
 		ex.addEventListener('scroll', more, { passive: true });
 		more();
 		sibs.forEach((t) => {
@@ -421,7 +429,10 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		face.style.opacity = '0';
 		ex.style.transition = `opacity .4s ease ${OPEN.growAt}ms`;
 		ex.style.opacity = '1';
-		if (liveCv) liveCv.style.opacity = '0';
+		if (liveCv) {
+			liveCv.style.opacity = '0';
+			if (card === 'experience') liveCv.style.filter = 'brightness(1.05) saturate(1.2)';
+		}
 		kids.forEach((k, i) => {
 			const d = OPEN.revealAt + i * OPEN.revealStep;
 			k.style.transition = `opacity .4s ease ${d}ms, transform .45s ${EASE_OUT} ${d}ms`;
@@ -432,6 +443,17 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 			c.style.opacity = '1';
 			c.style.transform = 'translateY(0)';
 		});
+		if (liveCv && card === 'experience')
+			// once the card grows past the tile, the strip's hard side edges would read as a box
+			// floating mid-panel — feather all four sides into a glow
+			later(() => {
+				const m =
+					'linear-gradient(180deg,transparent,#000 55%,#000 75%,transparent),linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)';
+				liveCv.style.setProperty('-webkit-mask-image', m);
+				liveCv.style.setProperty('-webkit-mask-composite', 'source-in');
+				liveCv.style.maskImage = m;
+				liveCv.style.maskComposite = 'intersect';
+			}, OPEN.growAt);
 		burnSibs(board, sibs);
 		fireRing(clone);
 		clone.addEventListener('transitionend', (ev) => {

@@ -103,7 +103,7 @@
 				<div
 					style="position:relative;width:100%;height:100%;border-radius:42% / 25%;overflow:hidden;background:linear-gradient(180deg,#140e12,#241428 40%,#43223a 62%,#7a3b3a 78%,#c8703f 90%,#e2954f);box-shadow:inset 0 0 26px rgba(0,0,0,.62),inset 0 3px 8px rgba(0,0,0,.5)"
 				>
-					<ThreeCanvas kind="calm" style="width:100%;height:100%;display:block" />
+					<ThreeCanvas kind="calm" style="width:100%;height:100%;display:block" class="porthole-sea" />
 					<div
 						style="position:absolute;inset:0;pointer-events:none;border-radius:42% / 25%;background:radial-gradient(150% 150% at 50% 50%,transparent 60%,rgba(0,0,0,.42)),linear-gradient(180deg,rgba(0,0,0,.42),rgba(0,0,0,.12) 22%,transparent 42%,transparent 78%,rgba(255,235,210,.05))"
 					></div>

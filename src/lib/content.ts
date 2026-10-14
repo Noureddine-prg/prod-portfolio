@@ -134,10 +134,12 @@ export const about = {
 export const contact = {
 	header: 'Contact',
 	headline: ['Available', 'for work'],
-	// copy-email row (DC L266–268 / wireExtras L3123–3136); label normalized to
-	// 'tap to copy' on both breakpoints
-	copyLabel: 'tap to copy',
-	copiedLabel: '✦ signal sent',
+	// copy-email row (DC L266–268 / wireExtras L3123–3136); the verb follows the input
+	// (pointer vs touch), not the breakpoint
+	copyLabel: 'click to copy',
+	copyLabelTouch: 'tap to copy',
+	copiedLabel: 'Copied',
+	copyFailedLabel: "Couldn't copy",
 	writeMe: 'write me',
 	resumeLabel: 'Open resume PDF',
 	socialsMobile: ['GitHub', 'LinkedIn']
