@@ -176,22 +176,29 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	const hill = new T.Mesh(hillGeo, new T.MeshLambertMaterial({ color: 0x0c1009 }));
 	spin.add(hill);
 
-	// --- path: a worn dirt trail from the stump, curving off the left edge toward the campfire ---
+	// --- path: a worn trail over the crest, around the stump, and down out the left edge toward
+	// the campfire. Plotted in view space (x right, z toward the camera) and turned into `spin`'s
+	// frame, since axelog has already rotated spin to its viewing angle. The stump's base radius
+	// is 0.88, so the trail keeps ≥1.2 from its centre.
+	const rotY = spin.rotation.y;
+	const toLocal = ([vx, vz]: number[]) =>
+		new T.Vector3(vx * Math.cos(rotY) - vz * Math.sin(rotY), 0, vx * Math.sin(rotY) + vz * Math.cos(rotY));
 	const pathCurve = new T.CatmullRomCurve3(
 		[
-			// local to `spin`, which axelog turns by VIEW_Y (0.5 rad): in view space this runs
-			// from the stump's front toward the camera and bends out the left edge, toward the fire
-			[-0.37, 0.37],
-			[-1.07, 1.01],
-			[-1.89, 1.59],
-			[-2.8, 2.0],
-			[-3.98, 2.27]
-		].map(([x, z]) => new T.Vector3(x, 0, z))
+			[1.5, -3.2],
+			[1.35, -1.6],
+			[1.25, -0.4],
+			[0.95, 0.75],
+			[0.15, 1.35],
+			[-0.75, 1.85],
+			[-1.6, 2.6],
+			[-2.6, 3.4]
+		].map(toLocal)
 	);
-	const PATH_N = 64;
+	const PATH_N = 96;
 	const pathPts = pathCurve.getSpacedPoints(PATH_N);
-	// half-width grows toward the camera (perspective already narrows it near the stump)
-	const pathHW = (k: number) => 0.2 + k * 0.22;
+	// one real width end to end — perspective alone tapers it (a widening ribbon read as a road)
+	const pathHW = (_k: number) => 0.26;
 	const pPos: number[] = [];
 	const pUv: number[] = [];
 	const pIdx: number[] = [];
