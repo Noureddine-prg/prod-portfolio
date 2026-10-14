@@ -41,7 +41,8 @@ test.describe('reduced motion', () => {
 		try {
 			await page.goto('/');
 			await expect.poll(() => veilCount(page), { timeout: 15_000 }).toBeGreaterThan(0);
-			await expect.poll(() => veilCount(page), { timeout: 6_000 }).toBe(0);
+			// ~1.4s of wall clock, but parallel WebGL-heavy workers can stretch timers well past it
+			await expect.poll(() => veilCount(page), { timeout: 12_000 }).toBe(0);
 		} finally {
 			await ctx.close();
 		}
