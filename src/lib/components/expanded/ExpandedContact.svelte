@@ -6,6 +6,7 @@
 	import { activateOnKey } from '$lib/util/a11y';
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import CardLinks from '../CardLinks.svelte';
+	import Icon from '../Icon.svelte';
 	import { contact, links, profile } from '$lib/content';
 
 	interface Props {
@@ -54,10 +55,10 @@
 		style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:baseline"
 	>
 		<span
-			style="font:500 10px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#94867f;text-transform:uppercase"
+			style="font:500 var(--t-label) 'JetBrains Mono',monospace;letter-spacing:.12em;color:#94867f;text-transform:uppercase"
 			>{contact.header}</span
 		>
-		<span style="font:400 8px 'JetBrains Mono',monospace;color:#6e6058">{profile.timezone}</span>
+		<span style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:var(--c-meta)">{profile.timezone}</span>
 	</div>
 	<div
 		style="position:relative;z-index:1;display:flex;flex-direction:column;gap:10px;margin-top:56px"
@@ -83,33 +84,33 @@
 			onkeydown={(e) => activateOnKey(e, copyEmail)}
 			style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 15px;border-radius:10px;background:#211b1b;border:1px solid #362e2e;cursor:pointer"
 		>
-			<span style="font:500 10.5px 'JetBrains Mono',monospace;color:#efe9e6">{profile.email}</span>
+			<span style="font:500 12px 'JetBrains Mono',monospace;color:#efe9e6">{profile.email}</span>
 			<span
 				data-copy-label
-				style="font:400 7.5px 'JetBrains Mono',monospace;color:{copied
-					? '#c85a44'
-					: '#6e6058'};text-transform:uppercase;letter-spacing:.08em;flex:none"
+				style="font:400 12px 'JetBrains Mono',monospace;color:{copied
+					? '#d86a52'
+					: '#958479'};text-transform:uppercase;letter-spacing:.06em;flex:none"
 				>{copied ? contact.copiedLabel : contact.copyLabel}</span
 			>
 		</span>
 		<a
 			href="mailto:{profile.email}"
-			style="display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:10px;background:#c85a44;font:500 10px 'JetBrains Mono',monospace;color:#2a0d06;text-decoration:none"
-			>{contact.writeMe}</a
+			style="display:flex;align-items:center;justify-content:center;gap:.4em;min-height:44px;border-radius:10px;background:#d86a52;font:500 12px 'JetBrains Mono',monospace;color:#2a0d06;text-decoration:none"
+			>{contact.writeMe}<Icon name="arrow-right" /></a
 		>
 		<div style="display:flex;gap:8px">
 			{#each contact.socialsMobile as s (s)}
 				<span
 					style="flex:1;display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:10px;background:#211b1b;border:1px solid #2a2424;font:500 12px 'JetBrains Mono',monospace;color:#efe9e6"
-					>{s}&nbsp;<span style="color:#c85a44">&#8599;</span></span
+					>{s}&nbsp;<span style="display:inline-flex;color:#d86a52"><Icon name="arrow-up-right" /></span></span
 				>
 			{/each}
 		</div>
 		<a
 			href={links.resume}
 			target="_blank"
-			style="display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:10px;border:1px solid #2a2424;font:500 9px 'JetBrains Mono',monospace;color:#c85a44;text-decoration:none"
-			>{contact.resumeLabel}</a
+			style="display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:10px;gap:.4em;border:1px solid #2a2424;font:500 12px 'JetBrains Mono',monospace;color:#d86a52;text-decoration:none"
+			>{contact.resumeLabel}<Icon name="arrow-right" /></a
 		>
 	</div>
 {:else}
@@ -181,10 +182,10 @@
 		style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:baseline"
 	>
 		<span
-			style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#94867f;text-transform:uppercase"
+			style="font:500 var(--t-label) 'JetBrains Mono',monospace;letter-spacing:.12em;color:#94867f;text-transform:uppercase"
 			>{contact.header}</span
 		>
-		<span style="font:400 9px 'JetBrains Mono',monospace;color:#6e6058">{profile.timezone}</span>
+		<span style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:var(--c-meta)">{profile.timezone}</span>
 	</div>
 	<div style="position:relative;z-index:1;display:flex;flex-direction:column;gap:12px">
 		<span style="display:flex;flex-direction:column"
@@ -208,22 +209,22 @@
 				<span style="font:500 13px 'JetBrains Mono',monospace;color:#efe9e6">{profile.email}</span>
 				<span
 					data-copy-label
-					style="font:400 8.5px 'JetBrains Mono',monospace;color:{copied
-						? '#c85a44'
-						: '#6e6058'};text-transform:uppercase;letter-spacing:.08em"
+					style="font:400 10px 'JetBrains Mono',monospace;color:{copied
+						? '#d86a52'
+						: '#958479'};text-transform:uppercase;letter-spacing:.08em"
 					>{copied ? contact.copiedLabel : contact.copyLabel}</span
 				>
 			</span>
 			<a
 				href="mailto:{profile.email}"
-				style="padding:12px 18px;border-radius:10px;background:#c85a44;font:500 10px 'JetBrains Mono',monospace;color:#2a0d06;text-decoration:none"
-				>{contact.writeMe}</a
+				style="display:inline-flex;align-items:center;gap:.4em;padding:12px 18px;border-radius:10px;background:#d86a52;font:500 11px 'JetBrains Mono',monospace;color:#2a0d06;text-decoration:none"
+				>{contact.writeMe}<Icon name="arrow-right" /></a
 			>
 		</div>
 	</div>
 	<div
 		style="position:relative;z-index:1;display:flex;gap:18px;align-items:baseline;border-top:1px solid #2a2424;padding-top:12px"
 	>
-		<CardLinks resumeColor="#c85a44" linkColor="#94867f" resumeLabel={contact.resumeLabel} />
+		<CardLinks resumeColor="#d86a52" linkColor="#94867f" resumeLabel={contact.resumeLabel} />
 	</div>
 {/if}

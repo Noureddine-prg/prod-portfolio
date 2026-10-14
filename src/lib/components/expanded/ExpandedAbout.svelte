@@ -25,10 +25,10 @@
 			style="width:{size}px;height:{Math.round(size * 1.15)}px;flex:none;display:block;pointer-events:none"
 		/>
 		<div style="display:flex;flex-direction:column;gap:3px">
-			<span style="font:600 {mobile ? 15 : 16}px 'Archivo',sans-serif;color:#f1ebe4"
+			<span style="font:600 var(--t-item) 'Archivo',sans-serif;color:#f1ebe4"
 				>{profile.name}</span
 			>
-			<span style="font:400 {mobile ? 11 : 11.5}px 'JetBrains Mono',monospace;color:#b8aca3"
+			<span style="font:400 {mobile ? 12 : 11.5}px 'JetBrains Mono',monospace;color:#b8aca3"
 				>{role} · {profile.location}</span
 			>
 		</div>
@@ -39,7 +39,7 @@
 	<span style="display:flex;align-items:center;gap:9px"
 		><span
 			style="width:7px;height:7px;border-radius:50%;background:#e2954f;flex:none;box-shadow:0 0 8px rgba(226,149,79,.7);animation:dcpulse 2.4s ease-in-out infinite"
-		></span><span style="font:400 {mobile ? 11 : 11.5}px 'JetBrains Mono',monospace;color:#e9d9c6"
+		></span><span style="font:400 {mobile ? 13 : 12.5}px/1.4 'Archivo',sans-serif;color:#e9d9c6;text-wrap:balance"
 			>{about.availabilityLine}</span
 		></span
 	>
@@ -58,7 +58,7 @@
 			style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,12,10,.55),transparent 28%,transparent 62%,#18130f);pointer-events:none"
 		></div>
 		<span
-			style="position:absolute;left:20px;top:20px;font:400 20px 'Archivo Black',sans-serif;letter-spacing:.01em;color:#f1ebe4;text-transform:uppercase"
+			style="position:absolute;left:20px;top:20px;font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#f1ebe4;text-transform:uppercase"
 			>{about.header}</span
 		>
 	</div>
@@ -74,7 +74,7 @@
 			<div style="display:flex;flex-direction:column;gap:9px">
 				<span style="display:flex;align-items:center;gap:10px"
 					><span
-						style="font:400 10px 'JetBrains Mono',monospace;color:#e2954f;text-transform:uppercase;letter-spacing:.12em;flex:none"
+						style="font:500 var(--t-label) 'JetBrains Mono',monospace;color:#e2954f;text-transform:uppercase;letter-spacing:.12em;flex:none"
 						>{g.label}</span
 					><span
 						style="flex:1;border-bottom:1px solid #3a302a;transform-origin:left;animation:dcrule .9s cubic-bezier(.2,.7,.3,1) {ruleDelays[
@@ -96,7 +96,7 @@
 	<div
 		style="position:relative;flex:none;display:flex;gap:14px;align-items:baseline;border-top:1px solid #2e2520;padding-top:12px"
 	>
-		<CardLinks size={11} resumeColor="#e2954f" linkColor="#b8aca3" />
+		<CardLinks size={12} resumeColor="#e2954f" linkColor="#b8aca3" />
 	</div>
 {:else}
 	<EmberGlass />
@@ -104,7 +104,7 @@
 		style="position:relative;display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"
 	>
 		<span
-			style="font:400 24px 'Archivo Black',sans-serif;letter-spacing:.01em;color:#efe9e6;text-transform:uppercase"
+			style="font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#efe9e6;text-transform:uppercase"
 			>{about.header}</span
 		>
 	</div>
@@ -137,7 +137,7 @@
 				{#each about.skillGroups as g (g.label)}
 					<div style="display:flex;flex-direction:column;gap:5px">
 						<span
-							style="font:400 10px 'JetBrains Mono',monospace;color:#e2954f;text-transform:uppercase;letter-spacing:.1em"
+							style="font:500 var(--t-label) 'JetBrains Mono',monospace;color:#e2954f;text-transform:uppercase;letter-spacing:.12em"
 							>{g.label}</span
 						>
 						<span style="font:400 12.5px/1.55 'Archivo',sans-serif;color:#d9cec4">{g.text}</span>

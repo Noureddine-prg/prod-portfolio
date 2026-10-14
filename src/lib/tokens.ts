@@ -32,14 +32,15 @@ export const color = {
 	textBody: '#94867f',
 	textAboutBody: '#b3a8c2',
 	textAboutBody2: '#cfc4de',
-	monoMuted: '#6e6058',
+	monoMuted: '#958479', // typography pass: was #6e6058 (under 4.5:1 as text)
 
 	// fire accents
 	ember: '#ff8c3a',
 	amber: '#e2954f',
 	warmLight: '#ffb066',
 	glow: '#ffd28a',
-	terracotta: '#c85a44',
+	terracotta: '#c85a44', // fills, dots, bars
+	terracottaText: '#d86a52', // terracotta as small text
 	terracotta2: '#d4654c',
 
 	// ash

@@ -18,8 +18,10 @@
 	const pad = 14;
 	const headFont = $derived(mobile ? 12 : 13);
 	const nameFont = 12;
-	const roleFont = $derived(mobile ? 11 : 10.5);
-	const logo = $derived(mobile ? 22 : 24);
+	const roleFont = 11;
+	// logo chips run a little wider than tall so the NYC wordmark clears the type floor
+	const logoW = $derived(mobile ? 30 : 28);
+	const logoH = $derived(mobile ? 22 : 24);
 	const logoBox = $derived(
 		`border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;${
 			mobile
@@ -64,7 +66,7 @@
 
 	<div style="position:relative;display:flex;justify-content:space-between;align-items:baseline">
 		<span
-			style="font:400 {headFont}px 'Archivo Black',sans-serif;letter-spacing:.02em;color:#efe9e6;text-transform:uppercase{mobile
+			style="font:400 {headFont}px 'Archivo Black',sans-serif;letter-spacing:.03em;color:#efe9e6;text-transform:uppercase{mobile
 				? ';text-shadow:0 1px 6px rgba(0,0,0,.45)'
 				: ''}"
 			>{experience.header}</span
@@ -79,13 +81,13 @@
 					? 9
 					: 10}px;min-width:0"
 			>
-				<span style="width:{logo}px;height:{logo}px;{logoBox}">
+				<span style="width:{logoW}px;height:{logoH}px;{logoBox}">
 					{#if r.company === 'Google'}
 						<CompanyIcon company="Google" w={11} h={11} />
 					{:else if r.company === 'Meta'}
 						<CompanyIcon company="Meta" w={13} h={9} />
 					{:else}
-						<span style="font:700 7px 'Archivo',sans-serif;color:#efe9e6">NYC</span>
+						<span style="font:700 {mobile ? 12 : 10}px 'Archivo',sans-serif;letter-spacing:-.02em;color:#efe9e6">NYC</span>
 					{/if}
 				</span>
 				{#if mobile}

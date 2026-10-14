@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { ui } from '$lib/stores/ui.svelte';
 	import { work } from '$lib/content';
+	import Icon from '../Icon.svelte';
 
 	interface Props {
 		narrow?: boolean;
@@ -34,15 +35,19 @@
 	const ink = '#ece5da',
 		mid = '#a8acb8',
 		dim = '#7c8294';
+	// type roles at the two widths (label / meta / body; floors 10 desktop, 12 narrow)
+	const labelStyle = $derived(
+		`font:500 ${narrow ? 12 : 10}px 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase`
+	);
+	const meta = $derived(narrow ? 12 : 11);
 </script>
 
-{#snippet ph(label: string, h: number)}
+{#snippet ph(text: string, h: number)}
 	<div
 		style="border:1px dashed rgba(220,226,240,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;min-height:{h}px;background:rgba(255,255,255,.025)"
 	>
 		<span
-			style="font:400 8.5px 'JetBrains Mono',monospace;color:{dim};letter-spacing:.08em;text-transform:uppercase"
-			>{label}</span
+			style="{labelStyle};color:{dim}">{text}</span
 		>
 	</div>
 {/snippet}
@@ -50,12 +55,11 @@
 {#snippet cs(h: string, b: string)}
 	<div style="display:flex;flex-direction:column;gap:5px">
 		<span
-			style="font:500 8px 'JetBrains Mono',monospace;letter-spacing:.14em;color:{dim};text-transform:uppercase"
-			>{h}</span
+			style="{labelStyle};color:{dim}">{h}</span
 		>
 		<!-- desktop reserves 3 lines so the media grid keeps one size across projects -->
 		<span
-			style="font:400 11px/1.65 'Hanken Grotesk',sans-serif;color:{mid};min-height:{narrow
+			style="font:400 {narrow ? 13 : 12}px/1.65 'Archivo',sans-serif;color:{mid};min-height:{narrow
 				? 0
 				: 'calc(1.65em * 3)'}">{b}</span
 		>
@@ -87,11 +91,13 @@
 			tabindex="0"
 			onclick={() => (ui.workDetail = null)}
 			onkeydown={(e) => e.key === 'Enter' && (ui.workDetail = null)}
-			style="cursor:pointer;font:500 9px 'JetBrains Mono',monospace;color:{ink}"
-			>&larr; all builds</span
+			style="cursor:pointer;display:inline-flex;align-items:center;gap:.45em;font:500 {narrow
+				? 12
+				: 11}px 'JetBrains Mono',monospace;color:{ink}"><Icon name="arrow-left" />all builds</span
 		>
 		<span style="display:flex;gap:16px;align-items:center;white-space:nowrap">
-			<span style="font:400 9px 'JetBrains Mono',monospace;color:{dim}"
+			<span
+				style="font:400 {meta}px 'JetBrains Mono',monospace;color:{dim};font-variant-numeric:tabular-nums"
 				>0{idx + 1} / 0{n}</span
 			>
 			<span
@@ -100,8 +106,9 @@
 				tabindex="0"
 				onclick={() => nav(-1)}
 				onkeydown={(e) => e.key === 'Enter' && nav(-1)}
-				style="cursor:pointer;font:500 {narrow ? 15 : 13}px 'JetBrains Mono',monospace;color:{ink};padding:{narrow ? '10px 14px' : '4px 6px'}"
-				>&larr;</span
+				aria-label="Previous project"
+				style="cursor:pointer;display:inline-flex;font-size:{narrow ? 15 : 13}px;color:{ink};padding:{narrow ? '10px 14px' : '4px 6px'}"
+				><Icon name="arrow-left" /></span
 			>
 			<span
 				data-pd-next
@@ -109,13 +116,14 @@
 				tabindex="0"
 				onclick={() => nav(1)}
 				onkeydown={(e) => e.key === 'Enter' && nav(1)}
-				style="cursor:pointer;font:500 {narrow ? 15 : 13}px 'JetBrains Mono',monospace;color:{ink};padding:{narrow ? '10px 14px' : '4px 6px'}"
-				>&rarr;</span
+				aria-label="Next project"
+				style="cursor:pointer;display:inline-flex;font-size:{narrow ? 15 : 13}px;color:{ink};padding:{narrow ? '10px 14px' : '4px 6px'}"
+				><Icon name="arrow-right" /></span
 			>
 		</span>
 	</div>
 	<span style="font:500 {narrow ? 19 : 26}px 'Cormorant Garamond',serif;color:{ink}">{p.name}</span>
-	<span style="font:400 8.5px 'JetBrains Mono',monospace;color:{mid};margin-top:-6px"
+	<span style="font:400 {meta}px/1.45 'JetBrains Mono',monospace;color:{mid};margin-top:-6px"
 		>{p.tech} &middot; {p.org} &middot; {p.year}</span
 	>
 	{#if narrow}

@@ -5,6 +5,25 @@
 	--c-text-cream: #efe9e6;
 	--f-body: 'Archivo', system-ui, sans-serif;
 	--c-field: #100d0c; /* root/backing ember charcoal — also paints the browser bar strips (mirror app.html theme-color) */
+	--c-meta: #958479; /* dim meta text (was #6e6058, under 4.5:1 on the warm darks) */
+	--c-accent-text: #d86a52; /* terracotta as small text; #c85a44 stays for fills/dots/bars */
+
+	/* Type scale — design px (the desktop board is scaled to the window, mobile runs at ×1).
+	 * Desktop values here, mobile under .stage--mobile. Floor: 10 desktop / 12 mobile. */
+	--t-title: 24px; /* panel title — Archivo Black, uppercase, .02em */
+	--t-item: 16px; /* item title — Archivo 600 / Cormorant 500 */
+	--t-body: 14px; /* body — Archivo 400, lh 1.6 */
+	--t-body-sm: 12px; /* body-sm — Archivo 400, lh 1.5 */
+	--t-meta: 11px; /* meta — JetBrains Mono 400, var(--c-meta) */
+	--t-label: 10px; /* label — JetBrains Mono 500, uppercase, .12em */
+}
+.stage--mobile {
+	--t-title: 20px;
+	--t-item: 15px;
+	--t-body: 14px;
+	--t-body-sm: 13px;
+	--t-meta: 12px;
+	--t-label: 12px;
 }
 
 * {
@@ -231,9 +250,6 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font:
-		400 18px 'JetBrains Mono',
-		monospace;
 	z-index: 5;
 }
 

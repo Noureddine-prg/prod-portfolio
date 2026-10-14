@@ -6,7 +6,8 @@
 	// same projects through the ledger, so the tile stays one control, no nested buttons).
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import TileHint from './TileHint.svelte';
-	import { work, tileHint } from '$lib/content';
+	import Icon from '../Icon.svelte';
+	import { work } from '$lib/content';
 
 	interface Props {
 		mobile?: boolean;
@@ -27,9 +28,9 @@
 	}
 
 	const pad = $derived(mobile ? 14 : 18);
-	const headFont = $derived(mobile ? 15 : 18);
+	const headFont = $derived(mobile ? 15 : 16);
 	const nameFont = $derived(mobile ? 15 : 19);
-	const metricFont = $derived(mobile ? 11 : 10.5);
+	const metricFont = $derived(mobile ? 12 : 11);
 	// desktop: the lower part of the column is the campfire's night (data-hill); its sky fades
 	// to transparent at the top into the tile's own night ground (the night zenith color), so
 	// there is no seam; mobile: the plain axe right of the list
@@ -49,14 +50,14 @@
 	onclick={onopen}
 	onkeydown={(e) => activateOnKey(e, onopen)}
 	style="{placement};background:linear-gradient(180deg,#0b0d15,#05070d 70%);border:1px solid #1d2230;border-radius:9px;padding:{pad}px;display:flex;flex-direction:column;gap:{mobile
-		? 8
+		? 6
 		: 14}px"
 >
 	<ThreeCanvas kind="axelog" hill={!mobile} style="position:absolute;{axeStyle};display:block" />
 
 	<div style="position:relative;display:flex;justify-content:space-between;align-items:baseline">
 		<span
-			style="font:400 {headFont}px 'Archivo Black',sans-serif;color:#efe9e6;text-transform:uppercase;letter-spacing:.01em"
+			style="font:400 {headFont}px 'Archivo Black',sans-serif;color:#efe9e6;text-transform:uppercase;letter-spacing:.03em"
 			>{work.header}</span
 		>
 		<span class="head-hint"><TileHint {mobile} color="#c9cdd8" /></span>
@@ -69,18 +70,18 @@
 	>
 		{#each featured as f (f.id)}
 			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-			<div class="wrow" style="padding:{mobile ? '5px 4px' : '12px 6px'}" onclick={(e) => pick(e, f.id)}>
+			<div class="wrow" style="padding:{mobile ? '4px 4px' : '12px 6px'}" onclick={(e) => pick(e, f.id)}>
 				<span style="display:flex;flex-direction:column;gap:{mobile ? 1 : 3}px;min-width:0">
 					<span
 						style="font:500 {nameFont}px/1.15 'Cormorant Garamond',serif;color:#ece5da;{mobile
 							? 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
 							: ''}">{f.name}</span
 					>
-					<span style="font:400 {metricFont}px/1.35 'Archivo',sans-serif;color:#a8acb8"
+					<span style="font:400 {metricFont}px/1.3 'Archivo',sans-serif;color:#a8acb8"
 						>{f.metric}</span
 					>
 				</span>
-				<span class="row-hint" aria-hidden="true">{tileHint}</span>
+				<span class="row-hint" aria-hidden="true"><Icon name="arrow-right" /></span>
 			</div>
 		{/each}
 	</div>
@@ -129,7 +130,8 @@
 		right: 6px;
 		top: 50%;
 		margin-top: -8px;
-		font: 400 16px/1 'Archivo', sans-serif;
+		display: flex;
+		font-size: 16px;
 		color: #e2954f;
 		opacity: 0;
 		transform: translate(-6px, -4px);

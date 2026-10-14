@@ -11,9 +11,6 @@ export const profile = {
 	timezone: 'New York · GMT-5'
 } as const;
 
-// The one "this card opens" hint every clickable board tile carries.
-export const tileHint = '→';
-
 export const links = {
 	resume: '/resume.pdf',
 	linkedin: 'https://www.linkedin.com/in/noureddine-sidi/',
@@ -141,8 +138,8 @@ export const contact = {
 	// 'tap to copy' on both breakpoints
 	copyLabel: 'tap to copy',
 	copiedLabel: '✦ signal sent',
-	writeMe: 'write me →',
-	resumeLabel: 'Open resume PDF →',
+	writeMe: 'write me',
+	resumeLabel: 'Open resume PDF',
 	socialsMobile: ['GitHub', 'LinkedIn']
 } as const;
 

@@ -14,9 +14,9 @@
 	const iconR = $derived(mobile ? 7 : 8);
 	const topPad = $derived(mobile ? 11 : 16);
 	const sidePad = $derived(mobile ? 12 : 16);
-	const badgePad = $derived(mobile ? '6px 10px' : '8px 14px');
+	const badgePad = $derived(mobile ? '6px 9px' : '8px 14px');
 	const badgeR = $derived(mobile ? 7 : 8);
-	const badgeFont = $derived(mobile ? 11 : 13);
+	const badgeFont = $derived(mobile ? 12 : 13);
 	const nameFont = $derived(mobile ? 21 : 34);
 	const nameLH = $derived(mobile ? 1.05 : 1.02);
 	const nameBottom = $derived(mobile ? 16 : 22);
@@ -40,7 +40,7 @@
 			: 8}px;align-items:center"
 	>
 		<span
-			style="margin-right:auto;padding:{badgePad};border-radius:{badgeR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);font:500 {badgeFont}px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#fff;text-transform:uppercase;box-shadow:{glow};text-shadow:{badgeShadow}"
+			style="margin-right:auto;padding:{badgePad};border-radius:{badgeR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);white-space:nowrap;font:500 {badgeFont}px 'JetBrains Mono',monospace;letter-spacing:{mobile ? '.08em' : '.12em'};color:#fff;text-transform:uppercase;box-shadow:{glow};text-shadow:{badgeShadow}"
 			>{hero.badge}</span
 		>
 		<a
@@ -50,9 +50,7 @@
 			aria-label="Resume (PDF)"
 			style="display:flex;align-items:center;gap:7px;height:{iconSize}px;padding:0 {mobile
 				? 10
-				: 13}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow};font:600 {mobile
-				? 11
-				: 12}px 'Archivo',sans-serif;color:#fff"
+				: 13}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow};font:600 12px 'Archivo',sans-serif;color:#fff"
 		>
 			<svg
 				width="14"

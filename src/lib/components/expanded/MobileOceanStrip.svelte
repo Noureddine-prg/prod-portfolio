@@ -23,11 +23,11 @@
 		style="position:absolute;left:20px;right:20px;top:16px;display:flex;justify-content:space-between;align-items:baseline"
 	>
 		<span
-			style="font:400 13px 'Archivo Black',sans-serif;letter-spacing:.02em;color:#f0e6dd;text-transform:uppercase;text-shadow:0 1px 8px rgba(0,0,0,.6)"
+			style="font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#f0e6dd;text-transform:uppercase;text-shadow:0 1px 8px rgba(0,0,0,.6)"
 			>{title}</span
 		>
 		<span
-			style="font:400 8px 'JetBrains Mono',monospace;color:#d8c9bd;text-shadow:0 1px 8px rgba(0,0,0,.6);padding-right:34px"
+			style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:#d8c9bd;text-shadow:0 1px 8px rgba(0,0,0,.6);padding-right:34px"
 			>{meta}</span
 		>
 	</div>

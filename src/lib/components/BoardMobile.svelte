@@ -48,7 +48,7 @@
 	/>
 	<WorkTile
 		mobile
-		placement="flex:0 1 176px;min-height:150px"
+		placement="flex:0 1 184px;min-height:180px"
 		onopen={() => onopen('work')}
 		onproject={(id) => openProject(id)}
 	/>
@@ -60,7 +60,7 @@
 
 	<!-- Footer strip — small addition beyond the DC board (see report). -->
 	<div
-		style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:2px 6px 2px;font:400 8px 'JetBrains Mono',monospace;letter-spacing:.08em;color:#6e6058;text-transform:uppercase"
+		style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:2px 6px 2px;font:400 var(--t-meta) 'JetBrains Mono',monospace;letter-spacing:.06em;color:var(--c-meta);text-transform:uppercase"
 	>
 		<span>{profile.name}</span>
 		<span>{profile.location}</span>

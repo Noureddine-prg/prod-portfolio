@@ -56,13 +56,13 @@
 {#if mobile}
 	<div
 		use:listEl
-		style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"
+		style="display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap;margin-bottom:10px"
 	>
 		<span
-			style="font:400 12px 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
+			style="font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
 			>Work &middot; 06 builds</span
 		>
-		<span style="font:400 8.5px 'JetBrains Mono',monospace;color:#7c8294">2024 &mdash; now</span>
+		<span style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:var(--c-meta)">2024 &mdash; now</span>
 	</div>
 	{#each work.projects as p, i (p.id)}
 		<div
@@ -75,11 +75,11 @@
 			onkeydown={(e) => e.key === 'Enter' && (ui.workDetail = p.id)}
 			style={i === work.projects.length - 1 ? 'border-bottom:none' : ''}
 		>
-			<span style="font:500 13px 'Cormorant Garamond',serif;color:#ece5da"
+			<span style="font:500 var(--t-item) 'Cormorant Garamond',serif;color:#ece5da;font-variant-numeric:lining-nums tabular-nums"
 				>{p.number} &middot; {p.name}</span
 			>
-			<span style="font:400 10.5px/1.5 'Archivo',sans-serif;color:#a8acb8">{p.descShort}</span>
-			<span style="font:400 7.5px 'JetBrains Mono',monospace;color:#7c8294"
+			<span style="font:400 13px/1.5 'Archivo',sans-serif;color:#a8acb8">{p.descShort}</span>
+			<span style="font:400 var(--t-meta)/1.45 'JetBrains Mono',monospace;color:#7c8294"
 				>{p.tech} &middot; {p.org} &middot; {p.year}</span
 			>
 		</div>
@@ -90,14 +90,14 @@
 		style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px"
 	>
 		<span
-			style="font:400 14px 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
+			style="font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
 			>Work &middot; 06 builds</span
 		>
-		<span style="font:400 9px 'JetBrains Mono',monospace;color:#7c8294">2024 &mdash; now</span>
+		<span style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:var(--c-meta)">2024 &mdash; now</span>
 	</div>
 	<div
 		use:listEl
-		style="display:grid;grid-template-columns:34px 1fr 160px 118px 44px;gap:16px;padding:0 6px 10px;border-bottom:1px solid rgba(220,226,240,0.17);font:400 8.5px 'Archivo Black',sans-serif;letter-spacing:.14em;color:#7c8294;text-transform:uppercase"
+		style="display:grid;grid-template-columns:34px 1fr 160px 118px 44px;gap:16px;padding:0 6px 10px;border-bottom:1px solid rgba(220,226,240,0.17);font:500 var(--t-label) 'JetBrains Mono',monospace;letter-spacing:.12em;color:#7c8294;text-transform:uppercase"
 	>
 		<span>#</span><span>Project</span><span>Tech</span><span>Company</span><span
 			style="text-align:right">Year</span
@@ -113,16 +113,16 @@
 			onclick={() => (ui.workDetail = p.id)}
 			onkeydown={(e) => e.key === 'Enter' && (ui.workDetail = p.id)}
 		>
-			<span style="font:400 12px 'Cormorant Garamond',serif;color:#7c8294">{p.number}</span>
+			<span style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:#7c8294;font-variant-numeric:lining-nums tabular-nums">{p.number}</span>
 			<span
-				><span style="font:500 16px 'Cormorant Garamond',serif;color:#ece5da">{p.name}</span><span
-					style="display:block;font:400 11px/1.5 'Archivo',sans-serif;color:#a8acb8;margin-top:3px"
+				><span style="font:500 var(--t-item) 'Cormorant Garamond',serif;color:#ece5da">{p.name}</span><span
+					style="display:block;font:400 var(--t-body-sm)/1.5 'Archivo',sans-serif;color:#a8acb8;margin-top:3px"
 					>{p.desc}</span
 				></span
 			>
-			<span style="font:400 8.5px 'JetBrains Mono',monospace;color:#b7bbc6">{p.tech}</span>
-			<span style="font:400 9px 'JetBrains Mono',monospace;color:#a8acb8">{p.org}</span>
-			<span style="font:400 8.5px 'JetBrains Mono',monospace;color:#a8acb8;text-align:right"
+			<span style="font:400 var(--t-meta)/1.45 'JetBrains Mono',monospace;color:#b7bbc6">{p.tech}</span>
+			<span style="font:400 var(--t-meta)/1.45 'JetBrains Mono',monospace;color:#a8acb8">{p.org}</span>
+			<span style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:#a8acb8;text-align:right;font-variant-numeric:tabular-nums"
 				>{p.year}</span
 			>
 		</div>

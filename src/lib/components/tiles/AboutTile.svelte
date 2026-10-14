@@ -52,7 +52,7 @@
 
 	<div style="position:relative;display:flex;justify-content:space-between;align-items:baseline">
 		<span
-			style="font:400 {headFont}px 'Archivo Black',sans-serif;color:#efe9e6;text-transform:uppercase;letter-spacing:.01em"
+			style="font:400 {headFont}px 'Archivo Black',sans-serif;color:#efe9e6;text-transform:uppercase;letter-spacing:.03em"
 			>{about.header}</span
 		>
 		<TileHint {mobile} color="#d9cec4" />

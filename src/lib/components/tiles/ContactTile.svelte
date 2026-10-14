@@ -14,7 +14,7 @@
 	let { mobile = false, placement = '', onopen = () => {} }: Props = $props();
 
 	const pad = $derived(mobile ? 12 : 16);
-	const headFont = $derived(mobile ? 12 : 15);
+	const headFont = $derived(mobile ? 12 : 13);
 	const envW = $derived(mobile ? 84 : 90);
 	const envH = $derived(mobile ? 96 : 102);
 	const envRight = $derived(mobile ? 4 : 6);
@@ -33,7 +33,7 @@
 >
 	<div style="position:relative;display:flex;justify-content:space-between;align-items:baseline">
 		<span
-			style="font:400 {headFont}px 'Archivo Black',sans-serif;color:#efe9e6;text-transform:uppercase;letter-spacing:.01em"
+			style="font:400 {headFont}px 'Archivo Black',sans-serif;color:#efe9e6;text-transform:uppercase;letter-spacing:.03em"
 			>{contact.header}</span
 		>
 		<TileHint {mobile} color="#e9b49a" />

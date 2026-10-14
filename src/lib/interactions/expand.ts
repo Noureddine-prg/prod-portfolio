@@ -22,6 +22,7 @@ import { mount, unmount, type Component } from 'svelte';
 import { pushState } from '$app/navigation';
 import { ui, type CardId } from '$lib/stores/ui.svelte';
 import { freeze } from '$lib/stores/freeze.svelte';
+import { iconSvg } from '$lib/icons';
 import ExpandedExperience from '$lib/components/expanded/ExpandedExperience.svelte';
 import ExpandedAbout from '$lib/components/expanded/ExpandedAbout.svelte';
 import ExpandedContact from '$lib/components/expanded/ExpandedContact.svelte';
@@ -313,7 +314,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	close.type = 'button';
 	close.className = 'clone-close';
 	close.setAttribute('aria-label', `Close ${spec.label}`);
-	close.textContent = '✕';
+	close.appendChild(iconSvg('close', '15px'));
 	Object.assign(close.style, {
 		background: 'rgba(0,0,0,.45)',
 		color: '#fff',
