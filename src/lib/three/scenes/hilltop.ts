@@ -169,7 +169,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	// --- scale: the DC stump + axe are sized to fill a small tile on their own; in this landscape
 	// (grass blades, a person-width trail) they read as giant, so the kit shrinks onto the knoll.
 	// The chop animation moves stump/grip in their own units, so it scales with them.
-	const KIT = 0.62;
+	const KIT = 0.52;
 	const kit = new T.Group();
 	[...spin.children].forEach((c) => kit.add(c));
 	kit.scale.setScalar(KIT);
@@ -189,20 +189,16 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	const hill = new T.Mesh(hillGeo, new T.MeshLambertMaterial({ color: 0x0c1009 }));
 	spin.add(hill);
 
-	// --- path: a worn trail over the crest, around the stump, and down out the left edge toward
-	// the campfire. Plotted in view space (x right, z toward the camera) and turned into `spin`'s
-	// frame, since axelog has already rotated spin to its viewing angle. The scaled stump's base
-	// radius is ~0.55, so the trail keeps ≥0.85 from its centre.
+	// --- worn ground: a strip from the stump's clearing down out the left edge toward the
+	// campfire. Plotted in view space (x right, z toward the camera) and turned into `spin`'s
+	// frame, since axelog has already rotated spin to its viewing angle.
 	const rotY = spin.rotation.y;
 	const toLocal = ([vx, vz]: number[]) =>
 		new T.Vector3(vx * Math.cos(rotY) - vz * Math.sin(rotY), 0, vx * Math.sin(rotY) + vz * Math.cos(rotY));
 	const pathCurve = new T.CatmullRomCurve3(
 		[
-			[1.3, -3.2],
-			[1.0, -1.6],
-			[0.88, -0.4],
-			[0.72, 0.5],
-			[0.1, 0.95],
+			// starts inside the clearing and only leads out toward the fire (no strip to the back)
+			[0.15, 0.7],
 			[-0.65, 1.5],
 			[-1.5, 2.4],
 			[-2.6, 3.4]
@@ -210,8 +206,8 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	);
 	const PATH_N = 96;
 	const pathPts = pathCurve.getSpacedPoints(PATH_N);
-	// one real width end to end — perspective alone tapers it (a widening ribbon read as a road)
-	const pathHW = (_k: number) => 0.26;
+	// a broad worn strip, like the ground the campfire has trodden bare — not a footpath
+	const pathHW = (k: number) => 0.6 + k * 0.1;
 	const pPos: number[] = [];
 	const pUv: number[] = [];
 	const pIdx: number[] = [];
@@ -243,6 +239,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	pathGeo.setAttribute('uv', new T.Float32BufferAttribute(pUv, 2));
 	pathGeo.setIndex(pIdx);
 	const pathUni = {
+		uDisc: { value: 0 },
 		uFlick: { value: 1 },
 		uAmb: { value: new T.Vector3(todP.amb[0], todP.amb[1], todP.amb[2]) },
 		uFogC: { value: new T.Color(todP.fog) },
@@ -268,6 +265,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
                 gl_Position = projectionMatrix * viewMatrix * w;
               }`,
 			fragmentShader: `
+              uniform float uDisc;
               uniform float uFlick;
               uniform vec3 uAmb;
               uniform vec3 uFogC;
@@ -283,8 +281,8 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
               void main() {
                 // soft, ragged edges: the trail frays into the grass rather than ending on a line
                 float n = vn(vWorld.xz * 7.0) * 0.6 + vn(vWorld.xz * 19.0) * 0.4;
-                float edge = abs(vUv.x - 0.5) * 2.0;
-                float a = 1.0 - smoothstep(0.45 + n * 0.25, 0.95, edge);
+                float edge = mix(abs(vUv.x - 0.5) * 2.0, length(vUv - 0.5) * 2.0, uDisc);
+                float a = 1.0 - smoothstep(0.3 + n * 0.3, 0.95, edge);
                 // packed earth, a worn lighter centre line, a few pebble flecks
                 vec3 dirt = mix(vec3(0.12, 0.095, 0.075), vec3(0.2, 0.155, 0.115), n);
                 dirt = mix(dirt, dirt * 1.35, (1.0 - edge) * 0.5);
@@ -301,11 +299,25 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 	);
 	path.renderOrder = 1;
 	spin.add(path);
+	// the bare ground around the stump that the strip opens out of
+	const CLEAR_R = 1.25;
+	const clearGeo = new T.CircleGeometry(CLEAR_R, 40, 0, Math.PI * 2);
+	clearGeo.rotateX(-Math.PI / 2);
+	const cp = clearGeo.attributes.position as THREE.BufferAttribute;
+	for (let i = 0; i < cp.count; i++) {
+		const x = cp.getX(i), z = cp.getZ(i);
+		cp.setY(i, hillY(Math.hypot(x, z)) + 0.02);
+	}
+	const clearMat = (path.material as THREE.ShaderMaterial).clone();
+	clearMat.uniforms = Object.assign({}, pathUni, { uDisc: { value: 1 } });
+	const clearing = new T.Mesh(clearGeo, clearMat);
+	clearing.renderOrder = 1;
+	spin.add(clearing);
 	// grass keeps off the trail's middle (blades on its edges are fine — they fray it)
 	const onPath = (x: number, z: number) => {
 		for (let i = 0; i <= PATH_N; i++) {
 			const q = pathPts[i];
-			const r = pathHW(i / PATH_N) * 0.7;
+			const r = pathHW(i / PATH_N) * 0.62;
 			if ((x - q.x) ** 2 + (z - q.z) ** 2 < r * r) return true;
 		}
 		return false;
@@ -408,6 +420,7 @@ export function addHilltop(ctx: SceneCtx): UpdateFn {
 		const x = Math.cos(a) * r, z = Math.sin(a) * r;
 		if (z < -4.8) continue; // fogged out past here
 		if (onPath(x, z)) continue;
+		if (r < 0.95 + rand() * 0.35) continue; // the clearing round the stump, ragged at its rim
 		const s = 0.55 + rand() * 0.6;
 		dummy.position.set(x, hillY(r) - 0.02, z);
 		dummy.rotation.set(0, rand() * Math.PI, (rand() - 0.5) * 0.14);
