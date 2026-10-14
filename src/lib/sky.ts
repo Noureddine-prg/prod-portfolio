@@ -1,7 +1,6 @@
-// One night sky in desktop-board coordinates (x/y as % of the board box). The board draws
-// it behind the tiles (it shows through the middle column and the gutters) and the
-// Experience panel draws the same list in the same box, so opening that card grows it
-// around stars that stay where they were.
+// One night sky in desktop-board coordinates (x/y as % of the board box). The board draws it
+// behind the tiles and the Experience panel draws the same list in the same box, so opening
+// that card grows it around stars that stay where they were.
 
 export interface Star {
 	x: number;

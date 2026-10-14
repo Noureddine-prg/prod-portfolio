@@ -3,9 +3,8 @@
 	// envelope + ash sit under the content (z0/z1), the flame bleeds ABOVE it (z2,
 	// pointer-events:none) and is cropped by the container's overflow:hidden.
 	import { onDestroy } from 'svelte';
-	import { activateOnKey } from '$lib/util/a11y';
 	import ThreeCanvas from '../ThreeCanvas.svelte';
-	import CardLinks from '../CardLinks.svelte';
+	import CardLinks from './CardLinks.svelte';
 	import Icon from '../Icon.svelte';
 	import { contact, links, profile } from '$lib/content';
 
@@ -95,13 +94,11 @@
 	<div
 		style="position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;margin-top:auto"
 	>
-		<span
+		<button
+			type="button"
 			data-copy-email
-			role="button"
-			tabindex="0"
 			onclick={copyEmail}
-			onkeydown={(e) => activateOnKey(e, copyEmail)}
-			style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 15px;border-radius:10px;background:#211b1b;border:1px solid #362e2e;cursor:pointer"
+			style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 15px;border-radius:10px;background:#211b1b;border:1px solid #362e2e;cursor:pointer;margin:0;font:inherit;text-align:inherit"
 		>
 			<span style="font:500 12px 'JetBrains Mono',monospace;color:#efe9e6">{profile.email}</span>
 			<span
@@ -111,7 +108,7 @@
 					: '#958479'};text-transform:uppercase;letter-spacing:.06em;flex:none"
 				>{#if copied}<Icon name="check" />{/if}{label}</span
 			>
-		</span>
+		</button>
 		<a
 			href="mailto:{profile.email}"
 			style="display:flex;align-items:center;justify-content:center;gap:.4em;min-height:44px;border-radius:10px;background:#d86a52;font:500 12px 'JetBrains Mono',monospace;color:#2a0d06;text-decoration:none"
@@ -131,6 +128,7 @@
 		<a
 			href={links.resume}
 			target="_blank"
+			rel="noreferrer"
 			style="display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:10px;gap:.4em;background:#211b1b;border:1px solid #2a2424;font:500 12px 'JetBrains Mono',monospace;color:#d86a52;text-decoration:none"
 			>{contact.resumeLabel}<Icon name="arrow-right" /></a
 		>
@@ -220,13 +218,11 @@
 			></span
 		>
 		<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-			<span
+			<button
+				type="button"
 				data-copy-email
-				role="button"
-				tabindex="0"
 				onclick={copyEmail}
-				onkeydown={(e) => activateOnKey(e, copyEmail)}
-				style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:10px;background:#211b1b;border:1px solid #362e2e;cursor:pointer"
+				style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:10px;background:#211b1b;border:1px solid #362e2e;cursor:pointer;margin:0;font:inherit;text-align:inherit"
 			>
 				<span style="font:500 13px 'JetBrains Mono',monospace;color:#efe9e6">{profile.email}</span>
 				<span
@@ -242,7 +238,7 @@
 						>{#if copied}<Icon name="check" />{/if}{label}</span
 					></span
 				>
-			</span>
+			</button>
 			<a
 				href="mailto:{profile.email}"
 				style="display:inline-flex;align-items:center;gap:.4em;padding:12px 18px;border-radius:10px;background:#d86a52;font:500 11px 'JetBrains Mono',monospace;color:#2a0d06;text-decoration:none"
@@ -253,7 +249,7 @@
 	<div
 		style="position:relative;z-index:1;display:flex;gap:18px;align-items:baseline;border-top:1px solid #2a2424;padding-top:12px"
 	>
-		<CardLinks resumeColor="#d86a52" linkColor="#94867f" resumeLabel={contact.resumeLabel} />
+		<CardLinks resumeColor="#d86a52" linkColor="#94867f" />
 	</div>
 {/if}
 

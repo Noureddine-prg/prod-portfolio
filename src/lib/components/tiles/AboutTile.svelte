@@ -1,7 +1,7 @@
 <script lang="ts">
+	// About tile — jar fireflies scene + twinkles; opens via `onopen`.
 	import { activateOnKey } from '$lib/util/a11y';
 	import { sceneHover } from '$lib/interactions/hover';
-	// About tile — jar fireflies scene + twinkles; opens via `onopen`.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import TileHint from './TileHint.svelte';
 	import { about } from '$lib/content';
@@ -13,8 +13,8 @@
 	}
 	let { mobile = false, placement = '', onopen = () => {} }: Props = $props();
 
-	// jar sits centred, matching Contact's envelope (DC had it hard right); explicit width/height — a canvas
-	// sized only by left/right falls back to its backing-store width and jumps once built
+	// jar sits centred, matching Contact's envelope; explicit width/height — a canvas sized
+	// only by left/right falls back to its backing-store width and jumps once built
 	const jarStyle = $derived(
 		mobile
 			? 'left:50%;top:60%;transform:translate(-50%,-50%);width:74px;height:84px'

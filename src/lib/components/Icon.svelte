@@ -5,20 +5,18 @@
 
 	interface Props {
 		name: IconName;
-		size?: string;
-		stroke?: number;
 		style?: string;
 	}
-	let { name, size = '1em', stroke = 2, style = '' }: Props = $props();
+	let { name, style = '' }: Props = $props();
 </script>
 
 <svg
-	width={size}
-	height={size}
+	width="1em"
+	height="1em"
 	viewBox="0 0 24 24"
 	fill="none"
 	stroke="currentColor"
-	stroke-width={stroke}
+	stroke-width="2"
 	stroke-linecap="round"
 	stroke-linejoin="round"
 	aria-hidden="true"

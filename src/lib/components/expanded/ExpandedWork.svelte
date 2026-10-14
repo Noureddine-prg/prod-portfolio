@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { activateOnKey } from '$lib/util/a11y';
 	// Work expanded panel — parchment ledger, mounted into the clone by expand.ts. Rows open
 	// the ProjDetail overlay via ui.workDetail; body-click close stays disabled for Work in expand.ts.
 	import { onDestroy } from 'svelte';
+	import { activateOnKey } from '$lib/util/a11y';
 	import { ui } from '$lib/stores/ui.svelte';
-	import CardLinks from '../CardLinks.svelte';
+	import CardLinks from './CardLinks.svelte';
 	import { work } from '$lib/content';
 	import ProjDetail from './ProjDetail.svelte';
 
@@ -14,6 +14,7 @@
 	let { mobile = false }: Props = $props();
 
 	const detailOpen = $derived(ui.workDetail !== null);
+	const title = `${work.header} · ${String(work.projects.length).padStart(2, '0')} builds`;
 
 	// top-level list elements — faded out under the detail exactly like the DC faded
 	// ex.children; inline styles so we never fight the reveal stagger's inline opacity
@@ -64,7 +65,7 @@
 	>
 		<h2
 			style="margin:0;font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
-			>Work &middot; 06 builds</h2
+			>{title}</h2
 		>
 		<span style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:var(--c-meta)">2024 &mdash; now</span>
 	</div>
@@ -95,7 +96,7 @@
 	>
 		<h2
 			style="margin:0;font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#ece5da;text-transform:uppercase"
-			>Work &middot; 06 builds</h2
+			>{title}</h2
 		>
 		<span style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:var(--c-meta)">2024 &mdash; now</span>
 	</div>
@@ -159,7 +160,6 @@
 		border-bottom: 1px solid rgba(220, 226, 240, 0.1);
 		border-radius: 4px;
 		cursor: pointer;
-		outline: none;
 	}
 	.prow::before,
 	.prow::after {

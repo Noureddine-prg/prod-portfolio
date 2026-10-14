@@ -1,6 +1,5 @@
 <script lang="ts">
-	// The prominent resume action in the Experience panel (the board has no Resume tile;
-	// the hero button and this one are the two front doors to the PDF).
+	// The hero button and this one are the two front doors to the resume PDF.
 	import { links } from '$lib/content';
 	import Icon from '../Icon.svelte';
 

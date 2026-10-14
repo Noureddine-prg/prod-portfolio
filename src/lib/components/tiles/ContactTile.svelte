@@ -1,7 +1,7 @@
 <script lang="ts">
+	// Contact tile — clean envelope scene + header + open hint; opens via `onopen`.
 	import { activateOnKey } from '$lib/util/a11y';
 	import { sceneHover } from '$lib/interactions/hover';
-	// Contact tile — clean envelope scene + header + open hint; opens via `onopen`.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import TileHint from './TileHint.svelte';
 	import { contact, profile } from '$lib/content';
@@ -13,8 +13,11 @@
 	}
 	let { mobile = false, placement = '', onopen = () => {} }: Props = $props();
 
-	const envW = $derived(mobile ? 74 : 96);
-	const envH = $derived(mobile ? 84 : 108);
+	const envelopeStyle = $derived(
+		mobile
+			? 'left:50%;top:60%;transform:translate(-50%,-50%);width:74px;height:84px'
+			: 'left:50%;top:55%;transform:translate(-50%,-50%);width:96px;height:108px'
+	);
 </script>
 
 <div
@@ -41,7 +44,7 @@
 		kind="envelope"
 		lite
 		clean
-		style="position:absolute;left:50%;top:{mobile ? 60 : 55}%;transform:translate(-50%,-50%);width:{envW}px;height:{envH}px;pointer-events:none"
+		style="position:absolute;{envelopeStyle};pointer-events:none"
 	/>
 	{#if !mobile}
 		<span

@@ -1,6 +1,6 @@
 // Design tokens extracted from the DC source of truth (boards 11a/11b) — a reference table
-// exercised by the token unit tests. Components carry their DC-ported values inline; app.css
-// keeps only the base-rule tokens (--c-text-cream, --f-body).
+// exercised by the token unit tests. Components carry their DC-ported values inline; the live
+// custom properties (base colors, type scale, tile inset) are defined in app.css.
 
 export const color = {
 	// surfaces
@@ -32,7 +32,7 @@ export const color = {
 	textBody: '#94867f',
 	textAboutBody: '#b3a8c2',
 	textAboutBody2: '#cfc4de',
-	monoMuted: '#958479', // typography pass: was #6e6058 (under 4.5:1 as text)
+	monoMuted: '#958479', // 4.5:1 as text on the warm darks
 
 	// fire accents
 	ember: '#ff8c3a',
@@ -74,8 +74,8 @@ export const board = {
 	desktopW: 900,
 	desktopH: 620,
 	mobileW: 390,
-	gridCols: '1.72fr 1fr 1fr',
-	gridRows: 'repeat(4,minmax(0,1fr))'
+	gridCols: '1.72fr 1.05fr 1.05fr',
+	gridRows: '1.15fr .85fr .85fr 1.15fr'
 } as const;
 
 // breakpoints (px) — README §Radii & spacing

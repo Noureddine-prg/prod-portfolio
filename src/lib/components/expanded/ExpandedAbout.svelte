@@ -3,7 +3,7 @@
 	// large stage, and the tile's firefly jar rides along as a small live accent beside the
 	// name; statement, body, availability and skill groups sit beside (desktop) or below (mobile).
 	import EmberGlass from './EmberGlass.svelte';
-	import CardLinks from '../CardLinks.svelte';
+	import CardLinks from './CardLinks.svelte';
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { about, profile } from '$lib/content';
 

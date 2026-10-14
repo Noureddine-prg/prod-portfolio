@@ -1,11 +1,7 @@
-// All site copy in one editable module. Content is placeholder-grade per the handoff
-// (structure for easy editing); wording is lifted from the DC file except the identity
-// fields below, which follow the scaffold brief. Expanded-card bodies (experience
-// bullets, work rows) live here now so Stage 3 only wires layout, not text.
+// All site copy. Wording from the DC file; identity fields per the brief.
 
 export const profile = {
 	name: 'Noureddine Sidi Abed',
-	title: 'SOFTWARE DEVELOPER',
 	location: 'New York, NY',
 	email: 'nour.sidiabed@gmail.com',
 	timezone: 'New York · ET'
@@ -27,12 +23,6 @@ export const hero = {
 // ── Experience ────────────────────────────────────────────────────────────────
 export const experience = {
 	header: 'Experience',
-	period: '2024 — 26',
-	companies: [
-		{ name: 'Google', short: 'G' },
-		{ name: 'Meta', short: 'M' },
-		{ name: "NYC Mayor's Office", short: 'NYC' }
-	],
 	roles: [
 		{
 			company: 'Google',
@@ -40,8 +30,6 @@ export const experience = {
 			start: 'Oct 2025',
 			end: 'Jun 2026',
 			period: 'Oct 2025 — Jun 2026',
-			blurb:
-				'Partnered directly with research teams to turn ambiguous evaluation requirements into deployed tooling — owning solutions from problem statement through production. Architected an agentic evaluation pipeline on the Gemini API scoring 1,000+ image outputs per cycle with human verification checkpoints, and consolidated 5 vendor sources into one reporting pipeline, cutting reporting time 70%.',
 			// mobile expanded role-card bullets (DC 11b L491–493)
 			bullets: [
 				'Owned eval tooling from ambiguous problem statements to production workflows',
@@ -57,8 +45,6 @@ export const experience = {
 			start: 'Sep 2024',
 			end: 'Sep 2025',
 			period: 'Sep 2024 — Sep 2025',
-			blurb:
-				"Served as the technical bridge between engineering, research, and vendor teams — leading 30+ analysts validating training data for Llama's coding and agentic capabilities. Shipped React tooling for structured QA across 10,000+ data points and Python failure-trajectory analyses that directly informed Llama training improvements.",
 			bullets: [
 				'Technical bridge across engineering, research, and vendor teams — 30+ analysts led',
 				'React QA tooling across 10,000+ data points',
@@ -73,8 +59,6 @@ export const experience = {
 			start: 'Jan 2024',
 			end: 'Jul 2024',
 			period: 'Jan — Jul 2024',
-			blurb:
-				'Embedded with internal government teams as the technical point of contact — scoping requirements, translating operational needs into specifications, and delivering working software against them. Shipped a cross-platform org-chart application in C#/ASP.NET and Java; migrated thousands of employee records with zero data loss.',
 			bullets: [
 				'Embedded as technical point of contact — requirements to working software',
 				'Org-chart platform in C#/ASP.NET + Java, Windows and Android',
@@ -95,15 +79,10 @@ interface SkillGroup {
 
 export const about = {
 	header: 'About',
-	availability: 'Available · New York, NY',
-	availabilityShort: 'Available · NYC',
-	location: 'New York, NY',
 	// expanded view copy (DC 11a L322–326 / 11b L622–628)
-	intro:
-		'Forward-deployed engineer — embedded with the teams who have the problem, shipping the tooling that solves it.',
 	body: "I work where engineering meets the people who need it — scoping ambiguous problems alongside research and operations teams, then owning the solution from first spec to production. Lately that means agentic evaluation pipelines on Gemini at Google, Llama training-data systems at Meta, and embedded delivery for the NYC Mayor's Office.",
 	availabilityLine: 'Available for full-time roles · New York or remote',
-	// board-tile summary line (placeholder until the Phase 5 copy rewrite)
+	// board-tile summary line
 	thesis: 'Embedded with the teams who have the problem, shipping the tooling that solves it.',
 	lockup: ['Software', 'Developer'],
 	portrait: { src: '/portrait.jpg', alt: 'Portrait of Noureddine Sidi Abed' },

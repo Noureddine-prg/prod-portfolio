@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { color, radius, space, board, breakpoint, font } from './tokens';
 
-// Token sanity — these values are extracted verbatim from the DC source of truth and
-// mirrored into app.css; drift here silently un-themes the board.
+// Token sanity — a reference table of the DC values; components carry them inline, so
+// these guard the table itself against drift from the board.
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const RGBA = /^rgba\(\d+,\d+,\d+,(0|1|\.\d+|0?\.\d+)\)$/;
@@ -29,9 +29,9 @@ describe('board geometry', () => {
 		expect(board.mobileW).toBe(390);
 	});
 
-	it('desktop grid template matches the DC (1.72fr 1fr 1fr × 4 rows)', () => {
-		expect(board.gridCols).toBe('1.72fr 1fr 1fr');
-		expect(board.gridRows).toBe('repeat(4,minmax(0,1fr))');
+	it('desktop grid template matches BoardDesktop', () => {
+		expect(board.gridCols).toBe('1.72fr 1.05fr 1.05fr');
+		expect(board.gridRows).toBe('1.15fr .85fr .85fr 1.15fr');
 	});
 
 	it('breakpoints are the two designed widths', () => {

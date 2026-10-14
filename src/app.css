@@ -5,7 +5,7 @@
 	--c-text-cream: #efe9e6;
 	--f-body: 'Archivo', system-ui, sans-serif;
 	--c-field: #100d0c; /* root/backing ember charcoal — also paints the browser bar strips (mirror app.html theme-color) */
-	--c-meta: #958479; /* dim meta text (was #6e6058, under 4.5:1 on the warm darks) */
+	--c-meta: #958479; /* dim meta text (4.5:1 on the warm darks) */
 	--c-accent-text: #d86a52; /* terracotta as small text; #c85a44 stays for fills/dots/bars */
 
 	/* Type scale — design px (the desktop board is scaled to the window, mobile runs at ×1).
@@ -25,12 +25,10 @@
 .stage--mobile {
 	--t-title: 20px;
 	--t-item: 15px;
-	--t-body: 14px;
 	--t-body-sm: 13px;
 	--t-meta: 12px;
 	--t-label: 12px;
 	--tile-pad: 14px;
-	--t-tile-head: 13px;
 }
 
 * {

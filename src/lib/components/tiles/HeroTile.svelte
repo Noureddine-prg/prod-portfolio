@@ -22,6 +22,9 @@
 	const nameBottom = $derived(mobile ? 16 : 22);
 	const glow = $derived(mobile ? '0 0 12px rgba(255,150,70,.14)' : '0 0 14px rgba(255,150,70,.14)');
 	const badgeShadow = $derived(mobile ? '0 0 7px rgba(255,150,70,.35)' : '0 0 8px rgba(255,150,70,.35)');
+	const glassBtn = $derived(
+		`flex:none;display:flex;align-items:center;justify-content:center;height:${iconSize}px;border-radius:${iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:${glow}`
+	);
 	// Mobile swaps name↑ / badge+icons↓; desktop keeps the DC arrangement (badge+icons↑ / name↓)
 	const topAnchor = $derived(`top:${topPad}px;left:${sidePad}px;right:${sidePad}px`);
 	const bottomAnchor = $derived(`bottom:${nameBottom}px;left:${nameBottom}px;right:${nameBottom}px`);
@@ -49,9 +52,9 @@
 			rel="noreferrer"
 			aria-label="Resume (PDF)"
 			class="hero-btn hero-resume"
-			style="flex:none;display:flex;align-items:center;justify-content:center;gap:7px;min-width:{iconSize}px;height:{iconSize}px;padding:0 {mobile
+			style="{glassBtn};gap:7px;min-width:{iconSize}px;padding:0 {mobile
 				? 10
-				: 13}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow};font:600 12px 'Archivo',sans-serif;color:#fff"
+				: 13}px;font:600 12px 'Archivo',sans-serif;color:#fff"
 		>
 			<svg
 				width="14"
@@ -75,7 +78,7 @@
 			title="LinkedIn"
 			aria-label="LinkedIn"
 			class="hero-btn"
-			style="flex:none;display:flex;align-items:center;justify-content:center;width:{iconSize}px;height:{iconSize}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow}"
+			style="{glassBtn};width:{iconSize}px"
 		>
 			<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"
 				><path
@@ -90,7 +93,7 @@
 			title="GitHub"
 			aria-label="GitHub"
 			class="hero-btn"
-			style="flex:none;display:flex;align-items:center;justify-content:center;width:{iconSize}px;height:{iconSize}px;border-radius:{iconR}px;background:rgba(20,16,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);text-decoration:none;box-shadow:{glow}"
+			style="{glassBtn};width:{iconSize}px"
 		>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"
 				><path

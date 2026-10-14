@@ -11,7 +11,6 @@ describe('profile', () => {
 
 	it('has non-empty identity fields', () => {
 		expect(profile.name.length).toBeGreaterThan(0);
-		expect(profile.title.length).toBeGreaterThan(0);
 		expect(profile.location.length).toBeGreaterThan(0);
 		expect(profile.timezone.length).toBeGreaterThan(0);
 	});
@@ -27,21 +26,15 @@ describe('experience', () => {
 		expect(experience.roles).toHaveLength(3);
 	});
 
-	it('every role is fully populated (title, period, blurb, bullets, tech)', () => {
+	it('every role is fully populated (title, period, bullets, tech)', () => {
 		for (const r of experience.roles) {
 			expect(r.company.length).toBeGreaterThan(0);
 			expect(r.title.length).toBeGreaterThan(0);
 			expect(r.period.length).toBeGreaterThan(0);
-			expect(r.blurb.length).toBeGreaterThan(0);
 			expect(r.bullets.length).toBeGreaterThanOrEqual(2);
 			r.bullets.forEach((b) => expect(b.length).toBeGreaterThan(0));
 			expect(r.tech.length).toBeGreaterThanOrEqual(1);
 		}
-	});
-
-	it('company strip matches the roles (same 3 companies, same order)', () => {
-		expect(experience.companies).toHaveLength(3);
-		expect(experience.companies.map((c) => c.name)).toEqual(experience.roles.map((r) => r.company));
 	});
 });
 
@@ -93,8 +86,7 @@ describe('contact', () => {
 });
 
 describe('about / links', () => {
-	it('about has intro, body, and ≥4 populated skill groups', () => {
-		expect(about.intro.length).toBeGreaterThan(0);
+	it('about has body and ≥4 populated skill groups', () => {
 		expect(about.body.length).toBeGreaterThan(0);
 		expect(about.skillGroups.length).toBeGreaterThanOrEqual(4);
 		for (const g of about.skillGroups) {

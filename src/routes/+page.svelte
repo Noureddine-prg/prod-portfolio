@@ -1,12 +1,7 @@
 <script lang="ts">
-	// The board shell. Both boards (11a desktop / 11b mobile) live in the DOM — a media
-	// query at 900px shows one; the loop only builds canvases that are actually on-screen,
-	// so the hidden board costs nothing. The boards own the expand flow; the intro runs
-	// once per session on the visible board (skipped under prefers-reduced-motion).
-	//
-	// Viewport scaling: each board keeps its native design coordinate system and is
-	// transform-scaled to fill the viewport. The wrapper is sized to the scaled box, and
-	// `boardScale` feeds the loop's render-resolution compensation.
+	// Board shell: both boards (11a/11b) stay in the DOM and a 900px media query shows one (the
+	// loop only builds on-screen canvases). Each board keeps its design coordinates and is
+	// transform-scaled to fill the viewport; `boardScale` feeds the loop's render compensation.
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import BoardDesktop from '$lib/components/BoardDesktop.svelte';
@@ -15,10 +10,19 @@
 	import { boardScale } from '$lib/stores/scale.svelte';
 	import { ui } from '$lib/stores/ui.svelte';
 
+	const DESK_BREAKPOINT = 900; // mirrors the max-width: 899px media query below
 	const DESK_H = 620;
 	const DESK_W_MIN = 900; // the DC board width — narrower and the card panels overflow
 	const DESK_H_MAX = 800;
+	const DESK_W_FLOOR = 760; // only reached once deskH hits DESK_H_MAX
+	const DESK_W_MAX = 1400;
+	const DESK_SCALE_MIN = 0.5;
 	const MOB_W = 390;
+	const MOB_H = 812; // design height before the viewport is measured
+	const MOB_H_MIN = 640;
+	const MOB_H_MAX = 1000;
+	const MOB_SCALE_MIN = 0.75;
+	const MOB_SCALE_MAX = 1.25;
 
 	// Layout truth for scaling: clientWidth of <main>, bound on mount. innerWidth can
 	// disagree with the real container width and skew the centered stage.
@@ -42,25 +46,24 @@
 			: DESK_H
 	);
 	const deskW = $derived(
-		mw && vhEff ? Math.round(Math.min(1400, Math.max(760, (deskH * mw) / vhEff))) : 900
+		mw && vhEff
+			? Math.round(Math.min(DESK_W_MAX, Math.max(DESK_W_FLOOR, (deskH * mw) / vhEff)))
+			: DESK_W_MIN
 	);
-	const deskScale = $derived(mw ? Math.max(0.5, Math.min(vhEff / deskH, mw / deskW)) : 1);
+	const deskScale = $derived(
+		mw ? Math.max(DESK_SCALE_MIN, Math.min(vhEff / deskH, mw / deskW)) : 1
+	);
 	// Mobile scales by width, capped so tablet widths get a centered column instead of a
 	// blown-up phone layout. Design height tracks the device (clamped so tiles never
 	// compress below usable) and the column form-fits the screen with no scrolling.
-	const mobScale = $derived(mw ? Math.min(1.25, Math.max(0.75, mw / MOB_W)) : 1);
+	const mobScale = $derived(mw ? Math.min(MOB_SCALE_MAX, Math.max(MOB_SCALE_MIN, mw / MOB_W)) : 1);
 	const mobH = $derived(
-		mw && vhEff ? Math.round(Math.min(1000, Math.max(640, vhEff / mobScale))) : 812
+		mw && vhEff ? Math.round(Math.min(MOB_H_MAX, Math.max(MOB_H_MIN, vhEff / mobScale))) : MOB_H
 	);
 
 	$effect(() => {
-		boardScale.value = mw >= 900 ? deskScale : mobScale;
+		boardScale.value = mw >= DESK_BREAKPOINT ? deskScale : mobScale;
 	});
-
-	// Bar tints: root/body/theme-color stay static charcoal; the .shade supplies the black while
-	// a card is open and hides INSTANTLY on close (see CSS) so the interaction-time sample on
-	// iOS never catches black. No scroll-jiggle — a programmatic scroll doesn't count as a
-	// resample trigger on that browser.
 
 	function readSvh() {
 		if (svhProbe) svh = svhProbe.clientHeight;
@@ -124,8 +127,8 @@
 		pointer-events: none;
 	}
 
-	/* black field behind an expanded card; the transparent board lets it show through */
-	/* full-screen black while a card is open */
+	/* black field behind an expanded card (the transparent board lets it show through) */
+	/* root/body/theme-color stay charcoal so iOS's interaction-time bar-tint sample never catches black */
 	.shade {
 		position: fixed;
 		top: 0;
@@ -173,7 +176,7 @@
 		main {
 			align-items: flex-start;
 		}
-		/* the hero sits at the top of the mobile column */
+		/* one warm glow high in the mobile column */
 		.field {
 			background:
 				radial-gradient(90% 45% at 50% 18%, rgba(214, 110, 52, 0.13), transparent 72%),

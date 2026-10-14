@@ -35,8 +35,8 @@ export const SCENE_BUILDERS = { jar: buildJar /* … */ };
 
 `SceneCtx` (see `src/lib/three/types.ts`) gives you everything: `T` (the three module —
 use `ctx.T.*`, never import three), `scene`, `cam`, `pivot`, `spin` (add content here),
-`renderer`, `canvas`, `variants {lite,nowing,sunzoom,clean,hour}`, `w`, `h`, and a seeded
-`rand`. Return an `UpdateFn = (t, dt) => void` (most DC builders only use `t`, the
+`renderer`, `canvas`, `variants {lite,nowing,sunzoom,clean,hill,hour}`, `quality` (device
+tier), `w`, `h`, and a seeded `rand`. Return an `UpdateFn = (t, dt) => void` (most DC builders only use `t`, the
 accumulated clock) or `null` for a static scene. Use `ctx.variants.hour` and `ctx.rand` —
 never `new Date()` / raw `Math.random()`.
 
@@ -44,14 +44,15 @@ The six kinds: `campfire | calm | flame | jar | envelope | axelog`. Porthole-win
 kind — it lives inside the `calm` builder (gated by the `nowing`/`sunzoom` variants).
 
 Kinds absent from the builder map render as an empty scene (one dev note logged), so the
-board runs today and each scene PR is additive.
+board runs today and each scene PR is additive. `scenes/` also holds two helpers that are not
+kinds: `shared.ts` and `hilltop.ts` (the desktop Work hill, used by `axelog`).
 
 ### The plumbing (built; don't duplicate)
 
 - `src/lib/three/loop.ts` — the singleton global rAF. ~15ms throttle, `dpr ≤ 2`, a
   live-WebGL-context CAP of 9 with offscreen dispose + `WEBGL_lose_context` restore,
   per-canvas accumulated `clk` (freezes never jump time), the freeze rule, the central
-  per-kind spin + pointer-tilt/parallax table (campfire pf 0.16, others 0.8; lite →
+  per-kind spin + pointer-tilt/parallax table (campfire 0.16, axelog 0.06, others 0.8; lite →
   auto-drift), IntersectionObserver onscreen tracking. HMR-safe singleton. **Never add a
   second loop.**
 - `src/lib/three/registry.ts` — `WeakMap<canvas, SceneEntry>` + a Set of mounted canvases.
@@ -63,13 +64,26 @@ board runs today and each scene PR is additive.
 - `src/lib/stores/freeze.svelte.ts` — `$state` frozen-container; the loop updates only
   canvases inside it (DC `.is-clone.is-settled` semantics).
 
+### Modules
+
+- `stores/ui.svelte.ts` — open card + Work detail state; `stores/scale.svelte.ts` — board
+  scale for render resolution; `stores/freeze.svelte.ts` — the frozen container.
+- `interactions/{expand,burn,intro,hover}.ts` — card open/close, sibling burn, intro veil,
+  tile-hover → scene flags.
+- `components/expanded/panels.ts` — card id → expanded panel component.
+- `three/quality.ts` — device tiers `full`/`reduced`/`still` (`?quality=` pins one);
+  `three/variants.ts` — `data-*` → `SceneVariants`.
+- `util/{rand,time,a11y}.ts` — seeded rand, hour/`?hour=`, key activation.
+- `sky.ts` — the shared star field; `icons.ts` — the stroke icon set.
+- `components/tiles/` — board tiles; `components/expanded/` — expanded card panels.
+
 ## Tokens & content
 
 - `src/lib/tokens.ts` — colors/radii/spacing/breakpoints as a reference table (exercised by
   the token unit tests). Components carry their DC-ported values inline rather than reading
   tokens; `src/app.css` holds the global base rules plus every board `@keyframes`, ported
   verbatim.
-- `src/lib/content.ts` — all copy (profile, experience roles, 6 work projects, health,
+- `src/lib/content.ts` — all copy (profile, experience roles, 6 work projects, about,
   contact). Placeholder-grade; edit here, not in components.
 
 ## Source of truth (gitignored, on disk)

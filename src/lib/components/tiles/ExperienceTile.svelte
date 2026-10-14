@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { activateOnKey } from '$lib/util/a11y';
 	// Experience tile — header + one entry per role; opens via `onopen`. Desktop (tall): the
 	// roles sit on the board's shared warm dark over a thin, dimmed dusk strip of the sea (the
 	// porthole in the panel keeps the bright sunset). Mobile (short): the sea under sea-glass.
+	import { activateOnKey } from '$lib/util/a11y';
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import CompanyIcon from '../CompanyIcon.svelte';
 	import TileHint from './TileHint.svelte';
@@ -17,7 +17,6 @@
 
 	// desktop: the taller middle row gives the role list room to read at body sizes
 	const nameFont = $derived(mobile ? 12 : 13);
-	const roleFont = $derived(mobile ? 11 : 12);
 	// mobile: sea-glass chips a little wider than tall (the NYC wordmark clears the type floor);
 	// desktop: round ember-lit coins that sit on the warm ground rather than grey boxes on it
 	const logoW = $derived(mobile ? 30 : 32);
@@ -104,7 +103,7 @@
 							>{r.company}</span
 						>
 						<span
-							style="font:400 {roleFont}px 'Archivo',sans-serif;color:#b8aca3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+							style="font:400 12px 'Archivo',sans-serif;color:#b8aca3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
 							>{r.title}</span
 						>
 					</span>
@@ -115,7 +114,7 @@
 </div>
 
 <style>
-	/* hover (rework): the dimmed dusk strip warms back toward its sunset */
+	/* hover: the dimmed dusk strip warms back toward its sunset */
 	@media (hover: hover) and (pointer: fine) {
 		.tile:hover {
 			--sea-b: 0.85;

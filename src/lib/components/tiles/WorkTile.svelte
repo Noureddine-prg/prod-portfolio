@@ -1,10 +1,8 @@
 <script lang="ts">
+	// Work tile — axe-in-log scene + featured projects. The card opens the ledger; a desktop row
+	// is a pointer shortcut straight to its project (keyboard users reach it through the ledger,
+	// so the tile stays one control). Mobile rows are names only; the whole card is the target.
 	import { activateOnKey } from '$lib/util/a11y';
-	// Work tile — night ground + axe-in-log scene + the featured projects (name + lead
-	// metric) so the board shows proof before a click. The card opens on the ledger; on desktop
-	// a project row opens straight to that project (pointer shortcut — keyboard users reach the
-	// same projects through the ledger, so the tile stays one control, no nested buttons). On
-	// mobile the rows are names only and the whole card is one target: the ledger.
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import TileHint from './TileHint.svelte';
 	import Icon from '../Icon.svelte';
@@ -24,13 +22,10 @@
 	}));
 
 	function pick(e: MouseEvent, id: string) {
-		if (mobile) return; // the tap falls through to the card
 		e.stopPropagation();
 		onproject(id);
 	}
 
-	const nameFont = $derived(mobile ? 15 : 19);
-	const metricFont = 11;
 	// desktop: the lower part of the column is the campfire's night (data-hill); its sky fades
 	// to transparent at the top into the tile's own night ground (the night zenith color), so
 	// there is no seam; mobile: the plain axe right of the list
@@ -77,32 +72,32 @@
 	>
 		<span class="feat-label">Featured</span>
 		{#each featured as f (f.id)}
-			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-			<div
-				class="wrow"
-				style="padding:{mobile ? '7px 4px' : '12px 6px'};margin:0 {mobile ? -4 : -6}px"
-				onclick={(e) => pick(e, f.id)}>
-				<span style="display:flex;flex-direction:column;gap:{mobile ? 1 : 3}px;min-width:0">
-					<span
-						style="font:500 {nameFont}px/1.15 'Cormorant Garamond',serif;color:#ece5da;{mobile
-							? 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
-							: ''}">{f.name}</span
-					>
-					{#if !mobile}
-						<span style="font:400 {metricFont}px/1.3 'Archivo',sans-serif;color:#a8acb8"
-							>{f.metric}</span
+			{#if mobile}
+				<div class="wrow" style="padding:7px 4px;margin:0 -4px">
+					<span style="display:flex;flex-direction:column;gap:1px;min-width:0">
+						<span
+							style="font:500 15px/1.15 'Cormorant Garamond',serif;color:#ece5da;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+							>{f.name}</span
 						>
-					{/if}
-				</span>
-				{#if !mobile}<span class="row-hint" aria-hidden="true"><Icon name="arrow-right" /></span>{/if}
-			</div>
+					</span>
+				</div>
+			{:else}
+				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+				<div class="wrow wrow--pick" style="padding:12px 6px;margin:0 -6px" onclick={(e) => pick(e, f.id)}>
+					<span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+						<span style="font:500 19px/1.15 'Cormorant Garamond',serif;color:#ece5da">{f.name}</span>
+						<span style="font:400 11px/1.3 'Archivo',sans-serif;color:#a8acb8">{f.metric}</span>
+					</span>
+					<span class="row-hint" aria-hidden="true"><Icon name="arrow-right" /></span>
+				</div>
+			{/if}
 		{/each}
 	</div>
 </div>
 
 <style>
-	/* project rows: hairline separators + the ledger's hover (ember sweep + edge bar); the
-	   card's arrow hands off to the hovered row */
+	/* project rows: hairline separators; desktop rows (.wrow--pick) add the ledger's hover
+	   (ember sweep + edge bar) and the card's arrow hands off to the hovered row */
 	.wrow {
 		position: relative;
 		display: flex;
@@ -120,14 +115,14 @@
 		color: #e2954f;
 		margin-bottom: 2px;
 	}
-	.wrow::before,
-	.wrow::after {
+	.wrow--pick::before,
+	.wrow--pick::after {
 		content: '';
 		position: absolute;
 		pointer-events: none;
 		z-index: -1;
 	}
-	.wrow::before {
+	.wrow--pick::before {
 		inset: 0;
 		border-radius: 4px;
 		background: rgba(226, 149, 79, 0.08);
@@ -135,7 +130,7 @@
 		transform-origin: right;
 		transition: transform 0.32s cubic-bezier(0.23, 1, 0.32, 1);
 	}
-	.wrow::after {
+	.wrow--pick::after {
 		left: 0;
 		top: 10px;
 		bottom: 10px;
@@ -183,15 +178,15 @@
 	}
 
 	@media (hover: hover) and (pointer: fine) {
-		.wrow:hover::before {
+		.wrow--pick:hover::before {
 			transform: scaleX(1);
 			transform-origin: left;
 		}
-		.wrow:hover::after {
+		.wrow--pick:hover::after {
 			transform: scaleY(1);
 			transition-delay: 0.06s;
 		}
-		.wrow:hover .row-hint {
+		.wrow--pick:hover .row-hint {
 			opacity: 1;
 			transform: none;
 		}
@@ -199,7 +194,7 @@
 			opacity: 1;
 			transform: translate(0, -50%);
 		}
-		.work-tile:has(.wrow:hover) .head-hint {
+		.work-tile:has(.wrow--pick:hover) .head-hint {
 			opacity: 0;
 		}
 	}

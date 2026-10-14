@@ -5,7 +5,7 @@
 	import SpaceNightBg from './SpaceNightBg.svelte';
 	import MobileOceanStrip from './MobileOceanStrip.svelte';
 	import CompanyIcon from '../CompanyIcon.svelte';
-	import CardLinks from '../CardLinks.svelte';
+	import CardLinks from './CardLinks.svelte';
 	import ResumeButton from './ResumeButton.svelte';
 	import { experience } from '$lib/content';
 
@@ -61,16 +61,16 @@
 						>
 					</div>
 					<span style="font:500 12px 'JetBrains Mono',monospace;color:var(--c-accent-text)">{role.title}</span>
-					<div style="display:flex;flex-direction:column;gap:5px">
+					<ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px">
 						{#each role.bullets as b (b)}
-							<span style="display:flex;gap:8px;align-items:flex-start"
+							<li style="display:flex;gap:8px;align-items:flex-start"
 								><span
 									style="width:3.5px;height:3.5px;border-radius:50%;background:#5e4f48;flex:none;margin-top:8px"
 								></span><span style="font:400 13px/1.55 'Archivo',sans-serif;color:#a89b93">{b}</span
-								></span
+								></li
 							>
 						{/each}
-					</div>
+					</ul>
 				</div>
 			</div>
 		{/each}
@@ -92,7 +92,7 @@
 		<div style="display:inline-flex;align-items:center;gap:12px"
 			><h2
 				style="margin:0;font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#efe9e6;text-transform:uppercase"
-				>Experience</h2
+				>{experience.header}</h2
 			><span
 				style="font:400 var(--t-meta) 'JetBrains Mono',monospace;line-height:1;color:var(--c-meta);align-self:center;margin-top:2px"
 				>&mdash; The journey so far</span
@@ -130,22 +130,17 @@
 						: 16}px 16px;display:flex;flex-direction:column;gap:5px"
 				>
 					<div style="display:flex;align-items:center;gap:10px">
-						{#if role.company === 'Google'}
-							<span
-								style="width:26px;height:26px;border-radius:8px;background:#262020;border:1px solid #362e2e;flex:none;display:flex;align-items:center;justify-content:center;"
-								><CompanyIcon company="Google" w={14} h={14} /></span
-							>
-						{:else if role.company === 'Meta'}
-							<span
-								style="width:26px;height:26px;border-radius:8px;background:#262020;border:1px solid #362e2e;flex:none;display:flex;align-items:center;justify-content:center;"
-								><CompanyIcon company="Meta" w={16} h={11} /></span
-							>
-						{:else}
-							<span
-								style="width:26px;height:26px;border-radius:8px;background:#262020;border:1px solid #362e2e;flex:none;display:flex;align-items:center;justify-content:center;font:700 10px 'Archivo',sans-serif;letter-spacing:-.02em;color:#efe9e6"
-								>NYC</span
-							>
-						{/if}
+						<span
+							style="width:26px;height:26px;border-radius:8px;background:#262020;border:1px solid #362e2e;flex:none;display:flex;align-items:center;justify-content:center"
+						>
+							{#if role.company === 'Google'}
+								<CompanyIcon company="Google" w={14} h={14} />
+							{:else if role.company === 'Meta'}
+								<CompanyIcon company="Meta" w={16} h={11} />
+							{:else}
+								<span style="font:700 10px 'Archivo',sans-serif;letter-spacing:-.02em;color:#efe9e6">NYC</span>
+							{/if}
+						</span>
 						<span style="font:600 var(--t-item) 'Archivo',sans-serif;color:#efe9e6">{role.company}</span>
 						<span style="font:500 var(--t-meta) 'JetBrains Mono',monospace;color:var(--c-accent-text)">{role.title}</span>
 					</div>

@@ -14,7 +14,7 @@ export type IconName = keyof typeof ICONS;
 
 const NS = 'http://www.w3.org/2000/svg';
 
-export function iconSvg(name: IconName, size = '1em', stroke = 2): SVGSVGElement {
+export function iconSvg(name: IconName, size = '1em'): SVGSVGElement {
 	const svg = document.createElementNS(NS, 'svg');
 	for (const [k, v] of Object.entries({
 		width: size,
@@ -22,7 +22,7 @@ export function iconSvg(name: IconName, size = '1em', stroke = 2): SVGSVGElement
 		viewBox: '0 0 24 24',
 		fill: 'none',
 		stroke: 'currentColor',
-		'stroke-width': String(stroke),
+		'stroke-width': '2',
 		'stroke-linecap': 'round',
 		'stroke-linejoin': 'round',
 		'aria-hidden': 'true',

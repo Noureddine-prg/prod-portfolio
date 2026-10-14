@@ -1,16 +1,11 @@
 <script lang="ts">
 	// Experience expanded (mobile) — calm ocean strip (nowing+lite) blending into the card body,
-	// header row, sea-glass panel. Stage 3 renders the staggered exp-cards via the children snippet.
+	// header row, sea-glass panel; the role cards come in through children.
 	import type { Snippet } from 'svelte';
 	import ThreeCanvas from '../ThreeCanvas.svelte';
 	import { experience } from '$lib/content';
 
-	interface Props {
-		title?: string;
-		meta?: string;
-		children?: Snippet;
-	}
-	let { title = experience.header, meta = '2024 — 2026 · NYC', children }: Props = $props();
+	let { children }: { children?: Snippet } = $props();
 </script>
 
 <!-- calm strip + blend-out + header — DC L463–470 -->
@@ -24,11 +19,11 @@
 	>
 		<h2
 			style="margin:0;font:400 var(--t-title) 'Archivo Black',sans-serif;letter-spacing:.02em;color:#f0e6dd;text-transform:uppercase;text-shadow:0 1px 8px rgba(0,0,0,.6)"
-			>{title}</h2
+			>{experience.header}</h2
 		>
 		<span
 			style="font:400 var(--t-meta) 'JetBrains Mono',monospace;color:#d8c9bd;text-shadow:0 1px 8px rgba(0,0,0,.6);padding-right:34px"
-			>{meta}</span
+			>2024 — 2026 · NYC</span
 		>
 	</div>
 </div>
