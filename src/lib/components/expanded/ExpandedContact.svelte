@@ -131,7 +131,7 @@
 		<a
 			href={links.resume}
 			target="_blank"
-			style="display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:10px;gap:.4em;border:1px solid #2a2424;font:500 12px 'JetBrains Mono',monospace;color:#d86a52;text-decoration:none"
+			style="display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:10px;gap:.4em;background:#211b1b;border:1px solid #2a2424;font:500 12px 'JetBrains Mono',monospace;color:#d86a52;text-decoration:none"
 			>{contact.resumeLabel}<Icon name="arrow-right" /></a
 		>
 	</div>

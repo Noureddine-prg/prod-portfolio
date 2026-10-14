@@ -101,9 +101,7 @@ const OPEN = {
 	// going (a fixed-size scene box inside a growing card read as stuck), while the panel
 	// ground (stars / glass / ember layers) fades in during the grow so the card is never an
 	// empty slab (DC faded the ground in only at revealAt)
-	popFade: 1250, // the tile's own scene (jar / envelope / axe)
-	oceanWarm: 1250, // Experience: the strip brightens toward the porthole's sunset…
-	oceanFade: 1800 // …and fades out across the porthole's rise (revealAt), so the two overlap
+	popFade: 1250 // the tile's own scene (jar / envelope / axe)
 } as const;
 const CLOSE_MS = 460; // rework: slower close so the tile's contents can be seen settling back (DC 280)
 const FOCUSABLE =
@@ -159,8 +157,10 @@ function burnEmbers(board: HTMLElement, t: HTMLElement): void {
 }
 
 // Everything on the board except the clicked tile — direct tiles, wrapper rows' children,
-// and non-scene strips (mobile footer) — ordered by distance from the clicked tile.
-function siblings(board: HTMLElement, tile: HTMLElement): HTMLElement[] {
+// and non-scene strips (mobile name strip) — ordered by distance from the clicked tile. On
+// mobile the hero burns too: it sits at the foot of the column, where the growing card
+// reaches it last, so left lit it was the one card still showing through the burn.
+function siblings(board: HTMLElement, tile: HTMLElement, mobile: boolean): HTMLElement[] {
 	const sibs = [...board.querySelectorAll<HTMLElement>('[data-tile]')].filter(
 		(t) => t !== tile && !t.classList.contains('is-clone')
 	);
@@ -180,7 +180,7 @@ function siblings(board: HTMLElement, tile: HTMLElement): HTMLElement[] {
 				)
 					sibs.push(c);
 			});
-		} else if (!el.querySelector('canvas[data-three]')) {
+		} else if (mobile || !el.querySelector('canvas[data-three]')) {
 			sibs.push(el);
 		}
 	});
@@ -229,9 +229,15 @@ function inert(el: HTMLElement): void {
 	el.setAttribute('aria-hidden', 'true');
 }
 
+// Bumped by every open. A close's late tidy-up (~1s of fade cleanup) checks it, so a quick
+// re-open isn't undone mid-open — that cleanup reset the moved canvas's opacity and left the
+// tile's scene showing over the new panel.
+let openGen = 0;
+
 // ── expand ────────────────────────────────────────────────────────────────────
 export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId): void {
 	if (board.dataset.open) return;
+	const gen = ++openGen;
 	board.dataset.open = '1';
 	ui.openCard = card;
 	const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -358,9 +364,9 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		cvLayer.appendChild(liveCv);
 		liveCv.style.pointerEvents = 'none';
 		if (card === 'experience') {
-			// hand-off: the dusk strip warms toward the porthole's sunset while the card grows,
-			// then fades as the porthole rises in at reveal (the two overlap, so no gap)
-			liveCv.style.transition = `filter ${OPEN.growDur}ms ${OPEN.growEase} ${OPEN.oceanWarm}ms, opacity .5s ease ${OPEN.oceanFade}ms`;
+			// the sunset never travels or stretches: it cross-fades into the panel's gradient as
+			// the grow starts (same timing as the panel), and the panel's own sea brings it back
+			liveCv.style.transition = `opacity .4s ease ${OPEN.growAt}ms`;
 		} else {
 			liveCv.dataset.pop = '1'; // jar cap / envelope / axe chop
 			liveCv.style.transition = `opacity .3s ease ${OPEN.popFade}ms`;
@@ -374,7 +380,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 	// only canvases inside the clone (the migrated tile scene, then the panel's).
 	freeze.container = clone;
 
-	const sibs = siblings(board, tile);
+	const sibs = siblings(board, tile, mobile);
 	const timers: ReturnType<typeof setTimeout>[] = [];
 	const later = (fn: () => void, ms: number) => timers.push(setTimeout(fn, ms));
 
@@ -429,10 +435,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 		face.style.opacity = '0';
 		ex.style.transition = `opacity .4s ease ${OPEN.growAt}ms`;
 		ex.style.opacity = '1';
-		if (liveCv) {
-			liveCv.style.opacity = '0';
-			if (card === 'experience') liveCv.style.filter = 'brightness(1.05) saturate(1.2)';
-		}
+		if (liveCv) liveCv.style.opacity = '0';
 		kids.forEach((k, i) => {
 			const d = OPEN.revealAt + i * OPEN.revealStep;
 			k.style.transition = `opacity .4s ease ${d}ms, transform .45s ${EASE_OUT} ${d}ms`;
@@ -443,17 +446,6 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 			c.style.opacity = '1';
 			c.style.transform = 'translateY(0)';
 		});
-		if (liveCv && card === 'experience')
-			// once the card grows past the tile, the strip's hard side edges would read as a box
-			// floating mid-panel — feather all four sides into a glow
-			later(() => {
-				const m =
-					'linear-gradient(180deg,transparent,#000 55%,#000 75%,transparent),linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)';
-				liveCv.style.setProperty('-webkit-mask-image', m);
-				liveCv.style.setProperty('-webkit-mask-composite', 'source-in');
-				liveCv.style.maskImage = m;
-				liveCv.style.maskComposite = 'intersect';
-			}, OPEN.growAt);
 		burnSibs(board, sibs);
 		fireRing(clone);
 		clone.addEventListener('transitionend', (ev) => {
@@ -521,6 +513,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 				t.style.transition = `opacity .35s ${EASE_OUT} ${reduced ? 0 : 80 + i * 40}ms`;
 				t.style.opacity = '1';
 				setTimeout(() => {
+					if (gen !== openGen) return; // a newer open owns these styles now
 					t.style.transition = '';
 					t.style.opacity = '';
 				}, 460 + i * 40);
@@ -548,6 +541,7 @@ export function expandCard(board: HTMLElement, tile: HTMLElement, card: CardId):
 				});
 				setTimeout(
 					() => {
+						if (gen !== openGen) return; // re-opened: the canvas is in the new clone
 						tkids.forEach((k) => {
 							k.style.transition = '';
 							k.style.opacity = '';
