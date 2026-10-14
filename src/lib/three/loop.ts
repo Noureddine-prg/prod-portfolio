@@ -74,7 +74,8 @@ function dpr(): number {
 // the board's design coordinates is displayed at boardScale× that size, so the backing
 // store multiplies in the scale (capped at 3 to bound GPU cost on large monitors).
 function renderPx(): number {
-	if (quality() !== 'full') return Math.min(1.5, boardScale.value);
+	// lighter tiers cap the backing store at 1.5x, but still count dpr (1x on a 3x phone was mush)
+	if (quality() !== 'full') return Math.min(1.5, dpr() * boardScale.value);
 	return Math.min(3, dpr() * boardScale.value);
 }
 

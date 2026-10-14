@@ -101,6 +101,9 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	// and the rock chisel; gusts and dither are cheap and carry most of the life, so they stay
 	const full = ctx.quality === 'full';
 	const Q = { gusts: true, shadows: full, landingEmbers: full, dither: true, rockDetail: full };
+	// mobile framing used to thin the scene too; now only a slower device does (any phone that keeps
+	// up on the full tier gets the full forest, grass and sky)
+	const thin = lite && !full;
 	// second seeded stream for pass-2 additions so ctx.rand (and the grass layout it seeds) is unchanged
 	const rand2 = mulberry32(hashSeed('campfire-pass2'));
 
@@ -615,8 +618,8 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		trunkGeos.push(tgn);
 		// whorls of drooping branch cards: wide at the base, a few upright cards as the spire
 		const info = [x, z, th, rand() + (dark ? 1 : 0)];
-		const whorls = lite ? 8 : 10,
-			per = lite ? 6 : 8;
+		const whorls = thin ? 8 : 10,
+			per = thin ? 6 : 8;
 		const y0 = th * 0.36,
 			y1 = th * 0.95;
 		for (let k = 0; k < whorls; k++) {
@@ -642,8 +645,8 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 				);
 			}
 			// short inner boughs fill the shelf between the trunk and the outer sprays
-			for (let b = 0; b < (lite ? 2 : 4); b++) {
-				const yaw = off + ((b + 0.5) / (lite ? 2 : 4)) * Math.PI * 2 + (rand() - 0.5) * 0.6;
+			for (let b = 0; b < (thin ? 2 : 4); b++) {
+				const yaw = off + ((b + 0.5) / (thin ? 2 : 4)) * Math.PI * 2 + (rand() - 0.5) * 0.6;
 				const L = reach * (0.45 + rand() * 0.2);
 				pushCard(base, 0, y + 0.06 * s, 0, yaw, -0.2 + (rand() - 0.5) * 0.3, Math.PI / 2 + (rand() - 0.5) * 0.8, L, L * 0.62, info);
 			}
@@ -669,7 +672,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		aoPts.push([x, z, 0.55 * s]);
 		casters.push([x, z, 0.19 * s, 50]);
 		// fuller canopy: in-between boughs bridging each tier gap, and wider inner shelves
-		const fillPer = lite ? 3 : 5;
+		const fillPer = thin ? 3 : 5;
 		for (let k = 0; k < whorls - 1; k++) {
 			const f = (k + 0.5) / (whorls - 1);
 			const y = y0 + (y1 - y0) * f;
@@ -691,7 +694,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	const isFar = function (d: [number, number, number, number, boolean?]) {
 		return d[1] <= -5.8;
 	};
-	(lite
+	(thin
 		? treeDefs.filter(function (d, i) {
 				return i % 2 === 0;
 			})
@@ -700,7 +703,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		if (!isFar(d) && inView(d[0], d[1], 1.6 * d[2])) mkTree(d[0], d[1], d[2], d[3], d[4]);
 	});
 	// extra flanking trees for mobile — the halved treeDefs leave the frame edges sparse
-	if (lite) {
+	if (thin) {
 		mkTree(-2.6, -2.3, 1.25, 0.03);
 		mkTree(-3.1, -1.0, 1.3, -0.03);
 		mkTree(3.0, -1.4, 1.3, 0.04);
@@ -725,7 +728,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		if (isFar(d)) silAt(d[0], d[1], 4.6 * d[2] * (0.85 + rand() * 0.3));
 	});
 	[-7.0, -10.0, -13.5].forEach(function (zr, ri) {
-		const n = (lite ? [7, 8, 9] : [10, 12, 14])[ri];
+		const n = (thin ? [7, 8, 9] : [10, 12, 14])[ri];
 		const half = Math.tan(1.0) * (5.8 - zr);
 		for (let i = 0; i < n; i++) {
 			const x = -half + ((i + 0.2 + rand() * 0.6) / n) * half * 2;
@@ -1070,7 +1073,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	spin.add(glow2);
 
 	// --- rising embers (rare jade = HxH nod) ---
-	const en = lite ? 24 : 55,
+	const en = thin ? 24 : 55,
 		eg = new T.BufferGeometry(),
 		ep = new Float32Array(en * 3),
 		ec = new Float32Array(en * 3),
@@ -1108,7 +1111,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	// --- fireflies drifting behind the trees ---
 	const ffGroups: { g: THREE.BufferGeometry; m: THREE.PointsMaterial; ph: number }[] = [];
 	for (let gi = 0; gi < 1; gi++) {
-		const fn = lite ? 2 : 3,
+		const fn = thin ? 2 : 3,
 			fgeo = new T.BufferGeometry(),
 			fp = new Float32Array(fn * 3);
 		for (let i = 0; i < fn; i++) {
@@ -1148,7 +1151,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 			}
 		})
 	);
-	// only casters near the fire throw a visible shadow; lite keeps the 10 closest
+	// only casters near the fire throw a visible shadow; thin keeps the 10 closest
 	const castN = casters
 		.filter(function (c) {
 			return Math.hypot(c[0], c[1]) < 5.2;
@@ -1156,7 +1159,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		.sort(function (a, b) {
 			return Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]);
 		})
-		.slice(0, lite ? 10 : 18);
+		.slice(0, thin ? 10 : 18);
 	const castUni = {
 		value: castN.map(function (c) {
 			return new T.Vector4(c[0], c[1], c[2], c[3]);
@@ -1241,7 +1244,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	});
 	const bladeGeoG = new T.PlaneGeometry(0.3, 0.34, 1, 3);
 	bladeGeoG.translate(0, 0.17, 0);
-	const GRASS_N = lite ? 3200 : 5200;
+	const GRASS_N = thin ? 3200 : 5200;
 	const grass = new T.InstancedMesh(bladeGeoG, grassMat, GRASS_N);
 	const dummy = new T.Object3D();
 	// keep blades out of the seat logs' footprint (axis-segment distance test)
@@ -1261,12 +1264,12 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	let gi = 0;
 	while (gi < GRASS_N) {
 		let x, z;
-		const band = gi % (lite ? 3 : 2);
+		const band = gi % (thin ? 3 : 2);
 		if (band === 0) {
 			// dedicated foreground band, close to camera — dense so the ground behind the logs stays hidden
 			x = (rand() - 0.5) * 7.5;
 			z = 2.2 + rand() * 3.2;
-		} else if (lite && band === 2) {
+		} else if (thin && band === 2) {
 			// tree-line band — fills the background around the trees (mobile parity with desktop)
 			const a = rand() * Math.PI * 2;
 			const r = 4.2 + rand() * 3.0;
@@ -1307,7 +1310,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 			bz = Math.sin(a) * r;
 		if (bz > 2.4 || !inView(bx, bz, 0.1)) continue;
 		const info = [bx, bz, 0.55, rand()];
-		const n = lite ? 6 : 9;
+		const n = thin ? 6 : 9;
 		for (let k = 0; k < n; k++) {
 			const yaw = (k / n) * Math.PI * 2 + rand() * 0.6;
 			const L = 0.32 + rand() * 0.24;
@@ -1379,7 +1382,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	treeDefs.forEach(function (d) {
 		if (inView(d[0], d[1], 1.6 * d[2])) clumpPts.push([d[0], d[1], 0.45 * d[2] + 0.35]);
 	});
-	if (!lite && clumpPts.length) {
+	if (!thin && clumpPts.length) {
 		const CL_N = 1500;
 		const clumps = new T.InstancedMesh(bladeGeoG, grassMat, CL_N);
 		for (let ci = 0; ci < CL_N; ci++) {
@@ -1684,7 +1687,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	const starGroups: { m: THREE.PointsMaterial; ph: number }[] = [];
 	if (starInt > 0.01) {
 		for (let sgi = 0; sgi < 3; sgi++) {
-			const sn = lite ? 40 : 100,
+			const sn = thin ? 40 : 100,
 				sg = new T.BufferGeometry(),
 				sp = new Float32Array(sn * 3);
 			for (let i = 0; i < sn; i++) {
@@ -1728,7 +1731,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 	moon.scale.set(3.4, 3.4, 1);
 	spin.add(moon);
 	const clouds: { s: THREE.Sprite; v: number }[] = [];
-	if (!lite) {
+	if (!thin) {
 		const cloudTex = new T.CanvasTexture(
 			mkCanvas(256, 96, function (g, w, h) {
 				for (let i = 0; i < 16; i++) {
@@ -1787,7 +1790,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		})
 	);
 	const mists: { s: THREE.Sprite; m: THREE.SpriteMaterial; ph: number }[] = [];
-	for (let i = 0; i < (lite ? 1 : 2); i++) {
+	for (let i = 0; i < (thin ? 1 : 2); i++) {
 		const mm = new T.SpriteMaterial({ map: mistTex, transparent: true, opacity: 0.5, fog: false, depthWrite: false });
 		const ms = new T.Sprite(mm);
 		ms.position.set(i ? 2.4 : -2.2, 0.55 + i * 0.2, -3.4 - i * 1.6);
@@ -1813,7 +1816,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		[0.6, 4.4, -6.4, 10, 4, 0.06],
 		[-1.8, 5.2, -9.5, 13, 5, 0.07]
 	];
-	(lite ? hazeLayers.slice(1) : hazeLayers).forEach(function (hl) {
+	(thin ? hazeLayers.slice(1) : hazeLayers).forEach(function (hl) {
 		const hm = new T.SpriteMaterial({
 			map: hazeTex,
 			color: 0x8ea4c6,
@@ -1837,7 +1840,7 @@ export function buildCampfire(ctx: SceneCtx): UpdateFn | null {
 		ph: number;
 		wait: number;
 	}[] = [];
-	if (!lite) {
+	if (!thin) {
 		const leafGeo = new T.PlaneGeometry(0.055, 0.075);
 		for (let i = 0; i < 6; i++) {
 			const lm = new T.Mesh(
