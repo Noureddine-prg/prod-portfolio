@@ -1,10 +1,6 @@
-// Intro — "ignition": an ember line draws across the screen, the name rises out of it and the
-// title drops below it, then the veil splits along the line to reveal the board.
-//
-// Everything that moves is a WAAPI transform/opacity animation, so it runs on the compositor
-// and stays smooth while the main thread builds the three.js scenes behind the veil. The split
-// waits (within a cap) for the hero scene to exist so the reveal never lands on an empty tile.
-// Any click or key skips ahead. Plays once per browser session.
+// Intro "ignition": an ember line draws, the name rises out of it, the title drops below, then
+// the veil splits along the line. WAAPI transform/opacity only, so it stays smooth while scenes
+// build behind it; the split waits (capped) for the hero scene. Any click/key skips; once per session.
 
 import { ui } from '$lib/stores/ui.svelte';
 import { getEntry } from '$lib/three/registry';
@@ -16,11 +12,12 @@ const HOLD_MIN = 1250; // ms after start before the split may begin
 const HOLD_MAX = 2600; // never wait longer than this for the hero scene
 const FONT_WAIT = 350;
 
-// In-flight intro teardowns, for mid-intro page unmount.
 const teardowns = new Set<() => void>();
+let cancels = 0; // bumped by teardownIntro, so a run still awaiting fonts never adds its veil
 
 /** Cancel any in-flight intro and drop its veil. Idempotent. */
 export function teardownIntro(): void {
+	cancels++;
 	teardowns.forEach((fn) => fn());
 	teardowns.clear();
 }
@@ -47,8 +44,8 @@ export async function maybeRunIntro(): Promise<void> {
 	if (seenThisSession()) return;
 	markSeen();
 	const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-	// The name is set in Archivo Black; give the webfont a brief chance so it doesn't swap
-	// mid-reveal, but never hold the intro on it.
+	const run = cancels;
+	// brief chance for Archivo Black so the name doesn't swap mid-reveal; never hold on it
 	try {
 		await Promise.race([
 			document.fonts.load('400 64px "Archivo Black"'),
@@ -57,6 +54,7 @@ export async function maybeRunIntro(): Promise<void> {
 	} catch {
 		/* no FontFaceSet — fall through with the fallback face */
 	}
+	if (run !== cancels) return; // page unmounted during the font wait
 	const board = [...document.querySelectorAll<HTMLElement>('[data-board]')].find(
 		(b) => b.getBoundingClientRect().width > 0
 	);
@@ -86,7 +84,6 @@ function runIntro(board: HTMLElement, reduced: boolean): void {
 	veil.setAttribute('aria-hidden', 'true');
 
 	// Each half carries its text, so the split pulls the name and title apart with it.
-	// A faint warm wash at the seam reads as light from the ember line.
 	const top = el(
 		'div',
 		half +
@@ -114,7 +111,7 @@ function runIntro(board: HTMLElement, reduced: boolean): void {
 	top.appendChild(nameClip);
 	bottom.appendChild(titleClip);
 
-	// The ember line: a bright core plus a soft glow, scaled out from the centre together.
+	// ember line: bright core + soft glow, scaled out from the centre together
 	const line = el(
 		'div',
 		'position:absolute;left:50%;top:50%;width:min(620px,74vw);height:24px;margin:-12px 0 0 calc(min(620px,74vw) / -2);pointer-events:none;will-change:transform,opacity'
@@ -162,8 +159,7 @@ function runIntro(board: HTMLElement, reduced: boolean): void {
 		exiting = true;
 		clearTimeout(poll);
 		veil.style.pointerEvents = 'none'; // the board is usable the moment the split starts
-		// The timer is the guarantee: `finished` never settles if the page stops producing
-		// frames (background tab, starved renderer), and the veil must never be left behind.
+		// `finished` never settles without frames (background tab), so a timer guarantees removal
 		const dur = reduced ? 300 : fast ? 420 : 680;
 		window.setTimeout(remove, dur + 200);
 		if (reduced) {
@@ -194,7 +190,7 @@ function runIntro(board: HTMLElement, reduced: boolean): void {
 	window.addEventListener('keydown', skip, true);
 
 	if (reduced) {
-		// No movement: the name and title are simply there, then the veil fades.
+		// no movement: the name and title are simply there, then the veil fades
 		poll = window.setTimeout(() => exit(false), 900);
 		return;
 	}
@@ -214,7 +210,7 @@ function runIntro(board: HTMLElement, reduced: boolean): void {
 		easing: EASE_OUT
 	});
 
-	// Split once the hold has elapsed and the hero scene is built (or the cap is reached).
+	// split once the hold has elapsed and the hero scene is built (or the cap is reached)
 	const check = () => {
 		const elapsed = performance.now() - t0;
 		if (elapsed >= HOLD_MAX || (elapsed >= HOLD_MIN && heroReady(board))) exit(false);

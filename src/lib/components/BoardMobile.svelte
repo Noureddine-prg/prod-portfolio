@@ -1,8 +1,5 @@
 <script lang="ts">
-	// Mobile board — DC id="11b" frame (390w flex column, gap 10, pad 12), rework order:
-	// name strip → Experience → Work → (About + Contact) → hero.
-	// Height form-fits the device (designH from the page scaler); the hero flexes to
-	// absorb the difference between phone aspect ratios.
+	// Mobile board — DC 11b frame: name strip → Experience → Work → About+Contact → hero (flexes).
 	import HeroTile from './tiles/HeroTile.svelte';
 	import ExperienceTile from './tiles/ExperienceTile.svelte';
 	import AboutTile from './tiles/AboutTile.svelte';

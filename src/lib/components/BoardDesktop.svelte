@@ -1,10 +1,5 @@
 <script lang="ts">
-	// Desktop board — DC id="11a" frame (900×620, gap 14, pad 16), rework layout: the hero
-	// column is unchanged, Work runs the full height on the right as a project list, and the
-	// middle column stacks About, Experience (two rows, room for every role), Contact. The
-	// outer rows run taller (1.15 : .85) so About and Contact have room for their scenes and
-	// Experience is sized to its role list rather than holding a dead band.
-	// The design box flexes with the window aspect (see +page.svelte); rows share the height.
+	// Desktop board — DC 11a frame (gap 14, pad 16): hero | About/Experience/Contact | Work (full height). Rows 1.15:.85.
 	import HeroTile from './tiles/HeroTile.svelte';
 	import ExperienceTile from './tiles/ExperienceTile.svelte';
 	import AboutTile from './tiles/AboutTile.svelte';
@@ -12,7 +7,7 @@
 	import WorkTile from './tiles/WorkTile.svelte';
 	import AshLayer from './AshLayer.svelte';
 	import NightSky from './NightSky.svelte';
-	import { expandCard } from '$lib/interactions/expand';
+	import { cardOpen, expandCard } from '$lib/interactions/expand';
 	import { ui, type CardId } from '$lib/stores/ui.svelte';
 
 	interface Props {
@@ -30,7 +25,7 @@
 	}
 	// a Work tile project row: the card opens straight onto that project
 	function openProject(id: string) {
-		if (boardEl?.dataset.open) return;
+		if (cardOpen()) return;
 		ui.workDetail = id;
 		onopen('work');
 	}
