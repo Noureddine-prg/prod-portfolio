@@ -19,13 +19,10 @@
 		ui.workDetail = work.projects[(((idx + d) % n) + n) % n].id;
 	}
 
-	// fade-in .35s ease .1s, as the DC's freshly-appended detail did (L3307–3309)
-	let shown = $state(false);
 	// focus moves into the detail (the row that opened it is hidden underneath)
 	let backBtn: HTMLButtonElement | undefined = $state();
 	onMount(() => {
 		backBtn?.focus({ preventScroll: true });
-		requestAnimationFrame(() => (shown = true));
 	});
 
 	// Every project opens at its top: the overlay is pinned to the panel's scroll origin, so a
@@ -47,9 +44,11 @@
 	const meta = $derived(narrow ? 12 : 11);
 </script>
 
-{#snippet ph(text: string, h: number)}
+<!-- each media box enters on its own beat (.pd-img, `i` = its place in the sequence) -->
+{#snippet ph(text: string, h: number, i: number)}
 	<div
-		style="border:1px dashed rgba(220,226,240,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;min-height:{h}px;background:rgba(255,255,255,.025)"
+		class="pd-img"
+		style="--i:{i};border:1px dashed rgba(220,226,240,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;min-height:{h}px;background:rgba(255,255,255,.025)"
 	>
 		<span
 			style="{labelStyle};color:{dim}">{text}</span
@@ -78,7 +77,7 @@
 		? '20px'
 		: '26px 30px'};display:flex;flex-direction:column;gap:{narrow
 		? '10px'
-		: '14px'};overflow:auto;opacity:{shown ? 1 : 0};transition:opacity .35s ease .1s"
+		: '14px'};overflow:auto"
 >
 	<!-- back / counter / prev-next; on narrow the row moves to the bottom of the card,
 	     so the ✕-clearance padding only applies in the desktop top position (DC L3314); there it
@@ -103,7 +102,7 @@
 		<span style="display:flex;gap:16px;align-items:center;white-space:nowrap">
 			<span
 				style="font:400 {meta}px 'JetBrains Mono',monospace;color:{dim};font-variant-numeric:tabular-nums"
-				>0{idx + 1} / 0{n}</span
+				>{String(idx + 1).padStart(2, '0')} / {String(n).padStart(2, '0')}</span
 			>
 			<button
 				type="button"
@@ -127,34 +126,37 @@
 			>
 		</span>
 	</div>
-	<h3 style="margin:0;font:500 {narrow ? 19 : 26}px 'Cormorant Garamond',serif;color:{ink}">{p.name}</h3>
-	<span style="font:400 {meta}px/1.45 'JetBrains Mono',monospace;color:{mid};margin-top:-6px"
-		>{p.tech} &middot; {p.org} &middot; {p.year}</span
-	>
-	{#if narrow}
-		{@render ph('screenshot', 110)}
-		<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-			{@render ph('detail', 70)}
-			{@render ph('diagram', 70)}
-		</div>
-	{:else}
-		<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;flex:1;min-height:150px">
-			{@render ph('screenshot', 0)}
-			<div style="display:grid;grid-template-rows:1fr 1fr;gap:12px">
-				{@render ph('detail', 0)}
-				{@render ph('diagram', 0)}
+	<!-- keyed so the media entrance replays on every project, prev/next included -->
+	{#key p.id}
+		<h3 style="margin:0;font:500 {narrow ? 19 : 26}px 'Cormorant Garamond',serif;color:{ink}">{p.name}</h3>
+		<span style="font:400 {meta}px/1.45 'JetBrains Mono',monospace;color:{mid};margin-top:-6px"
+			>{p.tech} &middot; {p.org} &middot; {p.year}</span
+		>
+		{#if narrow}
+			{@render ph('screenshot', 110, 0)}
+			<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+				{@render ph('detail', 70, 1)}
+				{@render ph('diagram', 70, 2)}
 			</div>
+		{:else}
+			<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;flex:1;min-height:150px">
+				{@render ph('screenshot', 0, 0)}
+				<div style="display:grid;grid-template-rows:1fr 1fr;gap:12px">
+					{@render ph('detail', 0, 1)}
+					{@render ph('diagram', 0, 2)}
+				</div>
+			</div>
+		{/if}
+		<div
+			style="display:grid;grid-template-columns:{narrow ? '1fr' : 'repeat(3,1fr)'};gap:{narrow
+				? '10px'
+				: '16px'};border-top:1px solid rgba(220,226,240,0.14);padding-top:12px"
+		>
+			{@render cs('Problem', p.problem)}
+			{@render cs('Approach', p.approach)}
+			{@render cs('Outcome', p.outcome)}
 		</div>
-	{/if}
-	<div
-		style="display:grid;grid-template-columns:{narrow ? '1fr' : 'repeat(3,1fr)'};gap:{narrow
-			? '10px'
-			: '16px'};border-top:1px solid rgba(220,226,240,0.14);padding-top:12px"
-	>
-		{@render cs('Problem', p.problem)}
-		{@render cs('Approach', p.approach)}
-		{@render cs('Outcome', p.outcome)}
-	</div>
+	{/key}
 </div>
 
 <style>
@@ -167,5 +169,21 @@
 		border: 0;
 		border-radius: 6px;
 		cursor: pointer;
+	}
+	/* media entrance: one box after another, a short drop from above coming into focus */
+	.pd-img {
+		animation: pd-img 0.7s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i) * 120ms) both;
+	}
+	@keyframes pd-img {
+		from {
+			opacity: 0;
+			transform: translateY(-12px);
+			filter: blur(6px);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.pd-img {
+			animation: none;
+		}
 	}
 </style>
